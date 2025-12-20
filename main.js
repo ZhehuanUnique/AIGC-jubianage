@@ -452,9 +452,8 @@ function setupJubianTitle() {
     }
     // 检查是否在生产环境（非 localhost）
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      // 生产环境：使用相对路径或配置的地址
-      // 默认使用 Streamlit Cloud 地址格式，需要替换为实际地址
-      return 'https://your-streamlit-app.streamlit.app';
+      // 生产环境：使用 Streamlit Cloud 地址
+      return 'https://jubianai.streamlit.app';
     }
     // 开发环境
     return 'http://localhost:8501';
