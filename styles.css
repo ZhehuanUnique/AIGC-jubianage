@@ -142,7 +142,7 @@ body::before {
   display:flex;
   gap: 16px;
   align-items:stretch;
-  padding: 0 18px; /* 恢复左右 padding，让卡片有适当间距 */
+  padding: 0; /* 移除 padding，确保无缝循环 */
   will-change: transform;
   transform: translate3d(0,0,0);
 }

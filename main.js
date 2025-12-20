@@ -52,28 +52,32 @@ function setupMarquee(root) {
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // 无缝循环：复制一份内容
-  // 注意：复制后宽度 = 原宽度 * 2，循环阈值 = 原宽度
+  // 无缝循环：复制两份内容，确保任何时候容器都被完全覆盖
+  // 复制后宽度 = 原宽度 * 3，确保满铺
   const originalHTML = track.innerHTML;
+  track.insertAdjacentHTML("beforeend", originalHTML);
   track.insertAdjacentHTML("beforeend", originalHTML);
 
   let running = true;
   let targetSpeed = prefersReduced ? 0 : baseSpeedPxPerSec;
   const speedState = { x: targetSpeed, v: 0 }; // x=speed, v=speed derivative
-  let x = 0; // 初始位置：0 表示从右侧开始（translate3d 用正值）
+  let translateX = 0; // 当前 translateX 值（直接控制位置）
   let lastT = performance.now();
-  let lastAppliedX = NaN;
 
   function measureHalfWidth() {
-    // track.scrollWidth 是两份内容的总宽度，half 即一份宽度
-    // 使用 Math.floor 确保精度，避免浮点数误差
-    return Math.floor(track.scrollWidth / 2);
+    // track.scrollWidth 是三份内容的总宽度，一份宽度 = 总宽度 / 3
+    // 不使用 Math.floor，保持原始精度，避免精度损失导致的不一致
+    const width = track.scrollWidth / 3;
+    // 确保宽度至少大于 0
+    return width > 0 ? width : 1;
   }
 
   function measureContainerWidth() {
     // 获取容器（marquee）的宽度，现在容器宽度为浏览器窗口宽度
-    // 使用 Math.ceil 确保向上取整，避免精度问题
-    return Math.ceil(root.getBoundingClientRect().width);
+    // 保持原始精度，避免精度损失
+    const width = root.getBoundingClientRect().width;
+    // 确保宽度至少大于 0
+    return width > 0 ? width : window.innerWidth;
   }
 
   let halfWidth = 0;
@@ -83,37 +87,35 @@ function setupMarquee(root) {
   requestAnimationFrame(() => {
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
-    // 从容器右侧边缘进入：初始位置设为 containerWidth，让第一份内容从右侧外开始
-    // 由于内容有两份，当第一份离开左侧时，第二份会无缝衔接
+    // 初始位置：确保容器被完全覆盖
+    // 由于有三份内容，初始时让第一份内容在容器内，确保满铺
     if (halfWidth > 0 && containerWidth > 0) {
-      x = containerWidth;
-      // 立即应用初始位置，确保从右侧外开始
-      applyX(x);
+      // 初始 translateX = -halfWidth，这样第一份内容的最后一张卡片在容器左侧边缘
+      // 第二份和第三份内容会覆盖整个容器，确保满铺
+      translateX = -halfWidth;
+      track.style.transform = `translate3d(${translateX}px, 0, 0)`;
     }
   });
 
   // 监听窗口大小变化，更新容器宽度
   const handleResize = () => {
     const oldHalfWidth = halfWidth;
-    const oldContainerWidth = containerWidth;
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
-    // 重新对齐，避免 resize 后跳动过大
-    // 保持相对位置比例，确保无缝循环
-    if (oldHalfWidth > 0 && halfWidth > 0 && oldContainerWidth > 0 && containerWidth > 0) {
-      // 计算相对于容器宽度的偏移量
-      const relativeOffset = oldContainerWidth - x;
-      // 保持相对位置比例
-      const newRelativeOffset = (relativeOffset / oldHalfWidth) * halfWidth;
-      // 转换为新的x值
-      x = containerWidth - newRelativeOffset;
-      // 确保在有效范围内
-      if (x < containerWidth - halfWidth) {
-        x = containerWidth - (newRelativeOffset % halfWidth);
+    // 重新对齐：保持相对位置，确保满铺
+    if (oldHalfWidth > 0 && halfWidth > 0) {
+      // 计算当前的相对位置（在 [-halfWidth, 0] 范围内）
+      let relativeX = translateX;
+      while (relativeX < -oldHalfWidth) {
+        relativeX += oldHalfWidth;
       }
-      if (x > containerWidth) {
-        x = containerWidth - (newRelativeOffset % halfWidth);
+      while (relativeX > 0) {
+        relativeX -= oldHalfWidth;
       }
+      // 调整 translateX 保持相对位置比例
+      translateX = (relativeX / oldHalfWidth) * halfWidth;
+      // 应用变换
+      track.style.transform = `translate3d(${translateX}px, 0, 0)`;
     }
   };
   window.addEventListener("resize", handleResize, { passive: true });
@@ -125,46 +127,36 @@ function setupMarquee(root) {
   let lastPointerT = 0;
   let gestureSpeed = 0; // px/s，正数表示向右拖（内容向右移动）
 
-  function applyX(newX) {
-    // 无缝循环逻辑（确保真正无缝，无跳跃）：
-    // 内容有两份，每份宽度为 halfWidth
-    // 关键：让x从containerWidth开始减少，通过模运算实现无缝循环
-    // 当第一份内容完全离开左侧时，第二份内容会无缝衔接
-    if (halfWidth > 0 && containerWidth > 0) {
-      // 将x转换为相对于halfWidth的偏移量
-      // 当x从containerWidth减少到containerWidth - halfWidth时，第一份内容完全离开左侧
-      // 此时重置x为containerWidth，第二份内容无缝衔接
-      let relativeX = containerWidth - newX;
-      
-      // 处理超出范围的情况
-      while (relativeX >= halfWidth) {
-        relativeX = relativeX - halfWidth;
-      }
-      while (relativeX < 0) {
-        relativeX = relativeX + halfWidth;
-      }
-      
-      // 转换回x值
-      newX = containerWidth - relativeX;
+  function updatePosition(deltaX) {
+    // 无缝循环逻辑（确保任何时候都满铺，且完全无缝无跳转）：
+    // 内容有三份，每份宽度 halfWidth
+    // 关键：translateX 持续变化（可以是任意值），使用模运算计算实际位置
+    // 这样就不会有跳转，看起来就像内容真的无穷无尽一样
+    
+    if (halfWidth <= 0 || containerWidth <= 0) return;
+    
+    // translateX 持续减小（内容向左移动），可以是任意值（包括很大的负数）
+    translateX -= deltaX;
+    
+    // 使用模运算计算相对位置，确保无缝循环，无跳转
+    // relativeX 应该在 [-halfWidth, 0) 范围内循环
+    let relativeX = translateX;
+    
+    // 将 translateX 映射到 [-halfWidth, 0) 范围内
+    // 使用模运算确保无缝循环
+    relativeX = relativeX % halfWidth;
+    // 确保结果在 [-halfWidth, 0) 范围内
+    if (relativeX >= 0) {
+      relativeX -= halfWidth;
     }
     
-    // 避免极小变化导致的合成抖动：小于 0.01px 不更新
-    // 从容器右侧边缘进入：translate3d 用 -x
-    // x = containerWidth 时，第一份内容的第一张卡片刚好在容器右侧外
-    // x = containerWidth - halfWidth 时，第一份内容的最后一张卡片刚好离开容器左侧
-    // 当 x 重置为 containerWidth 时，第二份内容会无缝衔接（因为内容有两份且完全相同）
+    // 应用变换（使用 relativeX 而不是 translateX，确保无缝）
+    track.style.transform = `translate3d(${relativeX}px, 0, 0)`;
     
-    // 直接使用x作为offset，因为x本身就是从containerWidth开始的
-    const offset = newX;
-    
-    // 检测重置：如果x从接近containerWidth - halfWidth突然变成接近containerWidth，说明重置了
-    // 但由于内容有两份，当x重置时，第二份内容应该刚好无缝衔接
-    // 所以不需要特殊处理，直接应用新的offset即可
-    if (!Number.isFinite(lastAppliedX) || Math.abs(newX - lastAppliedX) > 0.01) {
-      track.style.transform = `translate3d(${-offset}px, 0, 0)`;
-      lastAppliedX = newX;
+    // 定期重置 translateX 防止数值过大（但不影响视觉效果，因为使用的是 relativeX）
+    if (Math.abs(translateX) > halfWidth * 1000) {
+      translateX = relativeX;
     }
-    x = newX;
   }
 
   function tick(now) {
@@ -185,10 +177,10 @@ function setupMarquee(root) {
 
     if (!prefersReduced) {
       if (!isDragging) {
-        // 从浏览器窗口最右边边缘进入：x 减少时内容向左移动（视觉上从右侧进入、左侧离开），所以 autoSpeed 正数，x 减少
-        // 让x持续减少（从容器宽度开始），通过applyX中的模运算实现无缝循环
-        x -= (autoSpeed - gestureSpeed) * dt;
-        applyX(x);
+        // 从右到左移动：内容从右侧进入，向左侧移动
+        // 计算每帧的移动距离
+        const deltaX = (autoSpeed - gestureSpeed) * dt;
+        updatePosition(deltaX);
       }
     }
 
@@ -234,8 +226,20 @@ function setupMarquee(root) {
     lastPointerX = e.clientX;
     lastPointerT = now;
 
-    // 从右侧进入：x 减少时内容向左移动；手向右拖应让内容向右（x 增加），所以 x += dx
-    applyX(x + dx);
+    // 拖拽：手向右拖应让内容向右（translateX 增加），手向左拖应让内容向左（translateX 减小）
+    translateX += dx;
+    
+    // 使用与 updatePosition 相同的模运算逻辑，确保无缝无跳转
+    if (halfWidth > 0 && containerWidth > 0) {
+      let relativeX = translateX % halfWidth;
+      // 确保结果在 [-halfWidth, 0) 范围内
+      if (relativeX >= 0) {
+        relativeX -= halfWidth;
+      }
+      track.style.transform = `translate3d(${relativeX}px, 0, 0)`;
+    } else {
+      track.style.transform = `translate3d(${translateX}px, 0, 0)`;
+    }
 
     // 估计手势速度（px/s），用于放开后的惯性
     const inst = dx / dt; // px/s，右为正
