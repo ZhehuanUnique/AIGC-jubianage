@@ -45,6 +45,16 @@ body{
   background-color: #070A12;
 }
 
+/* 移动端：视频更居中显示，卡片变小 */
+@media (max-width: 768px) {
+  .bg-video {
+    /* 移动端视频居中显示，确保重要内容不被裁剪 */
+    object-position: center center;
+    /* 如果视频是横向的，可以调整垂直位置 */
+    /* object-position: center 50%; */
+  }
+}
+
 /* 视频背景遮罩层，确保内容可读性和高级感 */
 body::before {
   content: "";
@@ -239,6 +249,17 @@ body::before {
   overflow:hidden;
   position:relative;
   transition: transform .25s ease, border-color .25s ease, background .25s ease, filter .25s ease;
+}
+
+/* 移动端：卡片变小 */
+@media (max-width: 768px) {
+  .card {
+    width: 160px; /* 从 210px 减小到 160px */
+  }
+  
+  .card__thumb {
+    min-height: 240px; /* 相应调整最小高度 */
+  }
 }
 .card:hover{
   transform: translateY(-2px);
