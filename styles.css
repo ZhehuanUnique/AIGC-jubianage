@@ -48,8 +48,10 @@ body{
 /* 移动端：视频更居中显示，卡片变小 */
 @media (max-width: 768px) {
   .bg-video {
-    /* 移动端视频居中显示，确保重要内容不被裁剪 */
-    object-position: center center;
+    /* 移动端视频居中显示，确保重要内容（男生）不被裁剪 */
+    object-position: 50% 40%;
+    /* 如果视频是横向的，可能需要调整垂直位置 */
+    object-fit: cover;
   }
   
   /* 移动端卡片间距优化 */
