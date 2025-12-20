@@ -23,9 +23,15 @@ from backend.assets_api import (
 app = FastAPI(title="视频生成 API", version="1.0.0")
 
 # 配置 CORS
+# 生产环境应该限制特定域名，开发环境允许所有
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "*" if os.getenv("ENV") != "production" else "https://jubianai.cn,https://www.jubianai.cn"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该限制特定域名
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -15,6 +15,13 @@
     <link rel="stylesheet" href="./styles.css" />
     <!-- DNS 预解析和预连接，加速资源加载 -->
     <link rel="dns-prefetch" href="https://jubianai.cn" />
+    <!-- 剧变Agent地址配置（生产环境通过环境变量设置） -->
+    <script>
+      // 从环境变量获取地址（Vercel 会自动注入）
+      // 开发环境：http://localhost:8501
+      // 生产环境：通过 Vercel 环境变量 JUBIANAI_AGENT_URL 设置
+      window.JUBIANAI_AGENT_URL = window.JUBIANAI_AGENT_URL || 'http://localhost:8501';
+    </script>
   </head>
   <body>
     <!-- 背景视频 - 优化加载：按需加载，支持 WebM（更小）和 MP4（回退） -->
@@ -27,7 +34,15 @@
       <!-- Logo + 标题（左上角） -->
       <header class="header">
         <img class="header__logo" src="./logo/logo.png" alt="剧变时代 Logo" />
-        <span class="header__title">剧变时代</span>
+        <div class="header__title-wrapper">
+          <span class="header__title" id="jubian-title">剧变时代</span>
+          <!-- 悬浮窗口 -->
+          <div class="header__tooltip" id="jubian-tooltip">
+            <div class="tooltip__content">
+              <span class="tooltip__text">剧变Agent</span>
+            </div>
+          </div>
+        </div>
       </header>
       
       <section class="hero">

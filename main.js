@@ -435,9 +435,66 @@ function setupImageLazyLoading() {
   });
 }
 
+// 设置"剧变时代"标题的点击事件，打开剧变Agent子页面
+function setupJubianTitle() {
+  const title = document.getElementById("jubian-title");
+  const tooltip = document.getElementById("jubian-tooltip");
+  
+  if (!title) return;
+  
+  // 获取生产环境地址（从环境变量或默认值）
+  // 开发环境：http://localhost:8501
+  // 生产环境：从环境变量或配置中获取
+  const getAgentUrl = () => {
+    // 优先使用环境变量（如果通过 Vercel 等平台设置）
+    if (window.JUBIANAI_AGENT_URL) {
+      return window.JUBIANAI_AGENT_URL;
+    }
+    // 检查是否在生产环境（非 localhost）
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      // 生产环境：使用相对路径或配置的地址
+      // 默认使用 Streamlit Cloud 地址格式，需要替换为实际地址
+      return 'https://your-streamlit-app.streamlit.app';
+    }
+    // 开发环境
+    return 'http://localhost:8501';
+  };
+  
+  const agentUrl = getAgentUrl();
+  
+  // 点击标题打开子页面
+  title.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.open(agentUrl, "_blank");
+  });
+  
+  // 点击悬浮窗口也打开子页面
+  if (tooltip) {
+    tooltip.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(agentUrl, "_blank");
+    });
+    
+    // 让悬浮窗口可点击
+    const tooltipContent = tooltip.querySelector(".tooltip__content");
+    if (tooltipContent) {
+      tooltipContent.style.cursor = "pointer";
+      tooltipContent.addEventListener("mouseenter", () => {
+        tooltipContent.style.background = "linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.12))";
+      });
+      tooltipContent.addEventListener("mouseleave", () => {
+        tooltipContent.style.background = "linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.08))";
+      });
+    }
+  }
+}
+
 document.addEventListener(
   "DOMContentLoaded",
   () => {
+    // 设置"剧变时代"标题点击事件
+    setupJubianTitle();
     // 设置智能图片懒加载
     setupImageLazyLoading();
     // 设置背景视频

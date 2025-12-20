@@ -92,12 +92,86 @@ body::before {
   filter: brightness(1.1); /* 稍微提亮，确保在深色背景下可见 */
 }
 
+.header__title-wrapper{
+  position: relative;
+  display: inline-block;
+}
+
 .header__title{
   font-size: 32px; /* 和logo一样大小 */
   font-weight: 600;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.header__title:hover{
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+}
+
+/* 悬浮窗口样式 */
+.header__tooltip{
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+  pointer-events: none;
+  z-index: 100;
+  margin-top: 8px;
+}
+
+.header__title-wrapper:hover .header__tooltip{
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.tooltip__content{
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.08));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.tooltip__content:hover{
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.12));
+  transform: translateY(-1px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip__content::before{
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.tooltip__text{
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: block;
 }
 
 .hero{
