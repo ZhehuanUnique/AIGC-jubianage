@@ -257,11 +257,16 @@ body::before {
 /* 移动端：卡片变小 */
 @media (max-width: 768px) {
   .card {
-    width: 160px; /* 从 210px 减小到 160px */
+    width: 160px !important; /* 从 210px 减小到 160px，使用 !important 确保生效 */
   }
   
   .card__thumb {
-    min-height: 240px; /* 相应调整最小高度 */
+    min-height: 240px !important; /* 相应调整最小高度 */
+  }
+  
+  /* 测试：确保移动端样式生效（可以后续移除） */
+  .marquee__track {
+    gap: 12px !important; /* 移动端减小间距 */
   }
 }
 .card:hover{
