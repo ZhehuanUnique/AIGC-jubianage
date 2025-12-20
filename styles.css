@@ -50,8 +50,11 @@ body{
   .bg-video {
     /* 移动端视频居中显示，确保重要内容不被裁剪 */
     object-position: center center;
-    /* 如果视频是横向的，可以调整垂直位置 */
-    /* object-position: center 50%; */
+  }
+  
+  /* 移动端卡片间距优化 */
+  .marquee__track {
+    gap: 12px; /* 移动端减小间距 */
   }
 }
 
