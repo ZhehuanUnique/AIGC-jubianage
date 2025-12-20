@@ -392,55 +392,26 @@ function setupBackgroundVideo() {
   });
 }
 
-// 智能图片懒加载：使用 Intersection Observer，保持图片质量
+// 图片加载：确保所有图片正常显示
 function setupImageLazyLoading() {
-  const images = document.querySelectorAll("img[loading='lazy']");
+  const images = document.querySelectorAll("img.card__img");
   
-  // 移动端：前几张图片立即加载，不设置透明度
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-  const firstImages = Array.from(images).slice(0, isMobile ? 5 : 3);
-  
-  // 首屏图片立即显示，不设置透明度
-  firstImages.forEach((img) => {
+  // 所有图片立即显示，不设置透明度
+  images.forEach((img) => {
     img.style.opacity = "1";
-    if (img.src) {
-      const link = document.createElement("link");
-      link.rel = "preload";
-      link.as = "image";
-      link.href = img.src;
-      document.head.appendChild(link);
+    // 确保图片加载
+    if (img.complete) {
+      img.style.opacity = "1";
+    } else {
+      img.addEventListener("load", () => {
+        img.style.opacity = "1";
+      }, { once: true });
+      img.addEventListener("error", () => {
+        console.warn("图片加载失败:", img.src);
+        img.style.opacity = "1"; // 即使失败也显示，避免空白
+      }, { once: true });
     }
   });
-  
-  // 如果浏览器支持 Intersection Observer，使用它
-  if ("IntersectionObserver" in window) {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          // 如果图片还没有加载，开始加载
-          if (!img.complete && img.src) {
-            img.addEventListener("load", () => {
-              img.style.opacity = "1";
-            }, { once: true });
-          } else {
-            img.style.opacity = "1";
-          }
-          observer.unobserve(img);
-        }
-      });
-    }, {
-      // 提前 200px 开始加载（移动端更积极）
-      rootMargin: isMobile ? "200px" : "100px"
-    });
-
-    // 只对非首屏图片使用懒加载
-    Array.from(images).slice(firstImages.length).forEach((img) => {
-      img.style.opacity = "0";
-      img.style.transition = "opacity 0.3s ease-in";
-      imageObserver.observe(img);
-    });
-  }
 }
 
 // 设置"剧变时代"标题的点击事件，打开剧变Agent子页面
