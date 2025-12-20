@@ -66,12 +66,14 @@ function setupMarquee(root) {
 
   function measureHalfWidth() {
     // track.scrollWidth 是两份内容的总宽度，half 即一份宽度
-    return track.scrollWidth / 2;
+    // 使用 Math.floor 确保精度，避免浮点数误差
+    return Math.floor(track.scrollWidth / 2);
   }
 
   function measureContainerWidth() {
     // 获取容器（marquee）的宽度，现在容器宽度为浏览器窗口宽度
-    return root.getBoundingClientRect().width;
+    // 使用 Math.ceil 确保向上取整，避免精度问题
+    return Math.ceil(root.getBoundingClientRect().width);
   }
 
   let halfWidth = 0;
@@ -83,7 +85,7 @@ function setupMarquee(root) {
     containerWidth = measureContainerWidth();
     // 从容器右侧边缘进入：初始位置设为 0，让第一份内容从右侧外开始
     // 由于内容有两份，当第一份离开左侧时，第二份会无缝衔接
-    if (halfWidth > 0) {
+    if (halfWidth > 0 && containerWidth > 0) {
       x = 0;
       // 立即应用初始位置，确保从右侧外开始
       applyX(x);
@@ -119,10 +121,11 @@ function setupMarquee(root) {
   let gestureSpeed = 0; // px/s，正数表示向右拖（内容向右移动）
 
   function applyX(newX) {
-    // 无缝循环逻辑（容器内版本，确保真正无缝）：
+    // 无缝循环逻辑（确保真正无缝，无跳跃）：
     // 内容有两份，每份宽度为 halfWidth
-    // 使用简单的模运算，类似之前容器内的版本
-    if (halfWidth > 0) {
+    // 关键：让x持续增加，通过模运算实现无缝循环
+    // 当第一份内容完全离开左侧时，第二份内容会无缝衔接
+    if (halfWidth > 0 && containerWidth > 0) {
       // 使用模运算，确保x在[0, halfWidth)范围内
       // 当 x >= halfWidth 时，x 会回到 [0, halfWidth) 范围
       // 但由于内容有两份且完全相同，视觉上会无缝衔接
@@ -134,8 +137,16 @@ function setupMarquee(root) {
     // x = 0 时，第一份内容的第一张卡片刚好在容器右侧外
     // x = halfWidth 时，第一份内容的最后一张卡片刚好离开容器左侧
     // 当 x 重置为 0 时，第二份内容会无缝衔接（因为内容有两份且完全相同）
+    
+    // 计算实际偏移：从容器右侧外开始
+    // 初始位置应该是让第一张卡片在容器右侧外，所以需要加上容器宽度
+    const offset = containerWidth - newX;
+    
+    // 检测重置：如果x从接近halfWidth突然变成接近0，说明重置了
+    // 但由于内容有两份，当x重置时，第二份内容应该刚好无缝衔接
+    // 所以不需要特殊处理，直接应用新的offset即可
     if (!Number.isFinite(lastAppliedX) || Math.abs(newX - lastAppliedX) > 0.01) {
-      track.style.transform = `translate3d(${-newX}px, 0, 0)`;
+      track.style.transform = `translate3d(${-offset}px, 0, 0)`;
       lastAppliedX = newX;
     }
     x = newX;
