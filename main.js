@@ -329,38 +329,42 @@ function setupBackgroundVideo() {
     });
   };
 
-  // 方案1：使用 Intersection Observer（推荐）- 视频进入视口时加载
-  if ("IntersectionObserver" in window) {
-    const videoObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // 视频进入视口，开始加载
+  // 移动端立即加载，桌面端延迟加载
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  
+  if (isMobile) {
+    // 移动端立即加载视频
+    loadVideo();
+  } else {
+    // 桌面端使用 Intersection Observer 延迟加载
+    if ("IntersectionObserver" in window) {
+      const videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            loadVideo();
+            videoObserver.disconnect();
+          }
+        });
+      }, {
+        rootMargin: "200px"
+      });
+      
+      videoObserver.observe(video);
+      
+      setTimeout(() => {
+        if (!videoLoaded) {
           loadVideo();
           videoObserver.disconnect();
         }
-      });
-    }, {
-      // 提前 200px 开始加载
-      rootMargin: "200px"
-    });
-    
-    videoObserver.observe(video);
-    
-    // 备用方案：如果 3 秒后视频还没进入视口，开始加载
-    setTimeout(() => {
-      if (!videoLoaded) {
-        loadVideo();
-        videoObserver.disconnect();
-      }
-    }, 3000);
-  } else {
-    // 方案2：降级方案 - 延迟加载
-    if (document.readyState === "complete") {
-      setTimeout(loadVideo, 1000);
+      }, 3000);
     } else {
-      window.addEventListener("load", () => {
+      if (document.readyState === "complete") {
         setTimeout(loadVideo, 1000);
-      }, { once: true });
+      } else {
+        window.addEventListener("load", () => {
+          setTimeout(loadVideo, 1000);
+        }, { once: true });
+      }
     }
   }
 
@@ -392,39 +396,13 @@ function setupBackgroundVideo() {
 function setupImageLazyLoading() {
   const images = document.querySelectorAll("img[loading='lazy']");
   
-  // 如果浏览器支持 Intersection Observer，使用它
-  if ("IntersectionObserver" in window) {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          // 如果图片还没有加载，开始加载
-          if (!img.complete && img.src) {
-            // 图片已经在 src 中，浏览器会自动加载
-            // 这里可以添加加载完成的回调
-            img.addEventListener("load", () => {
-              img.style.opacity = "1";
-            }, { once: true });
-          }
-          observer.unobserve(img);
-        }
-      });
-    }, {
-      // 提前 100px 开始加载
-      rootMargin: "100px"
-    });
-
-    images.forEach((img) => {
-      // 设置初始透明度，加载完成后淡入
-      img.style.opacity = "0";
-      img.style.transition = "opacity 0.3s ease-in";
-      imageObserver.observe(img);
-    });
-  }
+  // 移动端：前几张图片立即加载，不设置透明度
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  const firstImages = Array.from(images).slice(0, isMobile ? 5 : 3);
   
-  // 预加载首屏可见的图片（前 2-3 张）
-  const firstImages = Array.from(images).slice(0, 3);
+  // 首屏图片立即显示，不设置透明度
   firstImages.forEach((img) => {
+    img.style.opacity = "1";
     if (img.src) {
       const link = document.createElement("link");
       link.rel = "preload";
@@ -433,6 +411,36 @@ function setupImageLazyLoading() {
       document.head.appendChild(link);
     }
   });
+  
+  // 如果浏览器支持 Intersection Observer，使用它
+  if ("IntersectionObserver" in window) {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          // 如果图片还没有加载，开始加载
+          if (!img.complete && img.src) {
+            img.addEventListener("load", () => {
+              img.style.opacity = "1";
+            }, { once: true });
+          } else {
+            img.style.opacity = "1";
+          }
+          observer.unobserve(img);
+        }
+      });
+    }, {
+      // 提前 200px 开始加载（移动端更积极）
+      rootMargin: isMobile ? "200px" : "100px"
+    });
+
+    // 只对非首屏图片使用懒加载
+    Array.from(images).slice(firstImages.length).forEach((img) => {
+      img.style.opacity = "0";
+      img.style.transition = "opacity 0.3s ease-in";
+      imageObserver.observe(img);
+    });
+  }
 }
 
 // 设置"剧变时代"标题的点击事件，打开剧变Agent子页面
