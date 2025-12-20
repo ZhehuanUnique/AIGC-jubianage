@@ -439,8 +439,22 @@ function setupImageLazyLoading() {
 function setupJubianTitle() {
   const title = document.getElementById("jubian-title");
   const tooltip = document.getElementById("jubian-tooltip");
+  const titleWrapper = title ? title.closest(".header__title-wrapper") : null;
   
   if (!title) return;
+  
+  // 移动端：触摸时显示悬浮窗口
+  if (titleWrapper) {
+    let touchTimer = null;
+    title.addEventListener("touchstart", (e) => {
+      titleWrapper.classList.add("touch-active");
+      // 触摸后延迟隐藏，让用户有时间看到
+      clearTimeout(touchTimer);
+      touchTimer = setTimeout(() => {
+        titleWrapper.classList.remove("touch-active");
+      }, 2000);
+    }, { passive: true });
+  }
   
   // 获取生产环境地址（从环境变量或默认值）
   // 开发环境：http://localhost:8501

@@ -140,11 +140,23 @@ body::before {
   margin-top: 8px;
 }
 
-.header__title-wrapper:hover .header__tooltip{
+.header__title-wrapper:hover .header__tooltip,
+.header__title-wrapper:active .header__tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
+}
+
+/* 移动端：触摸时显示悬浮窗口 */
+@media (max-width: 768px) {
+  .header__title-wrapper:active .header__tooltip,
+  .header__title-wrapper.touch-active .header__tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
 }
 
 .tooltip__content{
