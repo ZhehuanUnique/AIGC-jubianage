@@ -83,10 +83,10 @@ function setupMarquee(root) {
   requestAnimationFrame(() => {
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
-    // 从容器右侧边缘进入：初始位置设为 0，让第一份内容从右侧外开始
+    // 从容器右侧边缘进入：初始位置设为 containerWidth，让第一份内容从右侧外开始
     // 由于内容有两份，当第一份离开左侧时，第二份会无缝衔接
     if (halfWidth > 0 && containerWidth > 0) {
-      x = 0;
+      x = containerWidth;
       // 立即应用初始位置，确保从右侧外开始
       applyX(x);
     }
@@ -95,19 +95,24 @@ function setupMarquee(root) {
   // 监听窗口大小变化，更新容器宽度
   const handleResize = () => {
     const oldHalfWidth = halfWidth;
+    const oldContainerWidth = containerWidth;
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
     // 重新对齐，避免 resize 后跳动过大
     // 保持相对位置比例，确保无缝循环
-    if (oldHalfWidth > 0 && halfWidth > 0) {
+    if (oldHalfWidth > 0 && halfWidth > 0 && oldContainerWidth > 0 && containerWidth > 0) {
+      // 计算相对于容器宽度的偏移量
+      const relativeOffset = oldContainerWidth - x;
       // 保持相对位置比例
-      x = (x / oldHalfWidth) * halfWidth;
-      // 确保在有效范围内 [0, halfWidth)
-      if (x >= halfWidth) {
-        x = x - halfWidth;
+      const newRelativeOffset = (relativeOffset / oldHalfWidth) * halfWidth;
+      // 转换为新的x值
+      x = containerWidth - newRelativeOffset;
+      // 确保在有效范围内
+      if (x < containerWidth - halfWidth) {
+        x = containerWidth - (newRelativeOffset % halfWidth);
       }
-      if (x < 0) {
-        x = x + halfWidth;
+      if (x > containerWidth) {
+        x = containerWidth - (newRelativeOffset % halfWidth);
       }
     }
   };
@@ -123,26 +128,36 @@ function setupMarquee(root) {
   function applyX(newX) {
     // 无缝循环逻辑（确保真正无缝，无跳跃）：
     // 内容有两份，每份宽度为 halfWidth
-    // 关键：让x持续增加，通过模运算实现无缝循环
+    // 关键：让x从containerWidth开始减少，通过模运算实现无缝循环
     // 当第一份内容完全离开左侧时，第二份内容会无缝衔接
     if (halfWidth > 0 && containerWidth > 0) {
-      // 使用模运算，确保x在[0, halfWidth)范围内
-      // 当 x >= halfWidth 时，x 会回到 [0, halfWidth) 范围
-      // 但由于内容有两份且完全相同，视觉上会无缝衔接
-      newX = ((newX % halfWidth) + halfWidth) % halfWidth;
+      // 将x转换为相对于halfWidth的偏移量
+      // 当x从containerWidth减少到containerWidth - halfWidth时，第一份内容完全离开左侧
+      // 此时重置x为containerWidth，第二份内容无缝衔接
+      let relativeX = containerWidth - newX;
+      
+      // 处理超出范围的情况
+      while (relativeX >= halfWidth) {
+        relativeX = relativeX - halfWidth;
+      }
+      while (relativeX < 0) {
+        relativeX = relativeX + halfWidth;
+      }
+      
+      // 转换回x值
+      newX = containerWidth - relativeX;
     }
     
     // 避免极小变化导致的合成抖动：小于 0.01px 不更新
     // 从容器右侧边缘进入：translate3d 用 -x
-    // x = 0 时，第一份内容的第一张卡片刚好在容器右侧外
-    // x = halfWidth 时，第一份内容的最后一张卡片刚好离开容器左侧
-    // 当 x 重置为 0 时，第二份内容会无缝衔接（因为内容有两份且完全相同）
+    // x = containerWidth 时，第一份内容的第一张卡片刚好在容器右侧外
+    // x = containerWidth - halfWidth 时，第一份内容的最后一张卡片刚好离开容器左侧
+    // 当 x 重置为 containerWidth 时，第二份内容会无缝衔接（因为内容有两份且完全相同）
     
-    // 计算实际偏移：从容器右侧外开始
-    // 初始位置应该是让第一张卡片在容器右侧外，所以需要加上容器宽度
-    const offset = containerWidth - newX;
+    // 直接使用x作为offset，因为x本身就是从containerWidth开始的
+    const offset = newX;
     
-    // 检测重置：如果x从接近halfWidth突然变成接近0，说明重置了
+    // 检测重置：如果x从接近containerWidth - halfWidth突然变成接近containerWidth，说明重置了
     // 但由于内容有两份，当x重置时，第二份内容应该刚好无缝衔接
     // 所以不需要特殊处理，直接应用新的offset即可
     if (!Number.isFinite(lastAppliedX) || Math.abs(newX - lastAppliedX) > 0.01) {
@@ -170,9 +185,9 @@ function setupMarquee(root) {
 
     if (!prefersReduced) {
       if (!isDragging) {
-        // 从浏览器窗口最右边边缘进入：x 增加时内容向左移动（视觉上从右侧进入、左侧离开），所以 autoSpeed 正数，x 增加
-        // 让x持续增加，不限制上限，通过applyX中的模运算实现无缝循环
-        x += (autoSpeed - gestureSpeed) * dt;
+        // 从浏览器窗口最右边边缘进入：x 减少时内容向左移动（视觉上从右侧进入、左侧离开），所以 autoSpeed 正数，x 减少
+        // 让x持续减少（从容器宽度开始），通过applyX中的模运算实现无缝循环
+        x -= (autoSpeed - gestureSpeed) * dt;
         applyX(x);
       }
     }
@@ -219,8 +234,8 @@ function setupMarquee(root) {
     lastPointerX = e.clientX;
     lastPointerT = now;
 
-    // 从右侧进入：x 增加时内容向左移动；手向右拖应让内容向右（x 减少），所以 x -= dx
-    applyX(x - dx);
+    // 从右侧进入：x 减少时内容向左移动；手向右拖应让内容向右（x 增加），所以 x += dx
+    applyX(x + dx);
 
     // 估计手势速度（px/s），用于放开后的惯性
     const inst = dx / dt; // px/s，右为正
