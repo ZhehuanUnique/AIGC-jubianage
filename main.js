@@ -399,6 +399,24 @@ function setupImageLazyLoading() {
   // 所有图片立即显示，不设置透明度
   images.forEach((img) => {
     img.style.opacity = "1";
+    
+    // 修复路径中的中文冒号编码问题
+    if (img.src && img.src.includes('：')) {
+      // 如果路径包含中文冒号，重新设置 src 确保正确编码
+      const originalSrc = img.getAttribute('src');
+      if (originalSrc) {
+        // 使用 encodeURI 确保路径正确编码
+        const encodedSrc = originalSrc.split('/').map(part => {
+          return encodeURIComponent(part).replace(/%3A/g, '：'); // 保持中文冒号，但编码其他特殊字符
+        }).join('/');
+        
+        // 如果编码后的路径不同，更新 src
+        if (encodedSrc !== img.src) {
+          img.src = encodedSrc;
+        }
+      }
+    }
+    
     // 确保图片加载
     if (img.complete) {
       img.style.opacity = "1";
@@ -406,8 +424,13 @@ function setupImageLazyLoading() {
       img.addEventListener("load", () => {
         img.style.opacity = "1";
       }, { once: true });
-      img.addEventListener("error", () => {
+      img.addEventListener("error", (e) => {
         console.warn("图片加载失败:", img.src);
+        // 尝试使用原始路径重新加载
+        const originalSrc = img.getAttribute('src');
+        if (originalSrc && originalSrc !== img.src) {
+          img.src = originalSrc;
+        }
         img.style.opacity = "1"; // 即使失败也显示，避免空白
       }, { once: true });
     }
