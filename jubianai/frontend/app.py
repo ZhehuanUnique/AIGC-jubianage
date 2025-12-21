@@ -55,6 +55,17 @@ if os.getenv("ENV") == "production":
 else:
     BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
+# 尝试从 Streamlit Secrets 读取配置
+try:
+    secrets = st.secrets
+    # 从 Secrets 读取即梦 API 密钥（如果存在）
+    JIMENG_ACCESS_KEY_ID = secrets.get("JIMENG_ACCESS_KEY_ID", "")
+    JIMENG_SECRET_ACCESS_KEY = secrets.get("JIMENG_SECRET_ACCESS_KEY", "")
+except (AttributeError, FileNotFoundError, KeyError):
+    # 如果没有配置 Secrets，尝试从环境变量读取
+    JIMENG_ACCESS_KEY_ID = os.getenv("JIMENG_ACCESS_KEY_ID", "")
+    JIMENG_SECRET_ACCESS_KEY = os.getenv("JIMENG_SECRET_ACCESS_KEY", "")
+
 # 初始化 session state
 if "generated_videos" not in st.session_state:
     st.session_state.generated_videos = []
@@ -63,9 +74,11 @@ if "api_key" not in st.session_state:
 if "backend_url" not in st.session_state:
     st.session_state.backend_url = BACKEND_URL
 if "jimeng_access_key_id" not in st.session_state:
-    st.session_state.jimeng_access_key_id = ""
+    # 优先使用 Secrets 中的值，如果没有则使用空字符串
+    st.session_state.jimeng_access_key_id = JIMENG_ACCESS_KEY_ID
 if "jimeng_secret_access_key" not in st.session_state:
-    st.session_state.jimeng_secret_access_key = ""
+    # 优先使用 Secrets 中的值，如果没有则使用空字符串
+    st.session_state.jimeng_secret_access_key = JIMENG_SECRET_ACCESS_KEY
 if "provider" not in st.session_state:
     st.session_state.provider = "jimeng"  # 默认使用即梦
 
