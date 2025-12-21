@@ -2,11 +2,12 @@
 后端 API 服务
 使用 FastAPI 框架，后续接入 Seedance 1.0 Fast
 """
-from fastapi import FastAPI, HTTPException, Header, UploadFile, File
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+from sqlalchemy.orm import Session
 import httpx
 import os
 import sys
@@ -15,6 +16,7 @@ from pathlib import Path
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS
+from backend.database import get_db, init_db
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
     get_asset_path, AssetMetadata
@@ -36,6 +38,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时初始化数据库"""
+    try:
+        init_db()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        # 不阻止应用启动，允许在没有数据库的情况下运行
 
 
 class VideoGenerationRequest(BaseModel):
@@ -155,25 +168,33 @@ async def get_video_status(task_id: str):
 # ========== 资产管理 API ==========
 
 @app.post("/api/v1/assets/upload", response_model=AssetMetadata)
-async def upload_asset_endpoint(file: UploadFile = File(...)):
+async def upload_asset_endpoint(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     """
     上传资产文件
     
     文件名格式：人物名-视图类型.扩展名
     例如：小明-正视图.jpg, 小美-侧视图.png
+    
+    注意：在 Vercel Serverless 环境中，文件应该先上传到云存储，
+    然后通过 file_url 参数传入。这里只存储元数据。
     """
     try:
-        asset = await upload_asset(file)
+        asset = await upload_asset(file, db=db)
         return asset
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/v1/assets/list")
-async def list_assets():
-    """获取所有资产，按人物分组"""
+async def list_assets(db: Session = Depends(get_db)):
+    """获取所有资产，按人物分组（从数据库）"""
     try:
-        assets_by_character = get_assets_by_character()
+        assets_by_character = get_assets_by_character(db=db)
         
         # 转换为 JSON 可序列化格式
         result = {}
@@ -188,21 +209,40 @@ async def list_assets():
 
 
 @app.get("/api/v1/assets/characters")
-async def list_characters():
-    """获取所有人物列表"""
-    assets_by_character = get_assets_by_character()
-    return {
-        "characters": list(assets_by_character.keys()),
-        "count": len(assets_by_character)
-    }
+async def list_characters(db: Session = Depends(get_db)):
+    """获取所有人物列表（从数据库）"""
+    try:
+        assets_by_character = get_assets_by_character(db=db)
+        return {
+            "characters": list(assets_by_character.keys()),
+            "count": len(assets_by_character)
+        }
+    except Exception as e:
+        print(f"Error listing characters: {e}")
+        return {"characters": [], "count": 0}
 
 
 @app.get("/api/v1/assets/{filename:path}")
-async def get_asset(filename: str):
-    """获取资产文件"""
-    file_path = get_asset_path(filename)
+async def get_asset(filename: str, db: Session = Depends(get_db)):
+    """
+    获取资产文件
     
-    if not file_path or not file_path.exists():
+    如果 file_url 是完整 URL，重定向到该 URL
+    如果是本地路径，返回文件（仅开发环境）
+    """
+    file_path_or_url = get_asset_path(filename, db=db)
+    
+    if not file_path_or_url:
+        raise HTTPException(status_code=404, detail="资产文件不存在")
+    
+    # 如果是 URL，重定向
+    if file_path_or_url.startswith(('http://', 'https://')):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=file_path_or_url)
+    
+    # 如果是本地路径，返回文件（仅开发环境）
+    file_path = Path(file_path_or_url)
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="资产文件不存在")
     
     # 根据文件扩展名确定媒体类型
@@ -220,14 +260,19 @@ async def get_asset(filename: str):
 
 
 @app.delete("/api/v1/assets/{filename:path}")
-async def delete_asset_endpoint(filename: str):
-    """删除资产"""
-    success = delete_asset(filename)
-    
-    if not success:
-        raise HTTPException(status_code=404, detail="资产文件不存在")
-    
-    return {"success": True, "message": "资产已删除"}
+async def delete_asset_endpoint(filename: str, db: Session = Depends(get_db)):
+    """删除资产（从数据库）"""
+    try:
+        success = delete_asset(filename, db=db)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="资产文件不存在")
+        
+        return {"success": True, "message": "资产已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除资产失败: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -1,69 +1,30 @@
 """
 资产管理和知识库 API
+使用 PostgreSQL 数据库存储元数据
 """
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import UploadFile, File, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-import os
-import re
-import shutil
-import json
+from sqlalchemy.orm import Session
 from pathlib import Path
 from datetime import datetime
-
-# 资产存储目录
-# Vercel Serverless Functions 中，文件系统是只读的（除了 /tmp）
-# 在生产环境中，应该使用外部存储服务（如 Vercel Blob Storage、S3 等）
+import re
 import os
 
-# 检查是否在 Vercel 环境
-IS_VERCEL = os.getenv("VERCEL") == "1"
-
-if IS_VERCEL:
-    # Vercel 环境：使用 /tmp 目录（临时存储，不持久化）
-    ASSETS_DIR = Path("/tmp/assets")
-else:
-    # 本地环境：使用项目目录
-    ASSETS_DIR = Path("assets")
-
-ASSETS_DIR.mkdir(exist_ok=True, parents=True)
-
-# 元数据文件
-METADATA_FILE = ASSETS_DIR / "metadata.json"
+from backend.models import Asset
 
 
 class AssetMetadata(BaseModel):
-    """资产元数据"""
+    """资产元数据（兼容旧接口）"""
     filename: str
     character_name: str
     view_type: str
     file_path: str
+    file_url: Optional[str] = None
     upload_time: str
     file_size: int
-
-
-def load_metadata() -> Dict:
-    """加载元数据"""
-    try:
-        if METADATA_FILE.exists():
-            with open(METADATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-    except Exception as e:
-        # 如果读取失败，返回空数据
-        print(f"Error loading metadata: {e}")
-    return {"assets": []}
-
-
-def save_metadata(metadata: Dict):
-    """保存元数据"""
-    try:
-        with open(METADATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        # 如果保存失败（如在 Vercel 只读文件系统），记录错误但不抛出异常
-        print(f"Error saving metadata: {e}")
-        # 在 Vercel 环境中，元数据不会持久化
+    id: Optional[int] = None
 
 
 def parse_filename(filename: str) -> tuple[str, str]:
@@ -88,24 +49,36 @@ def parse_filename(filename: str) -> tuple[str, str]:
         return name_without_ext, "未知"
 
 
-def get_assets_by_character() -> Dict[str, List[AssetMetadata]]:
-    """按人物分组获取资产"""
-    metadata = load_metadata()
-    assets_by_character: Dict[str, List[AssetMetadata]] = {}
-    
-    for asset_data in metadata.get("assets", []):
-        asset = AssetMetadata(**asset_data)
-        character = asset.character_name
+def get_assets_by_character(db: Session) -> Dict[str, List[AssetMetadata]]:
+    """按人物分组获取资产（从数据库）"""
+    try:
+        assets = db.query(Asset).order_by(Asset.upload_time.desc()).all()
+        assets_by_character: Dict[str, List[AssetMetadata]] = {}
         
-        if character not in assets_by_character:
-            assets_by_character[character] = []
-        assets_by_character[character].append(asset)
+        for asset in assets:
+            character = asset.character_name
+            if character not in assets_by_character:
+                assets_by_character[character] = []
+            assets_by_character[character].append(AssetMetadata(**asset.to_dict()))
+        
+        return assets_by_character
+    except Exception as e:
+        # 如果数据库连接失败，返回空字典
+        print(f"Error getting assets from database: {e}")
+        return {}
+
+
+async def upload_asset(
+    file: UploadFile,
+    db: Session,
+    file_url: Optional[str] = None
+) -> AssetMetadata:
+    """
+    上传资产文件
     
-    return assets_by_character
-
-
-async def upload_asset(file: UploadFile) -> AssetMetadata:
-    """上传资产文件"""
+    注意：在 Vercel Serverless 环境中，文件应该先上传到云存储（如 Vercel Blob Storage、S3），
+    然后传入 file_url。这里只存储元数据到数据库。
+    """
     # 检查文件类型
     allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
     file_ext = Path(file.filename).suffix.lower()
@@ -119,69 +92,88 @@ async def upload_asset(file: UploadFile) -> AssetMetadata:
     # 解析文件名
     character_name, view_type = parse_filename(file.filename)
     
-    # 保存文件
+    # 读取文件内容（用于获取文件大小）
+    content = await file.read()
+    file_size = len(content)
+    
+    # 生成文件路径（用于显示，实际文件存储在云存储）
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_filename = f"{character_name}-{view_type}_{timestamp}{file_ext}"
-    file_path = ASSETS_DIR / safe_filename
     
-    # 保存文件
-    with open(file_path, 'wb') as f:
-        content = await file.read()
-        f.write(content)
+    # 如果没有提供 file_url，使用临时路径（仅用于元数据）
+    if not file_url:
+        file_path = f"assets/{safe_filename}"
+    else:
+        file_path = file_url
     
-    # 创建元数据
-    asset = AssetMetadata(
-        filename=file.filename,
-        character_name=character_name,
-        view_type=view_type,
-        file_path=str(file_path),
-        upload_time=datetime.now().isoformat(),
-        file_size=len(content)
-    )
-    
-    # 保存元数据
-    metadata = load_metadata()
-    metadata["assets"].append(asset.dict())
-    save_metadata(metadata)
-    
-    return asset
+    # 创建数据库记录
+    try:
+        db_asset = Asset(
+            filename=file.filename,
+            character_name=character_name,
+            view_type=view_type,
+            file_path=file_path,
+            file_url=file_url or file_path,
+            file_size=file_size,
+            file_type="image"
+        )
+        db.add(db_asset)
+        db.commit()
+        db.refresh(db_asset)
+        
+        return AssetMetadata(**db_asset.to_dict())
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"保存资产元数据失败: {str(e)}"
+        )
 
 
-def delete_asset(filename: str) -> bool:
-    """删除资产"""
-    metadata = load_metadata()
-    assets = metadata.get("assets", [])
-    
-    # 查找并删除
-    for i, asset_data in enumerate(assets):
-        asset = AssetMetadata(**asset_data)
-        if asset.filename == filename or Path(asset.file_path).name == filename:
-            # 删除文件
-            file_path = Path(asset.file_path)
-            if file_path.exists():
-                file_path.unlink()
-            
-            # 删除元数据
-            assets.pop(i)
-            save_metadata(metadata)
+def delete_asset(filename: str, db: Session) -> bool:
+    """删除资产（从数据库）"""
+    try:
+        # 查找资产
+        asset = db.query(Asset).filter(
+            (Asset.filename == filename) | 
+            (Asset.file_path.contains(filename))
+        ).first()
+        
+        if asset:
+            db.delete(asset)
+            db.commit()
             return True
-    
-    return False
+        return False
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting asset: {e}")
+        return False
 
 
-def get_asset_path(filename: str) -> Optional[Path]:
-    """获取资产文件路径"""
-    metadata = load_metadata()
-    for asset_data in metadata.get("assets", []):
-        asset = AssetMetadata(**asset_data)
-        stored_filename = Path(asset.file_path).name
-        # 匹配原始文件名或存储的文件名（支持部分匹配，因为存储时添加了时间戳）
-        if (asset.filename == filename or 
-            stored_filename == filename or 
-            filename in stored_filename or
-            stored_filename.startswith(filename.replace(Path(filename).suffix, ''))):
-            path = Path(asset.file_path)
-            if path.exists():
-                return path
-    return None
+def get_asset_path(filename: str, db: Session) -> Optional[str]:
+    """
+    获取资产文件路径或 URL（从数据库）
+    返回字符串路径/URL，而不是 Path 对象
+    """
+    try:
+        asset = db.query(Asset).filter(
+            (Asset.filename == filename) |
+            (Asset.file_path.contains(filename)) |
+            (Asset.file_url.contains(filename) if Asset.file_url else False)
+        ).first()
+        
+        if asset:
+            return asset.file_url or asset.file_path
+        return None
+    except Exception as e:
+        print(f"Error getting asset path: {e}")
+        return None
 
+
+def get_asset_by_id(asset_id: int, db: Session) -> Optional[Asset]:
+    """根据 ID 获取资产"""
+    try:
+        return db.query(Asset).filter(Asset.id == asset_id).first()
+    except Exception as e:
+        print(f"Error getting asset by id: {e}")
+        return None
