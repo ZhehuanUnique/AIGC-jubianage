@@ -2,102 +2,75 @@
 Vercel Serverless Function 入口
 使用 Vercel Python runtime 的标准格式
 """
+from http.server import BaseHTTPRequestHandler
 import json
 
-def handler(request):
-    """
-    Vercel Python runtime 的标准 handler 格式
-    request 是一个包含请求信息的对象
-    """
-    try:
-        # 获取请求路径 - Vercel 的 request 对象可能有不同的属性
-        if hasattr(request, 'path'):
-            path = request.path
-        elif isinstance(request, dict):
-            path = request.get('path', '/')
-        else:
-            # 尝试从 URL 中提取路径
-            path = getattr(request, 'url', '/').split('?')[0] if hasattr(request, 'url') else '/'
-        
-        # 移除查询参数
-        if '?' in path:
-            path = path.split('?')[0]
-        
-        # 根据路径返回不同的响应
-        if path == '/' or path == '':
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
-                'body': json.dumps({
+class handler(BaseHTTPRequestHandler):
+    """Vercel Python runtime 的标准 handler 类"""
+    
+    def do_GET(self):
+        """处理 GET 请求"""
+        self.handle_request()
+    
+    def do_POST(self):
+        """处理 POST 请求"""
+        self.handle_request()
+    
+    def do_OPTIONS(self):
+        """处理 OPTIONS 请求（CORS 预检）"""
+        self.send_response(200)
+        self.send_cors_headers()
+        self.end_headers()
+    
+    def send_cors_headers(self):
+        """发送 CORS 头"""
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+    
+    def handle_request(self):
+        """处理请求"""
+        try:
+            path = self.path.split('?')[0]  # 移除查询参数
+            
+            # 根据路径返回不同的响应
+            if path == '/' or path == '':
+                self.send_json_response(200, {
                     'message': '视频生成 API 服务',
                     'version': '1.0.0',
-                    'status': 'running',
-                    'path': path
+                    'status': 'running'
                 })
-            }
-        elif path == '/health' or path.endswith('/health'):
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
-                'body': json.dumps({
+            elif path == '/health':
+                self.send_json_response(200, {
                     'status': 'healthy',
                     'database': 'not_configured'
                 })
-            }
-        elif path == '/api/v1/assets/list' or path.endswith('/api/v1/assets/list'):
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
-                'body': json.dumps({})
-            }
-        elif path == '/api/v1/assets/characters' or path.endswith('/api/v1/assets/characters'):
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
-                'body': json.dumps({
+            elif path == '/api/v1/assets/list':
+                self.send_json_response(200, {})
+            elif path == '/api/v1/assets/characters':
+                self.send_json_response(200, {
                     'characters': [],
                     'count': 0
                 })
-            }
-        else:
-            return {
-                'statusCode': 404,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                },
-                'body': json.dumps({
+            else:
+                self.send_json_response(404, {
                     'error': 'Not found',
-                    'path': path,
-                    'request_type': str(type(request))
+                    'path': path
                 })
-            }
-    except Exception as e:
-        import traceback
-        error_msg = str(e)
-        error_traceback = traceback.format_exc()
-        return {
-            'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-            },
-            'body': json.dumps({
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            error_traceback = traceback.format_exc()
+            self.send_json_response(500, {
                 'error': error_msg,
                 'traceback': error_traceback,
-                'message': 'Internal server error',
-                'request_type': str(type(request)) if 'request' in locals() else 'unknown'
+                'message': 'Internal server error'
             })
-        }
+    
+    def send_json_response(self, status_code, data):
+        """发送 JSON 响应"""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
