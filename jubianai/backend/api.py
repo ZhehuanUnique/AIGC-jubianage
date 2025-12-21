@@ -83,7 +83,21 @@ class VideoGenerationResponse(BaseModel):
 @app.get("/")
 async def root():
     """根路径"""
-    return {"message": "视频生成 API 服务", "version": "1.0.0"}
+    try:
+        return {
+            "message": "视频生成 API 服务", 
+            "version": "1.0.0",
+            "status": "running"
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "message": "视频生成 API 服务",
+            "version": "1.0.0",
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
 
 
 @app.get("/health")
