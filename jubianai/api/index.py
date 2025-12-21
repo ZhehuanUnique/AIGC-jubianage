@@ -1,59 +1,78 @@
 """
-Vercel Serverless Function 入口
-将 FastAPI 应用适配为 Vercel Serverless Function
+Vercel Serverless Function 入口 - 最基础版本
 """
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
-import os
+import json
 
-# 创建 FastAPI 应用
-app = FastAPI(title="视频生成 API", version="1.0.0")
-
-# 配置 CORS
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "*" if os.getenv("ENV") != "production" else "https://jubianai.cn,https://www.jubianai.cn,https://jubianai.streamlit.app"
-).split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-async def root():
-    """根路径"""
-    return {
-        "message": "视频生成 API 服务", 
-        "version": "1.0.0",
-        "status": "running"
-    }
-
-@app.get("/health")
-async def health_check():
-    """健康检查"""
-    return {
-        "status": "healthy",
-        "database": "not_configured"
-    }
-
-@app.get("/api/v1/assets/list")
-async def list_assets():
-    """获取所有资产（返回空列表）"""
-    return {}
-
-@app.get("/api/v1/assets/characters")
-async def list_characters():
-    """获取所有人物列表"""
-    return {
-        "characters": [],
-        "count": 0
-    }
-
-# 使用 Mangum 将 FastAPI 适配为 ASGI
-# Vercel 需要 handler 函数
-handler = Mangum(app, lifespan="off")
+def handler(event, context):
+    """最简单的 handler 函数"""
+    try:
+        path = event.get('path', '/')
+        
+        # 根据路径返回不同的响应
+        if path == '/':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({
+                    'message': '视频生成 API 服务',
+                    'version': '1.0.0',
+                    'status': 'running'
+                })
+            }
+        elif path == '/health':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({
+                    'status': 'healthy',
+                    'database': 'not_configured'
+                })
+            }
+        elif path == '/api/v1/assets/list':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({})
+            }
+        elif path == '/api/v1/assets/characters':
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({
+                    'characters': [],
+                    'count': 0
+                })
+            }
+        else:
+            return {
+                'statusCode': 404,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                },
+                'body': json.dumps({'error': 'Not found'})
+            }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            },
+            'body': json.dumps({
+                'error': str(e),
+                'message': 'Internal server error'
+            })
+        }
