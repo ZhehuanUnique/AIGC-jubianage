@@ -1,28 +1,34 @@
 """
 Vercel Serverless Function 入口
-使用 ASGI 适配器调用 FastAPI 应用
+直接调用 FastAPI 应用的路由处理
 """
 import os
 import sys
 import json
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler
-from io import BytesIO
 import asyncio
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# 延迟导入 FastAPI 应用
-app = None
-try:
-    from backend.api import app as fastapi_app
-    app = fastapi_app
-except Exception as e:
-    print(f"Warning: Failed to import FastAPI app: {e}")
-    import traceback
-    traceback.print_exc()
+# 全局变量存储 FastAPI 应用
+_app = None
+
+def get_app():
+    """获取 FastAPI 应用实例（延迟加载）"""
+    global _app
+    if _app is None:
+        try:
+            from backend.api import app
+            _app = app
+        except Exception as e:
+            print(f"Error importing FastAPI app: {e}")
+            import traceback
+            traceback.print_exc()
+            _app = None
+    return _app
 
 class handler(BaseHTTPRequestHandler):
     """Vercel Python runtime 的标准 handler 类"""
@@ -45,6 +51,14 @@ class handler(BaseHTTPRequestHandler):
         self.send_cors_headers()
         self.end_headers()
     
+    def do_PUT(self):
+        """处理 PUT 请求"""
+        self.handle_request()
+    
+    def do_DELETE(self):
+        """处理 DELETE 请求"""
+        self.handle_request()
+    
     def send_cors_headers(self):
         """发送 CORS 头"""
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -54,12 +68,17 @@ class handler(BaseHTTPRequestHandler):
     def handle_request(self):
         """处理请求"""
         try:
+            app = get_app()
             if app is None:
                 self.send_json_response(500, {
                     'error': 'FastAPI app not initialized',
                     'message': '后端服务初始化失败，请检查日志'
                 })
                 return
+            
+            # 使用 TestClient 同步调用 FastAPI 应用
+            from starlette.testclient import TestClient
+            client = TestClient(app)
             
             # 读取请求体
             content_length = int(self.headers.get('Content-Length', 0))
@@ -68,79 +87,54 @@ class handler(BaseHTTPRequestHandler):
             # 解析路径和查询参数
             path_parts = self.path.split('?', 1)
             path = path_parts[0]
-            query_string = path_parts[1].encode() if len(path_parts) > 1 else b''
+            query_string = path_parts[1] if len(path_parts) > 1 else ''
             
-            # 构建 ASGI scope
-            headers = []
+            # 准备请求头
+            headers = {}
             for key, value in self.headers.items():
-                headers.append((key.lower().encode(), value.encode()))
+                # 跳过一些不需要的头
+                if key.lower() not in ['host', 'connection', 'content-length']:
+                    headers[key] = value
             
-            scope = {
-                'type': 'http',
-                'method': self.command,
-                'path': path,
-                'query_string': query_string,
-                'headers': headers,
-                'server': ('localhost', 8000),
-                'client': ('127.0.0.1', 0),
-                'scheme': 'https',
-            }
-            
-            # 创建消息接收器
-            message_queue = asyncio.Queue()
-            
-            async def receive():
-                if not message_queue.empty():
-                    return await message_queue.get()
-                return {'type': 'http.request', 'body': body, 'more_body': False}
-            
-            # 创建响应收集器
-            response_status = None
-            response_headers = []
-            response_body_parts = []
-            
-            async def send(message):
-                nonlocal response_status, response_headers
-                if message['type'] == 'http.response.start':
-                    response_status = message['status']
-                    response_headers = message['headers']
-                elif message['type'] == 'http.response.body':
-                    response_body_parts.append(message.get('body', b''))
-            
-            # 运行 ASGI 应用
+            # 调用 FastAPI 应用
             try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # 将初始请求消息放入队列
-            message_queue.put_nowait({
-                'type': 'http.request',
-                'body': body,
-                'more_body': False
-            })
-            
-            # 调用 ASGI 应用
-            coro = app(scope, receive, send)
-            loop.run_until_complete(coro)
-            
-            # 发送响应
-            if response_status:
-                self.send_response(response_status)
-                for key, value in response_headers:
-                    if key.lower() not in [b'content-length', b'transfer-encoding']:
-                        self.send_header(key.decode(), value.decode())
+                if self.command == 'GET':
+                    response = client.get(path, params=query_string, headers=headers)
+                elif self.command == 'POST':
+                    response = client.post(path, content=body, headers=headers)
+                elif self.command == 'PUT':
+                    response = client.put(path, content=body, headers=headers)
+                elif self.command == 'DELETE':
+                    response = client.delete(path, headers=headers)
+                else:
+                    self.send_json_response(405, {'error': f'Method {self.command} not allowed'})
+                    return
+                
+                # 发送响应
+                self.send_response(response.status_code)
+                
+                # 发送响应头（排除一些不需要的头）
+                for key, value in response.headers.items():
+                    key_lower = key.lower()
+                    if key_lower not in ['content-length', 'transfer-encoding', 'connection']:
+                        self.send_header(key, value)
+                
                 self.send_cors_headers()
                 self.end_headers()
                 
                 # 发送响应体
-                response_body = b''.join(response_body_parts)
-                self.wfile.write(response_body)
-            else:
+                self.wfile.write(response.content)
+                
+            except Exception as e:
+                import traceback
+                error_msg = str(e)
+                error_traceback = traceback.format_exc()
+                print(f"Error calling FastAPI: {error_msg}")
+                print(error_traceback)
                 self.send_json_response(500, {
-                    'error': 'No response from FastAPI app',
-                    'message': '应用未返回响应'
+                    'error': error_msg,
+                    'traceback': error_traceback,
+                    'message': 'FastAPI 调用失败'
                 })
             
         except Exception as e:
