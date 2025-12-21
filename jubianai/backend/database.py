@@ -15,16 +15,16 @@ def get_database_url() -> str:
     """
     获取数据库连接 URL
     优先级：
-    1. POSTGRES_URL (Vercel Postgres)
-    2. DATABASE_URL (通用环境变量)
+    1. POSTGRES_URL (旧版 Vercel Postgres，如果存在)
+    2. DATABASE_URL (Neon、Supabase 等 Marketplace 提供商使用这个)
     3. 本地 PostgreSQL (开发环境)
     """
-    # Vercel Postgres 提供的环境变量
+    # 旧版 Vercel Postgres 提供的环境变量（向后兼容）
     postgres_url = os.getenv("POSTGRES_URL")
     if postgres_url:
         return postgres_url
     
-    # 通用数据库 URL
+    # 通用数据库 URL（Neon、Supabase 等 Marketplace 提供商使用这个）
     database_url = os.getenv("DATABASE_URL")
     if database_url:
         return database_url
