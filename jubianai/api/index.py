@@ -8,6 +8,11 @@ import json
 class handler(BaseHTTPRequestHandler):
     """Vercel Python runtime 的标准 handler 类"""
     
+    def log_message(self, format, *args):
+        """重写 log_message 方法，避免日志错误"""
+        # Vercel 环境中不需要标准输出日志
+        pass
+    
     def do_GET(self):
         """处理 GET 请求"""
         self.handle_request()
