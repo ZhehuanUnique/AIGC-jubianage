@@ -51,7 +51,7 @@ st.markdown("""
 # 生产环境：从环境变量获取，开发环境：使用 localhost
 BACKEND_URL = os.getenv("BACKEND_URL", 
     "http://localhost:8000" if os.getenv("ENV") != "production" 
-    else os.getenv("BACKEND_URL", "https://your-api.vercel.app")
+    else os.getenv("BACKEND_URL", "https://jubianai.vercel.app")
 )
 
 # 初始化 session state
