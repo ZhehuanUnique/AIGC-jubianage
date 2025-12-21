@@ -2,39 +2,57 @@
 Vercel Serverless Function 入口
 将 FastAPI 应用适配为 Vercel Serverless Function
 """
-import sys
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 import os
-from pathlib import Path
-import traceback
 
-# 添加项目根目录到路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+# 创建 FastAPI 应用
+app = FastAPI(title="视频生成 API", version="1.0.0")
 
-# 延迟初始化数据库（在第一次请求时初始化，而不是在模块加载时）
-# 这样可以避免在 Vercel Serverless Functions 冷启动时因为数据库连接问题导致整个函数崩溃
+# 配置 CORS
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", 
+    "*" if os.getenv("ENV") != "production" else "https://jubianai.cn,https://www.jubianai.cn,https://jubianai.streamlit.app"
+).split(",")
 
-try:
-    # 导入 FastAPI 应用
-    from backend.api import app
-    from mangum import Mangum
-    
-    # 使用 Mangum 将 FastAPI 适配为 ASGI
-    handler = Mangum(app, lifespan="off")
-    
-    print("FastAPI app initialized successfully")
-except Exception as e:
-    # 如果导入失败，创建一个简单的错误处理函数
-    error_msg = str(e)
-    error_traceback = traceback.format_exc()
-    print(f"Error initializing FastAPI app: {error_msg}")
-    print(error_traceback)
-    
-    # 创建一个简单的错误处理函数
-    def handler(event, context):
-        return {
-            "statusCode": 500,
-            "body": f"Application initialization error: {error_msg}",
-            "headers": {"Content-Type": "application/json"}
-        }
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+@app.get("/")
+async def root():
+    """根路径"""
+    return {
+        "message": "视频生成 API 服务", 
+        "version": "1.0.0",
+        "status": "running"
+    }
+
+@app.get("/health")
+async def health_check():
+    """健康检查"""
+    return {
+        "status": "healthy",
+        "database": "not_configured"
+    }
+
+@app.get("/api/v1/assets/list")
+async def list_assets():
+    """获取所有资产（返回空列表）"""
+    return {}
+
+@app.get("/api/v1/assets/characters")
+async def list_characters():
+    """获取所有人物列表"""
+    return {
+        "characters": [],
+        "count": 0
+    }
+
+# 使用 Mangum 将 FastAPI 适配为 ASGI
+handler = Mangum(app, lifespan="off")
