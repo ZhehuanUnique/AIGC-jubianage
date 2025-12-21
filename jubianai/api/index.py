@@ -12,27 +12,39 @@ class handler(BaseHTTPRequestHandler):
         pass
     
     def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        
         path = self.path.split('?')[0]
         
-        if path == '/' or path == '/health':
-            response = {'status': 'ok', 'message': '后端服务运行正常'}
-        elif path == '/api/v1/assets/list':
-            response = {'assets': [], 'count': 0}
-        elif path == '/api/v1/assets/characters':
-            response = {'characters': [], 'count': 0}
-        else:
-            self.send_response(404)
+        # 健康检查
+        if path == '/health' or path == '/api/health':
+            self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
+            response = {'status': 'ok', 'message': '后端服务运行正常'}
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+        # API 路径
+        elif path.startswith('/api/'):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            if path == '/api/v1/assets/list':
+                response = {'assets': [], 'count': 0}
+            elif path == '/api/v1/assets/characters':
+                response = {'characters': [], 'count': 0}
+            else:
+                self.send_response(404)
+                response = {'error': 'Not found', 'path': path}
+            
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+        else:
+            # 非 API 路径返回 404（应该由静态文件处理）
+            self.send_response(404)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
             response = {'error': 'Not found', 'path': path}
-        
-        self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
     
     def do_POST(self):
         path = self.path.split('?')[0]
