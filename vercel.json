@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "jubianai/api/index.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/python"
     }
   ],
   "routes": [
@@ -14,10 +11,5 @@
       "src": "/(.*)",
       "dest": "jubianai/api/index.py"
     }
-  ],
-  "functions": {
-    "jubianai/api/index.py": {
-      "includeFiles": "jubianai/**"
-    }
-  }
+  ]
 }
