@@ -8,37 +8,11 @@
     <link rel="icon" type="image/svg+xml" href="./logo/favicon.svg" />
     <link rel="icon" type="image/png" href="./logo/favicon.png" />
     <link rel="apple-touch-icon" href="./logo/apple-touch-icon.png" />
-    <!-- 预加载关键资源 -->
-    <link rel="preload" href="./styles.css" as="style" />
-    <link rel="preload" href="./main.js" as="script" />
-    <link rel="preload" href="./logo/logo.png" as="image" />
     <link rel="stylesheet" href="./styles.css" />
-    <!-- DNS 预解析和预连接，加速资源加载 -->
-    <link rel="dns-prefetch" href="https://jubianai.cn" />
-    <!-- 剧变Agent地址配置（生产环境通过环境变量设置） -->
-    <script>
-      // 从环境变量获取地址（Vercel 会自动注入）
-      // 开发环境：http://localhost:8501
-      // 生产环境：默认使用 Streamlit Cloud 地址，或通过 Vercel 环境变量 JUBIANAI_AGENT_URL 覆盖
-      (function() {
-        // 检查是否在生产环境
-        const isProduction = window.location.hostname !== 'localhost' && 
-                            window.location.hostname !== '127.0.0.1' &&
-                            !window.location.hostname.startsWith('192.168.');
-        
-        if (!window.JUBIANAI_AGENT_URL) {
-          // 如果没有设置环境变量，根据环境选择默认值
-          window.JUBIANAI_AGENT_URL = isProduction 
-            ? 'https://jubianai.streamlit.app' 
-            : 'http://localhost:8501';
-        }
-      })();
-    </script>
   </head>
   <body>
-    <!-- 背景视频 - 优化加载：按需加载，支持 WebM（更小）和 MP4（回退） -->
-    <video class="bg-video" autoplay muted loop playsinline preload="metadata" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Crect fill='%23070A12' width='1920' height='1080'/%3E%3C/svg%3E">
-      <source src="./index.webm" type="video/webm" />
+    <!-- 背景视频 -->
+    <video class="bg-video" autoplay muted loop playsinline preload="auto">
       <source src="./index.mp4" type="video/mp4" />
     </video>
     
@@ -46,15 +20,7 @@
       <!-- Logo + 标题（左上角） -->
       <header class="header">
         <img class="header__logo" src="./logo/logo.png" alt="剧变时代 Logo" />
-        <div class="header__title-wrapper">
-          <span class="header__title" id="jubian-title">剧变时代</span>
-          <!-- 悬浮窗口 -->
-          <div class="header__tooltip" id="jubian-tooltip">
-            <div class="tooltip__content">
-              <span class="tooltip__text">剧变Agent</span>
-            </div>
-          </div>
-        </div>
+        <span class="header__title">剧变时代</span>
       </header>
       
       <section class="hero">
@@ -67,7 +33,7 @@
             <!-- 只需要写一份 items，JS 会自动复制一份用于无缝循环 -->
             <a class="card" href="javascript:void(0)" aria-label="视频 01">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214252.jpg" alt="封面 01" loading="eager" decoding="async" fetchpriority="high" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214252.jpg" alt="封面 01" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 01</div>
@@ -76,7 +42,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 02">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214301.jpg" alt="封面 02" loading="eager" decoding="async" fetchpriority="high" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214301.jpg" alt="封面 02" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 02</div>
@@ -85,7 +51,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 03">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214305.jpg" alt="封面 03" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214305.jpg" alt="封面 03" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 03</div>
@@ -94,7 +60,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 04">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214313.jpg" alt="封面 04" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214313.jpg" alt="封面 04" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 04</div>
@@ -103,7 +69,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 05">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214319.jpg" alt="封面 05" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214319.jpg" alt="封面 05" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 05</div>
@@ -112,7 +78,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 06">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214252.jpg" alt="封面 06" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214252.jpg" alt="封面 06" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 06</div>
@@ -121,7 +87,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 07">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214301.jpg" alt="封面 07" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214301.jpg" alt="封面 07" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 07</div>
@@ -130,7 +96,7 @@
             </a>
             <a class="card" href="javascript:void(0)" aria-label="视频 08">
               <div class="card__thumb">
-                <img class="card__img" src="./封面/2%EF%BC%9A3封面/20251218-214305.jpg" alt="封面 08" loading="eager" decoding="async" fetchpriority="low" />
+                <img class="card__img" src="./封面/2：3封面/20251218-214305.jpg" alt="封面 08" loading="lazy" />
               </div>
               <div class="card__meta">
                 <div class="card__title">AIGC 片段 08</div>

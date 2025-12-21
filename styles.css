@@ -38,26 +38,6 @@ body{
   min-height: 100%;
   /* 平滑过渡效果 */
   transition: opacity 0.5s ease-in-out;
-  /* 优化视频加载：使用硬件加速 */
-  transform: translateZ(0);
-  will-change: opacity;
-  /* 视频加载时的占位背景 */
-  background-color: #070A12;
-}
-
-/* 移动端：视频更居中显示，卡片变小 */
-@media (max-width: 768px) {
-  .bg-video {
-    /* 移动端视频居中显示，确保重要内容（男生）不被裁剪 */
-    object-position: 50% 40%;
-    /* 如果视频是横向的，可能需要调整垂直位置 */
-    object-fit: cover;
-  }
-  
-  /* 移动端卡片间距优化 */
-  .marquee__track {
-    gap: 12px; /* 移动端减小间距 */
-  }
 }
 
 /* 视频背景遮罩层，确保内容可读性和高级感 */
@@ -107,98 +87,12 @@ body::before {
   filter: brightness(1.1); /* 稍微提亮，确保在深色背景下可见 */
 }
 
-.header__title-wrapper{
-  position: relative;
-  display: inline-block;
-}
-
 .header__title{
   font-size: 32px; /* 和logo一样大小 */
   font-weight: 600;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  transition: color 0.3s ease, transform 0.2s ease;
-  user-select: none;
-}
-
-.header__title:hover{
-  color: rgba(255, 255, 255, 1);
-  transform: translateY(-1px);
-}
-
-/* 悬浮窗口样式 */
-.header__tooltip{
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
-  pointer-events: none;
-  z-index: 100;
-  margin-top: 8px;
-}
-
-.header__title-wrapper:hover .header__tooltip,
-.header__title-wrapper:active .header__tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-}
-
-/* 移动端：触摸时显示悬浮窗口 */
-@media (max-width: 768px) {
-  .header__title-wrapper:active .header__tooltip,
-  .header__title-wrapper.touch-active .header__tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(0);
-    pointer-events: auto;
-  }
-}
-
-.tooltip__content{
-  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.08));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 12px 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  white-space: nowrap;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.tooltip__content:hover{
-  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.12));
-  transform: translateY(-1px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-}
-
-.tooltip__content::before{
-  content: "";
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-bottom-color: rgba(255, 255, 255, 0.2);
-  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.tooltip__text{
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: 0.05em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  display: block;
 }
 
 .hero{
@@ -267,26 +161,6 @@ body::before {
   position:relative;
   transition: transform .25s ease, border-color .25s ease, background .25s ease, filter .25s ease;
 }
-
-/* 移动端：卡片变小 - 使用多个断点确保覆盖所有移动设备 */
-@media screen and (max-width: 768px),
-       screen and (max-device-width: 768px),
-       (orientation: portrait) and (max-width: 1024px) {
-  .card {
-    width: 140px !important; /* 从 210px 减小到 140px，更明显的变化 */
-    min-width: 140px !important;
-    max-width: 140px !important;
-  }
-  
-  .card__thumb {
-    min-height: 210px !important; /* 相应调整最小高度 */
-  }
-  
-  /* 移动端卡片间距优化 */
-  .marquee__track {
-    gap: 10px !important; /* 移动端减小间距 */
-  }
-}
 .card:hover{
   transform: translateY(-2px);
   border-color: var(--stroke2);
@@ -323,12 +197,7 @@ body::before {
   transform: translateZ(0) scale(1.02);
   filter: saturate(1.10) contrast(1.06) brightness(1.02);
   will-change: transform, filter;
-  transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .55s cubic-bezier(.2,.8,.2,1), opacity .3s ease-in;
-  /* 优化图片加载性能，保持高质量 */
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  /* 确保图片在加载时不会闪烁 */
-  background-color: #0a1026;
+  transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .55s cubic-bezier(.2,.8,.2,1);
 }
 
 .card:hover .card__img{

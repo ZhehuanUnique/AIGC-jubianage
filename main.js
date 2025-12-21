@@ -297,76 +297,17 @@ function setupMarquee(root) {
   };
 }
 
-// 背景视频处理：确保视频正确加载和循环播放（优化加载性能，不压缩视频）
+// 背景视频处理：确保视频正确加载和循环播放
 function setupBackgroundVideo() {
   const video = document.querySelector(".bg-video");
   if (!video) return;
 
-  // 使用 Intersection Observer 实现真正的按需加载
-  // 视频只在进入视口或页面完全加载后才开始加载
-  let videoLoaded = false;
-  
-  const loadVideo = () => {
-    if (videoLoaded) return;
-    videoLoaded = true;
-    
-    // 使用流式加载：先加载元数据，然后按需加载视频数据
-    video.preload = "auto";
-    
-    // 确保视频循环播放
-    video.addEventListener("loadeddata", () => {
-      video.play().catch((err) => {
-        console.warn("视频自动播放失败:", err);
-      });
-    }, { once: true });
-    
-    // 监听视频加载进度，优化体验
-    video.addEventListener("progress", () => {
-      // 当视频有足够数据可以播放时，开始播放
-      if (video.readyState >= 3 && video.paused) {
-        video.play().catch(() => {});
-      }
+  // 确保视频循环播放
+  video.addEventListener("loadeddata", () => {
+    video.play().catch((err) => {
+      console.warn("视频自动播放失败:", err);
     });
-  };
-
-  // 移动端立即加载，桌面端延迟加载
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-  
-  if (isMobile) {
-    // 移动端立即加载视频
-    loadVideo();
-  } else {
-    // 桌面端使用 Intersection Observer 延迟加载
-    if ("IntersectionObserver" in window) {
-      const videoObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            loadVideo();
-            videoObserver.disconnect();
-          }
-        });
-      }, {
-        rootMargin: "200px"
-      });
-      
-      videoObserver.observe(video);
-      
-      setTimeout(() => {
-        if (!videoLoaded) {
-          loadVideo();
-          videoObserver.disconnect();
-        }
-      }, 3000);
-    } else {
-      if (document.readyState === "complete") {
-        setTimeout(loadVideo, 1000);
-      } else {
-        window.addEventListener("load", () => {
-          setTimeout(loadVideo, 1000);
-        }, { once: true });
-      }
-    }
-  }
+  });
 
   // 视频结束时重新播放（确保无缝循环）
   video.addEventListener("ended", () => {
@@ -392,130 +333,9 @@ function setupBackgroundVideo() {
   });
 }
 
-// 图片加载：确保所有图片正常显示
-function setupImageLazyLoading() {
-  const images = document.querySelectorAll("img.card__img");
-  
-  // 所有图片立即显示，不设置透明度
-  images.forEach((img) => {
-    img.style.opacity = "1";
-    
-    // 修复路径中的中文冒号编码问题
-    if (img.src && img.src.includes('：')) {
-      // 如果路径包含中文冒号，重新设置 src 确保正确编码
-      const originalSrc = img.getAttribute('src');
-      if (originalSrc) {
-        // 使用 encodeURI 确保路径正确编码
-        const encodedSrc = originalSrc.split('/').map(part => {
-          return encodeURIComponent(part).replace(/%3A/g, '：'); // 保持中文冒号，但编码其他特殊字符
-        }).join('/');
-        
-        // 如果编码后的路径不同，更新 src
-        if (encodedSrc !== img.src) {
-          img.src = encodedSrc;
-        }
-      }
-    }
-    
-    // 确保图片加载
-    if (img.complete) {
-      img.style.opacity = "1";
-    } else {
-      img.addEventListener("load", () => {
-        img.style.opacity = "1";
-      }, { once: true });
-      img.addEventListener("error", (e) => {
-        console.warn("图片加载失败:", img.src);
-        // 尝试使用原始路径重新加载
-        const originalSrc = img.getAttribute('src');
-        if (originalSrc && originalSrc !== img.src) {
-          img.src = originalSrc;
-        }
-        img.style.opacity = "1"; // 即使失败也显示，避免空白
-      }, { once: true });
-    }
-  });
-}
-
-// 设置"剧变时代"标题的点击事件，打开剧变Agent子页面
-function setupJubianTitle() {
-  const title = document.getElementById("jubian-title");
-  const tooltip = document.getElementById("jubian-tooltip");
-  const titleWrapper = title ? title.closest(".header__title-wrapper") : null;
-  
-  if (!title) return;
-  
-  // 移动端：触摸时显示悬浮窗口
-  if (titleWrapper) {
-    let touchTimer = null;
-    title.addEventListener("touchstart", (e) => {
-      titleWrapper.classList.add("touch-active");
-      // 触摸后延迟隐藏，让用户有时间看到
-      clearTimeout(touchTimer);
-      touchTimer = setTimeout(() => {
-        titleWrapper.classList.remove("touch-active");
-      }, 2000);
-    }, { passive: true });
-  }
-  
-  // 获取生产环境地址（从环境变量或默认值）
-  // 开发环境：http://localhost:8501
-  // 生产环境：默认使用 Streamlit Cloud 地址
-  const getAgentUrl = () => {
-    // 优先使用环境变量（如果通过 Vercel 等平台设置）
-    if (window.JUBIANAI_AGENT_URL) {
-      return window.JUBIANAI_AGENT_URL;
-    }
-    // 检查是否在生产环境（非 localhost）
-    const isProduction = window.location.hostname !== 'localhost' && 
-                        window.location.hostname !== '127.0.0.1' &&
-                        !window.location.hostname.startsWith('192.168.');
-    
-    if (isProduction) {
-      // 生产环境：使用 Streamlit Cloud 地址
-      return 'https://jubianai.streamlit.app';
-    }
-    // 开发环境
-    return 'http://localhost:8501';
-  };
-  
-  const agentUrl = getAgentUrl();
-  
-  // 点击标题打开子页面
-  title.addEventListener("click", (e) => {
-    e.preventDefault();
-    window.open(agentUrl, "_blank");
-  });
-  
-  // 点击悬浮窗口也打开子页面
-  if (tooltip) {
-    tooltip.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      window.open(agentUrl, "_blank");
-    });
-    
-    // 让悬浮窗口可点击
-    const tooltipContent = tooltip.querySelector(".tooltip__content");
-    if (tooltipContent) {
-      tooltipContent.style.cursor = "pointer";
-      tooltipContent.addEventListener("mouseenter", () => {
-        tooltipContent.style.background = "linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.12))";
-      });
-      tooltipContent.addEventListener("mouseleave", () => {
-        tooltipContent.style.background = "linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.08))";
-      });
-    }
-  }
-}
-
 document.addEventListener(
   "DOMContentLoaded",
   () => {
-    // 设置"剧变时代"标题点击事件
-    setupJubianTitle();
-    // 设置智能图片懒加载
-    setupImageLazyLoading();
     // 设置背景视频
     setupBackgroundVideo();
     // 设置流动播放
