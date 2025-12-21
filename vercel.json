@@ -12,8 +12,12 @@
       "dest": "jubianai/api/index.py"
     },
     {
-      "src": "/(.*)",
+      "src": "/(.*\\.(html|js|css|png|jpg|jpeg|gif|svg|ico|mp4|webm))",
       "dest": "/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
     }
   ]
 }
