@@ -35,11 +35,6 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
     
     def do_POST(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        
         path = self.path.split('?')[0]
         
         if path == '/api/v1/video/generate':
@@ -52,7 +47,10 @@ class handler(BaseHTTPRequestHandler):
             except:
                 data = {}
             
-            # 尝试调用 FastAPI - 添加更详细的错误处理
+            # 尝试调用 FastAPI
+            response_data = None
+            status_code = 200
+            
             try:
                 import sys
                 from pathlib import Path
@@ -62,61 +60,92 @@ class handler(BaseHTTPRequestHandler):
                 if str(project_root) not in sys.path:
                     sys.path.insert(0, str(project_root))
                 
-                # 尝试导入
+                # 尝试导入 FastAPI
                 try:
                     from backend.api import app
                 except ImportError as e:
-                    # 如果导入失败，返回详细错误
-                    response = {
+                    response_data = {
                         'success': False,
                         'error': f'Failed to import FastAPI app: {str(e)}',
-                        'message': '后端服务配置错误',
-                        'sys_path': sys.path[:3]  # 只返回前3个路径，避免太长
+                        'message': '后端服务配置错误'
                     }
-                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
-                    return
-                
-                # 尝试使用 TestClient
-                try:
-                    from starlette.testclient import TestClient
-                except ImportError as e:
-                    response = {
-                        'success': False,
-                        'error': f'Failed to import TestClient: {str(e)}',
-                        'message': '缺少 starlette 依赖'
-                    }
-                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
-                    return
-                
-                client = TestClient(app)
-                response = client.post('/api/v1/video/generate', json=data)
-                
-                self.send_response(response.status_code)
-                for key, value in response.headers.items():
-                    if key.lower() not in ['content-length', 'transfer-encoding', 'connection']:
-                        self.send_header(key, value)
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(response.content)
-                return
-                
+                    status_code = 500
+                else:
+                    # 尝试使用 TestClient
+                    try:
+                        from starlette.testclient import TestClient
+                    except ImportError as e:
+                        response_data = {
+                            'success': False,
+                            'error': f'Failed to import TestClient: {str(e)}',
+                            'message': '缺少 starlette 依赖'
+                        }
+                        status_code = 500
+                    else:
+                        # 调用 FastAPI
+                        try:
+                            client = TestClient(app)
+                            fastapi_response = client.post('/api/v1/video/generate', json=data)
+                            
+                            # 尝试解析 FastAPI 返回的 JSON
+                            try:
+                                response_data = fastapi_response.json()
+                                status_code = fastapi_response.status_code
+                            except:
+                                # 如果不是 JSON，返回错误
+                                response_data = {
+                                    'success': False,
+                                    'error': 'FastAPI returned non-JSON response',
+                                    'message': '后端返回了无效的响应格式',
+                                    'response_text': fastapi_response.text[:200] if hasattr(fastapi_response, 'text') else str(fastapi_response.content)[:200]
+                                }
+                                status_code = 500
+                        except Exception as e:
+                            import traceback
+                            error_traceback = traceback.format_exc()
+                            response_data = {
+                                'success': False,
+                                'error': str(e),
+                                'message': '视频生成失败',
+                                'traceback': error_traceback[:500]
+                            }
+                            status_code = 500
+                            
             except Exception as e:
                 import traceback
                 error_traceback = traceback.format_exc()
-                response = {
+                response_data = {
                     'success': False,
                     'error': str(e),
-                    'message': '视频生成失败',
-                    'traceback': error_traceback[:500]  # 只返回前500字符
+                    'message': '处理请求时出错',
+                    'traceback': error_traceback[:500]
                 }
+                status_code = 500
+            
+            # 确保 response_data 不为 None
+            if response_data is None:
+                response_data = {
+                    'success': False,
+                    'error': 'Unknown error',
+                    'message': '未知错误'
+                }
+                status_code = 500
+            
+            # 发送响应
+            self.send_response(status_code)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data, ensure_ascii=False).encode('utf-8'))
+            
         else:
+            # 404 响应
             self.send_response(404)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             response = {'error': 'Not found', 'path': path}
-        
-        self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
     
     def do_OPTIONS(self):
         self.send_response(200)
