@@ -460,14 +460,18 @@ function setupJubianTitle() {
   
   // 获取生产环境地址（从环境变量或默认值）
   // 开发环境：http://localhost:8501
-  // 生产环境：从环境变量或配置中获取
+  // 生产环境：默认使用 Streamlit Cloud 地址
   const getAgentUrl = () => {
     // 优先使用环境变量（如果通过 Vercel 等平台设置）
     if (window.JUBIANAI_AGENT_URL) {
       return window.JUBIANAI_AGENT_URL;
     }
     // 检查是否在生产环境（非 localhost）
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    const isProduction = window.location.hostname !== 'localhost' && 
+                        window.location.hostname !== '127.0.0.1' &&
+                        !window.location.hostname.startsWith('192.168.');
+    
+    if (isProduction) {
       // 生产环境：使用 Streamlit Cloud 地址
       return 'https://jubianai.streamlit.app';
     }

@@ -19,8 +19,20 @@
     <script>
       // 从环境变量获取地址（Vercel 会自动注入）
       // 开发环境：http://localhost:8501
-      // 生产环境：通过 Vercel 环境变量 JUBIANAI_AGENT_URL 设置
-      window.JUBIANAI_AGENT_URL = window.JUBIANAI_AGENT_URL || 'http://localhost:8501';
+      // 生产环境：默认使用 Streamlit Cloud 地址，或通过 Vercel 环境变量 JUBIANAI_AGENT_URL 覆盖
+      (function() {
+        // 检查是否在生产环境
+        const isProduction = window.location.hostname !== 'localhost' && 
+                            window.location.hostname !== '127.0.0.1' &&
+                            !window.location.hostname.startsWith('192.168.');
+        
+        if (!window.JUBIANAI_AGENT_URL) {
+          // 如果没有设置环境变量，根据环境选择默认值
+          window.JUBIANAI_AGENT_URL = isProduction 
+            ? 'https://jubianai.streamlit.app' 
+            : 'http://localhost:8501';
+        }
+      })();
     </script>
   </head>
   <body>
