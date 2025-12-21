@@ -12,15 +12,30 @@ import httpx
 import os
 import sys
 from pathlib import Path
+import traceback
 
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS
-from backend.database import get_db, init_db
-from backend.assets_api import (
-    upload_asset, get_assets_by_character, delete_asset, 
-    get_asset_path, AssetMetadata
-)
+
+try:
+    from config import API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS
+    from backend.database import get_db, init_db
+    from backend.assets_api import (
+        upload_asset, get_assets_by_character, delete_asset, 
+        get_asset_path, AssetMetadata
+    )
+except Exception as e:
+    print(f"Error importing modules: {e}")
+    print(traceback.format_exc())
+    # 设置默认值，避免导入失败导致应用无法启动
+    API_KEY = os.getenv("API_KEY", "")
+    SEEDANCE_API_ENDPOINT = os.getenv("SEEDANCE_API_ENDPOINT", "")
+    DEFAULT_VIDEO_SETTINGS = {
+        "width": 1024,
+        "height": 576,
+        "duration": 5,
+        "fps": 24,
+    }
 
 app = FastAPI(title="视频生成 API", version="1.0.0")
 
