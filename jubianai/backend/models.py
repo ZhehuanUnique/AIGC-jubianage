@@ -20,7 +20,7 @@ class Asset(Base):
     upload_time = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     file_size = Column(Integer, nullable=False)
     file_type = Column(String(20), nullable=True)   # 文件类型：image, video 等
-    metadata = Column(Text, nullable=True)          # JSON 格式的额外元数据
+    extra_metadata = Column(Text, nullable=True)    # JSON 格式的额外元数据（重命名，因为 metadata 是 SQLAlchemy 保留字）
     
     def to_dict(self):
         """转换为字典格式（兼容旧的 AssetMetadata 模型）"""
