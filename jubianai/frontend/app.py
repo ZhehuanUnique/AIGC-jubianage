@@ -7,6 +7,7 @@ import requests
 import time
 from typing import Optional
 import os
+from pathlib import Path
 
 # 页面配置
 st.set_page_config(
@@ -49,10 +50,10 @@ st.markdown("""
 
 # API 配置（可以通过环境变量或侧边栏配置）
 # 生产环境：从环境变量获取，开发环境：使用 localhost
-BACKEND_URL = os.getenv("BACKEND_URL", 
-    "http://localhost:8000" if os.getenv("ENV") != "production" 
-    else os.getenv("BACKEND_URL", "https://jubianai.vercel.app")
-)
+if os.getenv("ENV") == "production":
+    BACKEND_URL = os.getenv("BACKEND_URL", "https://jubianai.vercel.app")
+else:
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # 初始化 session state
 if "generated_videos" not in st.session_state:
@@ -61,24 +62,71 @@ if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 if "backend_url" not in st.session_state:
     st.session_state.backend_url = BACKEND_URL
+if "jimeng_access_key_id" not in st.session_state:
+    st.session_state.jimeng_access_key_id = ""
+if "jimeng_secret_access_key" not in st.session_state:
+    st.session_state.jimeng_secret_access_key = ""
+if "provider" not in st.session_state:
+    st.session_state.provider = "jimeng"  # 默认使用即梦
 
 
-def generate_video(prompt: str, width: int, height: int, duration: int, 
-                   fps: int, seed: Optional[int], negative_prompt: Optional[str],
-                   api_key: str, backend_url: str) -> dict:
+def generate_video(
+    prompt: Optional[str] = None,
+    width: int = 1024,
+    height: int = 576,
+    duration: int = 5,
+    fps: int = 24,
+    seed: Optional[int] = None,
+    negative_prompt: Optional[str] = None,
+    api_key: str = "",
+    backend_url: str = "",
+    provider: str = "jimeng",
+    jimeng_access_key_id: str = "",
+    jimeng_secret_access_key: str = "",
+    mode: str = "first_frame",
+    image_base64: Optional[str] = None,
+    start_image_base64: Optional[str] = None,
+    end_image_base64: Optional[str] = None
+) -> dict:
     """调用后端 API 生成视频"""
     url = f"{backend_url}/api/v1/video/generate"
     
     payload = {
-        "prompt": prompt,
         "width": width,
         "height": height,
         "duration": duration,
         "fps": fps,
         "seed": seed,
         "negative_prompt": negative_prompt,
-        "api_key": api_key if api_key else None,
+        "provider": provider,
     }
+    
+    # 根据服务提供商添加相应的参数
+    if provider == "jimeng":
+        # 即梦图生视频
+        payload["jimeng_access_key_id"] = jimeng_access_key_id if jimeng_access_key_id else None
+        payload["jimeng_secret_access_key"] = jimeng_secret_access_key if jimeng_secret_access_key else None
+        payload["mode"] = mode
+        
+        if mode == "first_frame":
+            if image_base64:
+                payload["image_base64"] = image_base64
+            if prompt:
+                payload["prompt"] = prompt
+        elif mode == "first_last_frame":
+            if start_image_base64:
+                payload["start_image_base64"] = start_image_base64
+            elif image_base64:
+                payload["start_image_base64"] = image_base64
+            if end_image_base64:
+                payload["end_image_base64"] = end_image_base64
+            if prompt:
+                payload["prompt"] = prompt
+    elif provider == "seedance":
+        # Seedance 文生视频
+        if prompt:
+            payload["prompt"] = prompt
+        payload["api_key"] = api_key if api_key else None
     
     try:
         response = requests.post(url, json=payload, timeout=300)
@@ -123,14 +171,43 @@ def video_generation_page():
     with st.sidebar:
         st.header("⚙️ 配置")
         
-        # API Key 输入
-        api_key = st.text_input(
-            "API Key",
-            value=st.session_state.api_key,
-            type="password",
-            help="输入您的 API Key"
+        # 服务提供商选择
+        provider = st.selectbox(
+            "服务提供商",
+            options=["jimeng", "seedance"],
+            index=0 if st.session_state.provider == "jimeng" else 1,
+            help="选择视频生成服务提供商"
         )
-        st.session_state.api_key = api_key
+        st.session_state.provider = provider
+        
+        if provider == "jimeng":
+            # 即梦 API 配置
+            st.markdown("#### 即梦 API 配置")
+            jimeng_access_key_id = st.text_input(
+                "即梦 AccessKeyId",
+                value=st.session_state.jimeng_access_key_id,
+                type="password",
+                help="输入即梦 AccessKeyId"
+            )
+            st.session_state.jimeng_access_key_id = jimeng_access_key_id
+            
+            jimeng_secret_access_key = st.text_input(
+                "即梦 SecretAccessKey",
+                value=st.session_state.jimeng_secret_access_key,
+                type="password",
+                help="输入即梦 SecretAccessKey"
+            )
+            st.session_state.jimeng_secret_access_key = jimeng_secret_access_key
+        else:
+            # Seedance API 配置
+            st.markdown("#### Seedance API 配置")
+            api_key = st.text_input(
+                "API Key",
+                value=st.session_state.api_key,
+                type="password",
+                help="输入您的 Seedance API Key"
+            )
+            st.session_state.api_key = api_key
         
         # 后端 URL 配置
         backend_url = st.text_input(
@@ -143,12 +220,21 @@ def video_generation_page():
         st.divider()
         
         st.markdown("### 📖 使用说明")
-        st.markdown("""
-        1. 输入视频描述（提示词）
-        2. 调整视频参数（可选）
-        3. 点击"生成视频"按钮
-        4. 等待视频生成完成
-        """)
+        if provider == "jimeng":
+            st.markdown("""
+            **即梦图生视频：**
+            1. 选择生成模式（首帧或首尾帧）
+            2. 上传图片（首帧模式1张，首尾帧模式2张）
+            3. 调整视频参数（可选）
+            4. 点击"生成视频"按钮
+            """)
+        else:
+            st.markdown("""
+            **Seedance 文生视频：**
+            1. 输入视频描述（提示词）
+            2. 调整视频参数（可选）
+            3. 点击"生成视频"按钮
+            """)
         
         st.divider()
         
@@ -165,21 +251,106 @@ def video_generation_page():
     with col1:
         st.header("📝 视频生成")
         
-        # 提示词输入
-        prompt = st.text_area(
-            "视频描述（提示词）",
-            height=150,
-            placeholder="例如：一只可爱的小猫在花园里玩耍，阳光明媚，画面清晰",
-            help="详细描述您想要生成的视频内容"
-        )
+        provider = st.session_state.provider
         
-        # 负面提示词（可选）
-        negative_prompt = st.text_area(
-            "负面提示词（可选）",
-            height=100,
-            placeholder="例如：模糊、低质量、变形",
-            help="描述不希望在视频中出现的内容"
-        )
+        # 即梦图生视频模式
+        if provider == "jimeng":
+            # 模式选择
+            mode = st.radio(
+                "生成模式",
+                options=["first_frame", "first_last_frame"],
+                format_func=lambda x: "首帧模式" if x == "first_frame" else "首尾帧模式",
+                help="首帧模式：使用一张图片生成视频；首尾帧模式：使用两张图片生成视频"
+            )
+            
+            # 图片上传
+            if mode == "first_frame":
+                uploaded_image = st.file_uploader(
+                    "上传首帧图片",
+                    type=["png", "jpg", "jpeg"],
+                    help="上传一张图片作为视频的首帧"
+                )
+                start_image_base64 = None
+                end_image_base64 = None
+                image_base64 = None
+                
+                if uploaded_image:
+                    import base64
+                    image_bytes = uploaded_image.read()
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    st.image(uploaded_image, caption="首帧图片", use_container_width=True)
+            else:
+                col_start, col_end = st.columns(2)
+                with col_start:
+                    uploaded_start_image = st.file_uploader(
+                        "上传首帧图片",
+                        type=["png", "jpg", "jpeg"],
+                        key="start_image",
+                        help="上传首帧图片"
+                    )
+                    if uploaded_start_image:
+                        import base64
+                        start_image_bytes = uploaded_start_image.read()
+                        start_image_base64 = base64.b64encode(start_image_bytes).decode('utf-8')
+                        st.image(uploaded_start_image, caption="首帧", use_container_width=True)
+                    else:
+                        start_image_base64 = None
+                
+                with col_end:
+                    uploaded_end_image = st.file_uploader(
+                        "上传尾帧图片",
+                        type=["png", "jpg", "jpeg"],
+                        key="end_image",
+                        help="上传尾帧图片"
+                    )
+                    if uploaded_end_image:
+                        import base64
+                        end_image_bytes = uploaded_end_image.read()
+                        end_image_base64 = base64.b64encode(end_image_bytes).decode('utf-8')
+                        st.image(uploaded_end_image, caption="尾帧", use_container_width=True)
+                    else:
+                        end_image_base64 = None
+                
+                image_base64 = None
+            
+            # 提示词（可选）
+            prompt = st.text_area(
+                "视频描述（提示词，可选）",
+                height=100,
+                placeholder="例如：画面平滑过渡，自然流畅",
+                help="可选：描述视频的过渡效果或风格"
+            )
+            
+            # 负面提示词（可选）
+            negative_prompt = st.text_area(
+                "负面提示词（可选）",
+                height=80,
+                placeholder="例如：模糊、低质量、变形",
+                help="描述不希望在视频中出现的内容"
+            )
+        
+        # Seedance 文生视频模式
+        else:
+            mode = None
+            image_base64 = None
+            start_image_base64 = None
+            end_image_base64 = None
+            
+            # 提示词输入
+            prompt = st.text_area(
+                "视频描述（提示词）",
+                height=150,
+                placeholder="例如：一只可爱的小猫在花园里玩耍，阳光明媚，画面清晰",
+                help="详细描述您想要生成的视频内容"
+            )
+            
+            # 负面提示词（可选）
+            negative_prompt = st.text_area(
+                "负面提示词（可选）",
+                height=100,
+                placeholder="例如：模糊、低质量、变形",
+                help="描述不希望在视频中出现的内容"
+            )
         
         # 高级参数
         with st.expander("⚙️ 高级参数", expanded=False):
@@ -233,23 +404,84 @@ def video_generation_page():
         
         # 生成视频
         if generate_button:
-            if not prompt:
-                st.error("请输入视频描述！")
-            elif not api_key:
-                st.warning("⚠️ 请在侧边栏输入 API Key")
+            # 检查 API Key 配置
+            provider = st.session_state.provider
+            if provider == "jimeng":
+                # 即梦图生视频
+                if not st.session_state.jimeng_access_key_id or not st.session_state.jimeng_secret_access_key:
+                    st.warning("⚠️ 请输入即梦 API 密钥（AccessKeyId 和 SecretAccessKey）")
+                elif mode == "first_frame" and not image_base64:
+                    st.error("⚠️ 请上传首帧图片！")
+                elif mode == "first_last_frame" and (not start_image_base64 or not end_image_base64):
+                    st.error("⚠️ 请上传首帧和尾帧图片！")
+                else:
+                    with st.spinner("正在生成视频，请稍候..."):
+                        result = generate_video(
+                            prompt=prompt if prompt else None,
+                            width=width,
+                            height=height,
+                            duration=duration,
+                            fps=fps,
+                            seed=int(seed) if seed is not None else None,
+                            negative_prompt=negative_prompt if negative_prompt else None,
+                            api_key="",  # Seedance 不需要
+                            backend_url=st.session_state.backend_url,
+                            provider=provider,
+                            jimeng_access_key_id=st.session_state.jimeng_access_key_id,
+                            jimeng_secret_access_key=st.session_state.jimeng_secret_access_key,
+                            mode=mode,
+                            image_base64=image_base64,
+                            start_image_base64=start_image_base64,
+                            end_image_base64=end_image_base64
+                        )
+                        
+                        # 处理结果
+                        if result.get("success"):
+                            if result.get("video_url"):
+                                st.success("✅ 视频生成成功！")
+                                st.video(result["video_url"])
+                            elif result.get("task_id"):
+                                st.success(f"✅ 任务已提交！任务 ID: {result['task_id']}")
+                                st.info("⏳ 视频正在生成中，请稍后查询状态...")
+                            else:
+                                st.info(result.get("message", "请求已接收"))
+                        else:
+                            st.error(f"❌ 生成失败: {result.get('error', result.get('message', '未知错误'))}")
             else:
-                with st.spinner("正在生成视频，请稍候..."):
-                    result = generate_video(
-                        prompt=prompt,
-                        width=width,
-                        height=height,
-                        duration=duration,
-                        fps=fps,
-                        seed=int(seed) if seed is not None else None,
-                        negative_prompt=negative_prompt if negative_prompt else None,
-                        api_key=api_key,
-                        backend_url=st.session_state.backend_url
-                    )
+                # Seedance 文生视频
+                if not prompt:
+                    st.error("请输入视频描述！")
+                else:
+                    api_key = st.session_state.api_key
+                    if not api_key:
+                        st.warning("⚠️ 请输入 Seedance API Key")
+                    else:
+                        with st.spinner("正在生成视频，请稍候..."):
+                            result = generate_video(
+                                prompt=prompt,
+                                width=width,
+                                height=height,
+                                duration=duration,
+                                fps=fps,
+                                seed=int(seed) if seed is not None else None,
+                                negative_prompt=negative_prompt if negative_prompt else None,
+                                api_key=api_key,
+                                backend_url=st.session_state.backend_url,
+                                provider=provider
+                            )
+                            
+                            # 处理结果
+                            if result.get("success"):
+                                if result.get("video_url"):
+                                    st.success("✅ 视频生成成功！")
+                                    st.video(result["video_url"])
+                                elif result.get("task_id"):
+                                    st.success(f"✅ 任务已提交！任务 ID: {result['task_id']}")
+                                    st.info("⏳ 视频正在生成中，请稍后查询状态...")
+                                else:
+                                    st.info(result.get("message", "请求已接收"))
+                            else:
+                                st.error(f"❌ 生成失败: {result.get('error', result.get('message', '未知错误'))}")
                     
                     if result.get("success"):
                         task_id = result.get("task_id")

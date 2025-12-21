@@ -18,18 +18,39 @@ import traceback
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from config import API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS
+    from config import (
+        API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS,
+        JIMENG_ACCESS_KEY_ID, JIMENG_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT
+    )
     from backend.database import get_db, init_db
     from backend.assets_api import (
         upload_asset, get_assets_by_character, delete_asset, 
         get_asset_path, AssetMetadata
     )
+    # 即梦 API 客户端
+    try:
+        from backend.jimeng_client import (
+            generate_video_from_image_first_frame,
+            generate_video_from_images_first_last,
+            check_video_status as jimeng_check_status
+        )
+    except ImportError:
+        # 如果导入失败，创建占位函数
+        async def generate_video_from_image_first_frame(*args, **kwargs):
+            raise Exception("即梦 API 客户端未正确导入")
+        async def generate_video_from_images_first_last(*args, **kwargs):
+            raise Exception("即梦 API 客户端未正确导入")
+        async def jimeng_check_status(*args, **kwargs):
+            raise Exception("即梦 API 客户端未正确导入")
 except Exception as e:
     print(f"Error importing modules: {e}")
     print(traceback.format_exc())
     # 设置默认值，避免导入失败导致应用无法启动
     API_KEY = os.getenv("API_KEY", "")
     SEEDANCE_API_ENDPOINT = os.getenv("SEEDANCE_API_ENDPOINT", "")
+    JIMENG_ACCESS_KEY_ID = os.getenv("JIMENG_ACCESS_KEY_ID", "")
+    JIMENG_SECRET_ACCESS_KEY = os.getenv("JIMENG_SECRET_ACCESS_KEY", "")
+    JIMENG_API_ENDPOINT = os.getenv("JIMENG_API_ENDPOINT", "https://api.jimeng.ai")
     DEFAULT_VIDEO_SETTINGS = {
         "width": 1024,
         "height": 576,
@@ -61,14 +82,22 @@ app.add_middleware(
 
 class VideoGenerationRequest(BaseModel):
     """视频生成请求模型"""
-    prompt: str  # 文本提示词
+    prompt: Optional[str] = None  # 文本提示词（图生视频时可选）
     width: Optional[int] = DEFAULT_VIDEO_SETTINGS["width"]
     height: Optional[int] = DEFAULT_VIDEO_SETTINGS["height"]
     duration: Optional[int] = DEFAULT_VIDEO_SETTINGS["duration"]
     fps: Optional[int] = DEFAULT_VIDEO_SETTINGS["fps"]
     seed: Optional[int] = None
     negative_prompt: Optional[str] = None
-    api_key: Optional[str] = None  # 前端传入的 API Key
+    api_key: Optional[str] = None  # 前端传入的 API Key（用于 Seedance）
+    provider: Optional[str] = "jimeng"  # 服务提供商：jimeng 或 seedance
+    jimeng_access_key_id: Optional[str] = None  # 即梦 AccessKeyId
+    jimeng_secret_access_key: Optional[str] = None  # 即梦 SecretAccessKey
+    # 图生视频参数
+    mode: Optional[str] = "first_frame"  # 模式：first_frame（首帧）或 first_last_frame（首尾帧）
+    image_base64: Optional[str] = None  # 首帧图片 Base64 编码
+    start_image_base64: Optional[str] = None  # 首帧图片 Base64 编码（首尾帧模式）
+    end_image_base64: Optional[str] = None  # 尾帧图片 Base64 编码（首尾帧模式）
 
 
 class VideoGenerationResponse(BaseModel):
@@ -146,59 +175,115 @@ async def generate_video(request: VideoGenerationRequest):
     """
     生成视频接口
     
-    后续接入 Seedance 1.0 Fast API
+    支持即梦（JIMENG）图生视频：首帧和首尾帧两种模式
+    支持 Seedance 文生视频
     """
-    # 使用请求中的 API Key 或配置文件中的 API Key
-    api_key = request.api_key or API_KEY
-    
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="API Key 未配置，请在配置文件中设置或通过请求传入"
-        )
-    
-    if not request.prompt:
-        raise HTTPException(
-            status_code=400,
-            detail="提示词不能为空"
-        )
+    provider = request.provider or "jimeng"  # 默认使用即梦
     
     try:
-        # TODO: 接入 Seedance 1.0 Fast API
-        # 目前返回模拟响应
-        # 实际接入时，需要根据 Seedance API 文档进行调用
+        if provider == "jimeng":
+            # 使用即梦 API（图生视频）
+            jimeng_ak_id = request.jimeng_access_key_id or JIMENG_ACCESS_KEY_ID
+            jimeng_ak_secret = request.jimeng_secret_access_key or JIMENG_SECRET_ACCESS_KEY
+            
+            if not jimeng_ak_id or not jimeng_ak_secret:
+                raise HTTPException(
+                    status_code=400,
+                    detail="即梦 API 密钥未配置，请设置 JIMENG_ACCESS_KEY_ID 和 JIMENG_SECRET_ACCESS_KEY"
+                )
+            
+            mode = request.mode or "first_frame"  # 默认首帧模式
+            
+            # 根据模式调用不同的接口
+            if mode == "first_frame":
+                # 首帧图生视频
+                if not request.image_base64:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="首帧模式需要提供 image_base64 参数"
+                    )
+                
+                result = await generate_video_from_image_first_frame(
+                    image_base64=request.image_base64,
+                    duration=request.duration,
+                    access_key_id=jimeng_ak_id,
+                    secret_access_key=jimeng_ak_secret,
+                    prompt=request.prompt,
+                    negative_prompt=request.negative_prompt,
+                    seed=request.seed
+                )
+            
+            elif mode == "first_last_frame":
+                # 首尾帧图生视频
+                start_image = request.start_image_base64 or request.image_base64
+                if not start_image or not request.end_image_base64:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="首尾帧模式需要提供 start_image_base64 和 end_image_base64 参数"
+                    )
+                
+                result = await generate_video_from_images_first_last(
+                    start_image_base64=start_image,
+                    end_image_base64=request.end_image_base64,
+                    duration=request.duration,
+                    access_key_id=jimeng_ak_id,
+                    secret_access_key=jimeng_ak_secret,
+                    prompt=request.prompt,
+                    negative_prompt=request.negative_prompt,
+                    seed=request.seed
+                )
+            
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"不支持的模式: {mode}，支持的模式：first_frame, first_last_frame"
+                )
+            
+            # 解析即梦 API 响应
+            # 根据实际 API 响应格式调整
+            task_id = result.get("task_id") or result.get("taskId") or result.get("id") or result.get("data", {}).get("task_id")
+            video_url = result.get("video_url") or result.get("videoUrl") or result.get("url") or result.get("data", {}).get("video_url")
+            
+            return VideoGenerationResponse(
+                success=True,
+                task_id=task_id,
+                video_url=video_url,
+                message="视频生成任务已提交" if task_id else "视频生成完成" if video_url else "请求已接收",
+            )
         
-        # 示例调用（需要根据实际 API 文档调整）:
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.post(
-        #         SEEDANCE_API_ENDPOINT,
-        #         headers={
-        #             "Authorization": f"Bearer {api_key}",
-        #             "Content-Type": "application/json"
-        #         },
-        #         json={
-        #             "prompt": request.prompt,
-        #             "width": request.width,
-        #             "height": request.height,
-        #             "duration": request.duration,
-        #             "fps": request.fps,
-        #             "seed": request.seed,
-        #             "negative_prompt": request.negative_prompt,
-        #         },
-        #         timeout=300.0
-        #     )
-        #     result = response.json()
+        elif provider == "seedance":
+            # 使用 Seedance API
+            api_key = request.api_key or API_KEY
+            
+            if not api_key:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Seedance API Key 未配置"
+                )
+            
+            # TODO: 接入 Seedance 1.0 Fast API
+            # 目前返回模拟响应
+            task_id = f"seedance_task_{hash(request.prompt) % 1000000}"
+            
+            return VideoGenerationResponse(
+                success=True,
+                task_id=task_id,
+                message="视频生成任务已提交（Seedance）",
+            )
         
-        # 模拟响应
-        task_id = f"task_{hash(request.prompt) % 1000000}"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的服务提供商: {provider}，支持的值：jimeng, seedance"
+            )
         
-        return VideoGenerationResponse(
-            success=True,
-            task_id=task_id,
-            message="视频生成任务已提交",
-        )
-        
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Video generation error: {str(e)}")
+        print(error_traceback)
         return VideoGenerationResponse(
             success=False,
             message="视频生成失败",
@@ -207,19 +292,73 @@ async def generate_video(request: VideoGenerationRequest):
 
 
 @app.get("/api/v1/video/status/{task_id}")
-async def get_video_status(task_id: str):
+async def get_video_status(
+    task_id: str,
+    provider: Optional[str] = "jimeng",
+    jimeng_access_key_id: Optional[str] = None,
+    jimeng_secret_access_key: Optional[str] = None
+):
     """
     查询视频生成状态
     
-    后续接入 Seedance 1.0 Fast API 的状态查询接口
+    支持即梦（JIMENG）和 Seedance 两种服务提供商
     """
-    # TODO: 接入实际的状态查询 API
-    return {
-        "task_id": task_id,
-        "status": "processing",  # processing, completed, failed
-        "progress": 50,
-        "video_url": None,
-    }
+    try:
+        if provider == "jimeng":
+            # 使用即梦 API 查询状态
+            jimeng_ak_id = jimeng_access_key_id or JIMENG_ACCESS_KEY_ID
+            jimeng_ak_secret = jimeng_secret_access_key or JIMENG_SECRET_ACCESS_KEY
+            
+            if not jimeng_ak_id or not jimeng_ak_secret:
+                raise HTTPException(
+                    status_code=400,
+                    detail="即梦 API 密钥未配置"
+                )
+            
+            result = await jimeng_check_status(
+                task_id=task_id,
+                access_key_id=jimeng_ak_id,
+                secret_access_key=jimeng_ak_secret
+            )
+            
+            # 解析即梦 API 响应
+            status = result.get("status") or result.get("state") or "processing"
+            progress = result.get("progress") or result.get("percentage") or 0
+            video_url = result.get("video_url") or result.get("videoUrl") or result.get("url")
+            
+            return {
+                "task_id": task_id,
+                "status": status,  # processing, completed, failed
+                "progress": progress,
+                "video_url": video_url,
+            }
+        
+        elif provider == "seedance":
+            # TODO: 接入 Seedance 状态查询 API
+            return {
+                "task_id": task_id,
+                "status": "processing",
+                "progress": 50,
+                "video_url": None,
+            }
+        
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的服务提供商: {provider}"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"Status check error: {str(e)}")
+        print(error_traceback)
+        raise HTTPException(
+            status_code=500,
+            detail=f"查询状态失败: {str(e)}"
+        )
 
 
 # ========== 资产管理 API ==========
