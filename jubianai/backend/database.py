@@ -49,15 +49,21 @@ def get_engine():
     if _engine is None:
         database_url = get_database_url()
         try:
+            # Neon 和 Supabase 的连接字符串已经包含 sslmode 参数
+            # 如果连接字符串中已经有 sslmode，就不需要在 connect_args 中设置
+            connect_args = {}
+            if "neon.tech" in database_url or "supabase.co" in database_url:
+                # 如果连接字符串中没有 sslmode，添加它
+                if "sslmode" not in database_url:
+                    connect_args["sslmode"] = "require"
+                connect_args["connect_timeout"] = 10
+            
             _engine = create_engine(
                 database_url,
                 pool_pre_ping=True,  # 自动重连
                 pool_recycle=300,    # 连接回收时间（秒）
                 echo=False,         # 设置为 True 可以看到 SQL 日志
-                connect_args={
-                    "connect_timeout": 10,  # 连接超时 10 秒
-                    "sslmode": "require" if "neon.tech" in database_url or "supabase.co" in database_url else "prefer"
-                }
+                connect_args=connect_args if connect_args else {}
             )
         except Exception as e:
             print(f"Error creating database engine: {e}")
@@ -75,18 +81,24 @@ def get_session_local():
 
 def get_db():
     """获取数据库会话（用于依赖注入）"""
+    SessionLocal = None
+    db = None
     try:
         SessionLocal = get_session_local()
         db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+        yield db
     except Exception as e:
         print(f"Error getting database session: {e}")
-        # 返回一个空会话，避免整个请求失败
-        # 在实际使用中，API 端点会处理这个错误
+        import traceback
+        print(traceback.format_exc())
+        # 如果数据库连接失败，仍然返回一个会话对象
+        # API 端点会捕获这个错误并返回适当的响应
+        if db:
+            db.rollback()
         raise
+    finally:
+        if db:
+            db.close()
 
 
 def init_db():

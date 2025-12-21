@@ -221,7 +221,12 @@ async def list_assets(db: Session = Depends(get_db)):
         return result
     except Exception as e:
         # 如果出错，返回空结果而不是 500 错误
-        print(f"Error listing assets: {e}")
+        import traceback
+        error_msg = str(e)
+        traceback_str = traceback.format_exc()
+        print(f"Error listing assets: {error_msg}")
+        print(traceback_str)
+        # 返回空结果，避免 500 错误
         return {}
 
 
