@@ -77,27 +77,38 @@ async def health_check():
     try:
         # 尝试初始化数据库（如果还没有初始化）
         from backend.database import init_db, get_engine
+        from sqlalchemy import text
         try:
             engine = get_engine()
             # 测试数据库连接
             with engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
             init_db()  # 确保表已创建
             return {
                 "status": "healthy",
                 "database": "connected"
             }
         except Exception as e:
+            import traceback
+            error_msg = str(e)
+            traceback_str = traceback.format_exc()
+            print(f"Database health check error: {error_msg}")
+            print(traceback_str)
             return {
                 "status": "healthy",
                 "database": "disconnected",
-                "error": str(e)
+                "error": error_msg
             }
     except Exception as e:
+        import traceback
+        error_msg = str(e)
+        traceback_str = traceback.format_exc()
+        print(f"Health check error: {error_msg}")
+        print(traceback_str)
         return {
             "status": "healthy",
             "database": "error",
-            "error": str(e)
+            "error": error_msg
         }
 
 
