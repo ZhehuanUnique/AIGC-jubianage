@@ -5,6 +5,7 @@ Streamlit 前端界面
 import streamlit as st
 import requests
 import time
+import json
 from typing import Optional
 import os
 from pathlib import Path
@@ -144,7 +145,22 @@ def generate_video(
     try:
         response = requests.post(url, json=payload, timeout=300)
         response.raise_for_status()
-        return response.json()
+        
+        # 检查响应内容
+        if not response.text or len(response.text.strip()) == 0:
+            return {"success": False, "error": "后端返回空响应", "message": "后端服务可能未正确配置"}
+        
+        # 尝试解析JSON
+        try:
+            return response.json()
+        except json.JSONDecodeError as e:
+            # 如果不是JSON，返回错误信息
+            return {
+                "success": False, 
+                "error": f"JSON解析失败: {str(e)}", 
+                "message": f"后端返回了非JSON响应: {response.text[:200]}",
+                "response_text": response.text[:500]
+            }
     except requests.exceptions.RequestException as e:
         return {"success": False, "error": str(e), "message": "请求失败"}
 
@@ -289,9 +305,16 @@ def video_generation_page():
                 
                 if uploaded_image:
                     import base64
+                    from PIL import Image
+                    import io
+                    # 重置文件指针
+                    uploaded_image.seek(0)
                     image_bytes = uploaded_image.read()
                     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                    st.image(uploaded_image, caption="首帧图片", use_container_width=True)
+                    # 创建缩略图
+                    img = Image.open(io.BytesIO(image_bytes))
+                    img.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                    st.image(img, caption="首帧图片预览", width=150)
             else:
                 col_start, col_end = st.columns(2)
                 with col_start:
@@ -303,9 +326,16 @@ def video_generation_page():
                     )
                     if uploaded_start_image:
                         import base64
+                        from PIL import Image
+                        import io
+                        # 重置文件指针
+                        uploaded_start_image.seek(0)
                         start_image_bytes = uploaded_start_image.read()
                         start_image_base64 = base64.b64encode(start_image_bytes).decode('utf-8')
-                        st.image(uploaded_start_image, caption="首帧", use_container_width=True)
+                        # 创建缩略图
+                        img = Image.open(io.BytesIO(start_image_bytes))
+                        img.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                        st.image(img, caption="首帧预览", width=150)
                     else:
                         start_image_base64 = None
                 
@@ -318,9 +348,16 @@ def video_generation_page():
                     )
                     if uploaded_end_image:
                         import base64
+                        from PIL import Image
+                        import io
+                        # 重置文件指针
+                        uploaded_end_image.seek(0)
                         end_image_bytes = uploaded_end_image.read()
                         end_image_base64 = base64.b64encode(end_image_bytes).decode('utf-8')
-                        st.image(uploaded_end_image, caption="尾帧", use_container_width=True)
+                        # 创建缩略图
+                        img = Image.open(io.BytesIO(end_image_bytes))
+                        img.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                        st.image(img, caption="尾帧预览", width=150)
                     else:
                         end_image_base64 = None
                 
