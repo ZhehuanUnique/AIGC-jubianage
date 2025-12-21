@@ -55,10 +55,5 @@ async def list_characters():
     }
 
 # 使用 Mangum 将 FastAPI 适配为 ASGI
-# 注意：Mangum 2.0+ 使用不同的 API
-try:
-    # 尝试使用新版本 API
-    handler = Mangum(app, lifespan="off")
-except:
-    # 如果失败，使用旧版本 API
-    handler = Mangum(app)
+# Vercel 需要 handler 函数
+handler = Mangum(app, lifespan="off")
