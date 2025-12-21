@@ -13,8 +13,21 @@ from pathlib import Path
 from datetime import datetime
 
 # 资产存储目录
-ASSETS_DIR = Path("assets")
-ASSETS_DIR.mkdir(exist_ok=True)
+# Vercel Serverless Functions 中，文件系统是只读的（除了 /tmp）
+# 在生产环境中，应该使用外部存储服务（如 Vercel Blob Storage、S3 等）
+import os
+
+# 检查是否在 Vercel 环境
+IS_VERCEL = os.getenv("VERCEL") == "1"
+
+if IS_VERCEL:
+    # Vercel 环境：使用 /tmp 目录（临时存储，不持久化）
+    ASSETS_DIR = Path("/tmp/assets")
+else:
+    # 本地环境：使用项目目录
+    ASSETS_DIR = Path("assets")
+
+ASSETS_DIR.mkdir(exist_ok=True, parents=True)
 
 # 元数据文件
 METADATA_FILE = ASSETS_DIR / "metadata.json"
@@ -32,16 +45,25 @@ class AssetMetadata(BaseModel):
 
 def load_metadata() -> Dict:
     """加载元数据"""
-    if METADATA_FILE.exists():
-        with open(METADATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+    try:
+        if METADATA_FILE.exists():
+            with open(METADATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        # 如果读取失败，返回空数据
+        print(f"Error loading metadata: {e}")
     return {"assets": []}
 
 
 def save_metadata(metadata: Dict):
     """保存元数据"""
-    with open(METADATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    try:
+        with open(METADATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        # 如果保存失败（如在 Vercel 只读文件系统），记录错误但不抛出异常
+        print(f"Error saving metadata: {e}")
+        # 在 Vercel 环境中，元数据不会持久化
 
 
 def parse_filename(filename: str) -> tuple[str, str]:

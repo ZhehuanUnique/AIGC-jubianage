@@ -172,14 +172,19 @@ async def upload_asset_endpoint(file: UploadFile = File(...)):
 @app.get("/api/v1/assets/list")
 async def list_assets():
     """获取所有资产，按人物分组"""
-    assets_by_character = get_assets_by_character()
-    
-    # 转换为 JSON 可序列化格式
-    result = {}
-    for character, assets in assets_by_character.items():
-        result[character] = [asset.dict() for asset in assets]
-    
-    return result
+    try:
+        assets_by_character = get_assets_by_character()
+        
+        # 转换为 JSON 可序列化格式
+        result = {}
+        for character, assets in assets_by_character.items():
+            result[character] = [asset.dict() for asset in assets]
+        
+        return result
+    except Exception as e:
+        # 如果出错，返回空结果而不是 500 错误
+        print(f"Error listing assets: {e}")
+        return {}
 
 
 @app.get("/api/v1/assets/characters")
