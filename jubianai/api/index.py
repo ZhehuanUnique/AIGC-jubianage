@@ -1,15 +1,20 @@
 """
-Vercel Serverless Function 入口 - 最基础版本
+Vercel Serverless Function 入口
+使用 Vercel Python runtime 的标准格式
 """
 import json
 
-def handler(event, context):
-    """最简单的 handler 函数"""
+def handler(request):
+    """
+    Vercel Python runtime 的标准 handler 格式
+    request 是一个包含请求信息的对象
+    """
     try:
-        path = event.get('path', '/')
+        # 获取请求路径
+        path = request.path if hasattr(request, 'path') else request.get('path', '/')
         
         # 根据路径返回不同的响应
-        if path == '/':
+        if path == '/' or path == '':
             return {
                 'statusCode': 200,
                 'headers': {
@@ -62,9 +67,12 @@ def handler(event, context):
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
                 },
-                'body': json.dumps({'error': 'Not found'})
+                'body': json.dumps({'error': 'Not found', 'path': path})
             }
     except Exception as e:
+        import traceback
+        error_msg = str(e)
+        error_traceback = traceback.format_exc()
         return {
             'statusCode': 500,
             'headers': {
@@ -72,7 +80,8 @@ def handler(event, context):
                 'Access-Control-Allow-Origin': '*',
             },
             'body': json.dumps({
-                'error': str(e),
+                'error': error_msg,
+                'traceback': error_traceback,
                 'message': 'Internal server error'
             })
         }
