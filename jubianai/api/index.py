@@ -1,6 +1,6 @@
 """
 Vercel Serverless Function 入口
-简化版本，直接处理请求
+简化版本，确保基础功能正常工作
 """
 import os
 import sys
@@ -9,8 +9,11 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler
 
 # 添加项目根目录到路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+try:
+    project_root = Path(__file__).parent.parent
+    sys.path.insert(0, str(project_root))
+except Exception as e:
+    print(f"Warning: Failed to add project root to path: {e}")
 
 class handler(BaseHTTPRequestHandler):
     """Vercel Python runtime 的标准 handler 类"""
@@ -21,23 +24,51 @@ class handler(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """处理 GET 请求"""
-        self.handle_request()
+        try:
+            self.handle_request()
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            error_traceback = traceback.format_exc()
+            print(f"Error in do_GET: {error_msg}")
+            print(error_traceback)
+            self.send_json_response(500, {
+                'error': error_msg,
+                'message': 'Internal server error'
+            })
     
     def do_POST(self):
         """处理 POST 请求"""
-        self.handle_request()
+        try:
+            self.handle_request()
+        except Exception as e:
+            import traceback
+            error_msg = str(e)
+            error_traceback = traceback.format_exc()
+            print(f"Error in do_POST: {error_msg}")
+            print(error_traceback)
+            self.send_json_response(500, {
+                'error': error_msg,
+                'message': 'Internal server error'
+            })
     
     def do_OPTIONS(self):
         """处理 OPTIONS 请求（CORS 预检）"""
-        self.send_response(200)
-        self.send_cors_headers()
-        self.end_headers()
+        try:
+            self.send_response(200)
+            self.send_cors_headers()
+            self.end_headers()
+        except Exception as e:
+            print(f"Error in do_OPTIONS: {e}")
     
     def send_cors_headers(self):
         """发送 CORS 头"""
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        try:
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        except Exception as e:
+            print(f"Error sending CORS headers: {e}")
     
     def handle_request(self):
         """处理请求"""
@@ -48,11 +79,12 @@ class handler(BaseHTTPRequestHandler):
             if path == '/' or path == '/health':
                 self.send_json_response(200, {
                     'status': 'ok',
-                    'message': '后端服务运行正常'
+                    'message': '后端服务运行正常',
+                    'path': path
                 })
                 return
             
-            # 资产管理列表 - 简化版本，直接返回空列表
+            # 资产管理列表 - 直接返回空列表
             if path == '/api/v1/assets/list':
                 self.send_json_response(200, {
                     'assets': [],
@@ -93,11 +125,12 @@ class handler(BaseHTTPRequestHandler):
             import traceback
             error_msg = str(e)
             error_traceback = traceback.format_exc()
-            print(f"Error: {error_msg}")
+            print(f"Error in handle_request: {error_msg}")
             print(error_traceback)
             self.send_json_response(500, {
                 'error': error_msg,
-                'message': 'Internal server error'
+                'message': 'Internal server error',
+                'path': self.path
             })
     
     def handle_video_generate(self):
@@ -131,6 +164,13 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(response.content)
                 return
                 
+            except ImportError as e:
+                # 如果导入失败，返回错误
+                self.send_json_response(500, {
+                    'error': f'Failed to import FastAPI: {str(e)}',
+                    'message': '视频生成服务暂时不可用'
+                })
+                return
             except Exception as e:
                 # 如果 FastAPI 调用失败，返回错误
                 import traceback
@@ -153,8 +193,14 @@ class handler(BaseHTTPRequestHandler):
     
     def send_json_response(self, status_code, data):
         """发送 JSON 响应"""
-        self.send_response(status_code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_cors_headers()
-        self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        try:
+            self.send_response(status_code)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_cors_headers()
+            self.end_headers()
+            response_body = json.dumps(data, ensure_ascii=False).encode('utf-8')
+            self.wfile.write(response_body)
+        except Exception as e:
+            print(f"Error in send_json_response: {e}")
+            import traceback
+            print(traceback.format_exc())
