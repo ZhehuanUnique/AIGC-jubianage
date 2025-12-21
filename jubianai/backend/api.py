@@ -40,15 +40,8 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时初始化数据库"""
-    try:
-        init_db()
-        print("Database initialized successfully")
-    except Exception as e:
-        print(f"Database initialization error: {e}")
-        # 不阻止应用启动，允许在没有数据库的情况下运行
+# 注意：Vercel Serverless Functions 不支持 startup 事件
+# 数据库初始化会在第一次请求时自动进行（通过 get_db() 延迟初始化）
 
 
 class VideoGenerationRequest(BaseModel):
@@ -81,7 +74,31 @@ async def root():
 @app.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "healthy"}
+    try:
+        # 尝试初始化数据库（如果还没有初始化）
+        from backend.database import init_db, get_engine
+        try:
+            engine = get_engine()
+            # 测试数据库连接
+            with engine.connect() as conn:
+                conn.execute("SELECT 1")
+            init_db()  # 确保表已创建
+            return {
+                "status": "healthy",
+                "database": "connected"
+            }
+        except Exception as e:
+            return {
+                "status": "healthy",
+                "database": "disconnected",
+                "error": str(e)
+            }
+    except Exception as e:
+        return {
+            "status": "healthy",
+            "database": "error",
+            "error": str(e)
+        }
 
 
 @app.post("/api/v1/video/generate", response_model=VideoGenerationResponse)

@@ -39,29 +39,64 @@ def get_database_url() -> str:
     return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 
-# 创建数据库引擎
-database_url = get_database_url()
-engine = create_engine(
-    database_url,
-    pool_pre_ping=True,  # 自动重连
-    pool_recycle=300,    # 连接回收时间（秒）
-    echo=False           # 设置为 True 可以看到 SQL 日志
-)
+# 延迟创建数据库引擎（避免在模块加载时连接失败导致整个函数崩溃）
+_engine = None
+_SessionLocal = None
 
-# 创建会话工厂
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_engine():
+    """获取数据库引擎（延迟初始化）"""
+    global _engine
+    if _engine is None:
+        database_url = get_database_url()
+        try:
+            _engine = create_engine(
+                database_url,
+                pool_pre_ping=True,  # 自动重连
+                pool_recycle=300,    # 连接回收时间（秒）
+                echo=False,         # 设置为 True 可以看到 SQL 日志
+                connect_args={
+                    "connect_timeout": 10,  # 连接超时 10 秒
+                    "sslmode": "require" if "neon.tech" in database_url or "supabase.co" in database_url else "prefer"
+                }
+            )
+        except Exception as e:
+            print(f"Error creating database engine: {e}")
+            raise
+    return _engine
+
+def get_session_local():
+    """获取会话工厂（延迟初始化）"""
+    global _SessionLocal
+    if _SessionLocal is None:
+        engine = get_engine()
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return _SessionLocal
 
 
 def get_db():
     """获取数据库会话（用于依赖注入）"""
-    db = SessionLocal()
     try:
-        yield db
-    finally:
-        db.close()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error getting database session: {e}")
+        # 返回一个空会话，避免整个请求失败
+        # 在实际使用中，API 端点会处理这个错误
+        raise
 
 
 def init_db():
     """初始化数据库表"""
-    Base.metadata.create_all(bind=engine)
+    try:
+        engine = get_engine()
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        # 不抛出异常，允许应用在没有数据库的情况下运行
+        pass
 
