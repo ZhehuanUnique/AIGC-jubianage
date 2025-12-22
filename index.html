@@ -142,54 +142,109 @@
     </main>
 
     <script>
-      // 检查资源加载状态
-      window.addEventListener('load', function() {
-        const debugInfo = document.getElementById('debugInfo');
-        const cssStatus = document.getElementById('cssStatus');
-        const jsStatus = document.getElementById('jsStatus');
+      // 页面加载完成后的初始化
+      (function() {
+        'use strict';
         
-        // 检查 CSS 是否加载
-        const testEl = document.createElement('div');
-        testEl.className = 'bg-video';
-        document.body.appendChild(testEl);
-        const styles = window.getComputedStyle(testEl);
-        if (styles.position === 'fixed' || styles.position === 'absolute') {
-          cssStatus.textContent = '✓ 已加载';
-          cssStatus.style.color = '#4CAF50';
+        // 检查资源加载状态
+        function checkResources() {
+          const debugInfo = document.getElementById('debugInfo');
+          if (!debugInfo) return;
+          
+          const cssStatus = document.getElementById('cssStatus');
+          const jsStatus = document.getElementById('jsStatus');
+          
+          // 检查 CSS 是否加载
+          try {
+            const testEl = document.createElement('div');
+            testEl.className = 'bg-video';
+            testEl.style.visibility = 'hidden';
+            testEl.style.position = 'absolute';
+            document.body.appendChild(testEl);
+            const styles = window.getComputedStyle(testEl);
+            const cssLoaded = styles.position === 'fixed' || styles.position === 'absolute';
+            document.body.removeChild(testEl);
+            
+            if (cssStatus) {
+              if (cssLoaded) {
+                cssStatus.textContent = '✓ 已加载';
+                cssStatus.style.color = '#4CAF50';
+              } else {
+                cssStatus.textContent = '✗ 加载失败';
+                cssStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+          } catch (e) {
+            if (cssStatus) {
+              cssStatus.textContent = '✗ 检查失败';
+              cssStatus.style.color = '#f44336';
+            }
+            debugInfo.style.display = 'block';
+          }
+          
+          // 检查 JS 是否加载（延迟检查，等待 main.js 加载）
+          setTimeout(function() {
+            if (jsStatus) {
+              if (typeof setupMarquee === 'function') {
+                jsStatus.textContent = '✓ 已加载';
+                jsStatus.style.color = '#4CAF50';
+              } else {
+                jsStatus.textContent = '✗ 加载失败';
+                jsStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+            
+            // 3秒后隐藏调试信息（如果一切正常）
+            if (cssStatus && cssStatus.textContent.includes('✓') && 
+                jsStatus && jsStatus.textContent.includes('✓')) {
+              setTimeout(function() {
+                if (debugInfo) debugInfo.style.display = 'none';
+              }, 3000);
+            }
+          }, 500);
+        }
+        
+        // 页面加载完成后检查
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', checkResources);
         } else {
-          cssStatus.textContent = '✗ 加载失败';
-          cssStatus.style.color = '#f44336';
-          debugInfo.style.display = 'block';
-        }
-        document.body.removeChild(testEl);
-        
-        // 检查 JS 是否加载
-        if (typeof setupMarquee === 'function') {
-          jsStatus.textContent = '✓ 已加载';
-          jsStatus.style.color = '#4CAF50';
-        } else {
-          jsStatus.textContent = '✗ 加载失败';
-          jsStatus.style.color = '#f44336';
-          debugInfo.style.display = 'block';
+          checkResources();
         }
         
-        // 3秒后隐藏调试信息
-        setTimeout(() => {
-          if (debugInfo) debugInfo.style.display = 'none';
-        }, 3000);
-      });
-      
-      // 捕获资源加载错误
-      window.addEventListener('error', function(e) {
-        console.error('资源加载错误:', e);
-        const debugInfo = document.getElementById('debugInfo');
-        if (debugInfo) {
-          debugInfo.style.display = 'block';
-          debugInfo.innerHTML += '<div style="color: #f44336;">错误: ' + (e.message || '未知错误') + '</div>';
-        }
-      }, true);
+        // 捕获资源加载错误
+        window.addEventListener('error', function(e) {
+          // 忽略脚本错误（由 onerror 处理）
+          if (e.target && e.target.tagName === 'SCRIPT') {
+            return;
+          }
+          console.error('资源加载错误:', e);
+          const debugInfo = document.getElementById('debugInfo');
+          if (debugInfo) {
+            debugInfo.style.display = 'block';
+            const errorMsg = e.message || e.filename || '未知错误';
+            debugInfo.innerHTML += '<div style="color: #f44336; margin-top: 5px;">错误: ' + errorMsg + '</div>';
+          }
+        }, true);
+        
+        // 处理 main.js 加载失败
+        window.addEventListener('error', function(e) {
+          if (e.target && e.target.tagName === 'SCRIPT' && e.target.src) {
+            const jsStatus = document.getElementById('jsStatus');
+            const debugInfo = document.getElementById('debugInfo');
+            if (jsStatus) {
+              jsStatus.textContent = '✗ 加载失败';
+              jsStatus.style.color = '#f44336';
+            }
+            if (debugInfo) {
+              debugInfo.style.display = 'block';
+            }
+          }
+        }, true);
+      })();
     </script>
-    <script src="/main.js" onerror="document.getElementById('jsStatus').textContent='✗ 加载失败'; document.getElementById('jsStatus').style.color='#f44336'; document.getElementById('debugInfo').style.display='block';"></script>
+    <script src="/main.js" defer></script>
   </body>
 </html>
 

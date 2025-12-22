@@ -70,7 +70,7 @@ async def generate_video(request: VideoGenerationRequest):
     """
     生成视频接口
     
-    后续接入 Seedance 1.0 Fast API
+    支持 RAG 增强提示词：根据提示词检索相似视频帧，增强生成效果
     """
     # 使用请求中的 API Key 或配置文件中的 API Key
     api_key = request.api_key or API_KEY
@@ -88,8 +88,42 @@ async def generate_video(request: VideoGenerationRequest):
         )
     
     try:
+        # RAG 增强提示词（可选）
+        enhanced_prompt = request.prompt
+        rag_references = None
+        
+        try:
+            # 尝试导入 RAG 服务
+            import sys
+            from pathlib import Path
+            rag_path = Path(__file__).parent.parent.parent / "doubao-rag" / "backend"
+            if str(rag_path) not in sys.path:
+                sys.path.insert(0, str(rag_path))
+            
+            from rag_service import RAGService
+            
+            # 初始化 RAG 服务
+            rag_service = RAGService()
+            
+            # 增强提示词
+            enhanced_result = rag_service.enhance_prompt(
+                original_prompt=request.prompt,
+                n_references=3  # 参考 3 个相似帧
+            )
+            
+            enhanced_prompt = enhanced_result["enhanced_prompt"]
+            rag_references = enhanced_result["references"]
+            
+        except ImportError:
+            # RAG 服务不可用，使用原始提示词
+            pass
+        except Exception as e:
+            # RAG 增强失败，使用原始提示词
+            print(f"RAG 增强失败，使用原始提示词: {e}")
+            pass
+        
         # TODO: 接入 Seedance 1.0 Fast API
-        # 目前返回模拟响应
+        # 使用增强后的提示词生成视频
         # 实际接入时，需要根据 Seedance API 文档进行调用
         
         # 示例调用（需要根据实际 API 文档调整）:
@@ -101,7 +135,7 @@ async def generate_video(request: VideoGenerationRequest):
         #             "Content-Type": "application/json"
         #         },
         #         json={
-        #             "prompt": request.prompt,
+        #             "prompt": enhanced_prompt,  # 使用增强后的提示词
         #             "width": request.width,
         #             "height": request.height,
         #             "duration": request.duration,
@@ -114,13 +148,22 @@ async def generate_video(request: VideoGenerationRequest):
         #     result = response.json()
         
         # 模拟响应
-        task_id = f"task_{hash(request.prompt) % 1000000}"
+        task_id = f"task_{hash(enhanced_prompt) % 1000000}"
         
-        return VideoGenerationResponse(
-            success=True,
-            task_id=task_id,
-            message="视频生成任务已提交",
-        )
+        response_data = {
+            "success": True,
+            "task_id": task_id,
+            "message": "视频生成任务已提交",
+        }
+        
+        # 如果使用了 RAG，添加参考信息
+        if rag_references:
+            response_data["rag_enhanced"] = True
+            response_data["original_prompt"] = request.prompt
+            response_data["enhanced_prompt"] = enhanced_prompt
+            response_data["rag_references_count"] = len(rag_references)
+        
+        return VideoGenerationResponse(**response_data)
         
     except Exception as e:
         return VideoGenerationResponse(

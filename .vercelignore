@@ -1,0 +1,27 @@
+# 不要忽略静态文件
+!index.html
+!styles.css
+!main.js
+!index.mp4
+!index.webm
+!logo/
+!封面/
+
+# 忽略开发文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+.env.local
+.vercel
+
+# 忽略测试和临时文件
+test_export/
+*.log
+.DS_Store
+
