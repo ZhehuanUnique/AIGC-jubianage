@@ -23,6 +23,7 @@ from backend.assets_api import (
     get_asset_path, AssetMetadata
 )
 from backend.volcengine_auth import generate_signature, generate_simple_signature
+from backend.volcengine_sdk_helper import create_visual_service, submit_video_task
 import json
 
 app = FastAPI(title="视频生成 API", version="1.0.0")
@@ -79,19 +80,12 @@ async def generate_video(request: VideoGenerationRequest):
     
     支持 RAG 增强提示词：根据提示词检索相似视频帧，增强生成效果
     """
-    # 使用请求中的 API Key 或配置文件中的 API Key
-    api_key = request.api_key or API_KEY
-    
-    if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail="API Key 未配置，请在配置文件中设置或通过请求传入"
-        )
-    
+    # 验证提示词
     if not request.prompt:
-        raise HTTPException(
-            status_code=400,
-            detail="提示词不能为空"
+        return VideoGenerationResponse(
+            success=False,
+            message="提示词不能为空",
+            error="提示词不能为空"
         )
     
     try:
@@ -133,116 +127,185 @@ async def generate_video(request: VideoGenerationRequest):
         # 参考：https://www.volcengine.com/docs/85621/1791184?lang=zh
         
         # 使用火山引擎 AK/SK 认证
-        volc_access_key = VOLCENGINE_ACCESS_KEY_ID or api_key
+        # 优先使用环境变量中的配置，如果没有则使用请求中的 api_key（兼容旧方式）
+        volc_access_key = VOLCENGINE_ACCESS_KEY_ID or request.api_key or API_KEY
         volc_secret_key = VOLCENGINE_SECRET_ACCESS_KEY
         
-        if not volc_access_key or not volc_secret_key:
-            raise HTTPException(
-                status_code=400,
-                detail="即梦 API 认证信息未配置，请设置 VOLCENGINE_ACCESS_KEY_ID 和 VOLCENGINE_SECRET_ACCESS_KEY"
+        if not volc_access_key:
+            return VideoGenerationResponse(
+                success=False,
+                message="即梦 API 认证信息未配置",
+                error="请设置环境变量 VOLCENGINE_ACCESS_KEY_ID，或在请求中传入 api_key"
+            )
+        
+        if not volc_secret_key:
+            return VideoGenerationResponse(
+                success=False,
+                message="即梦 API 认证信息未配置",
+                error="请设置环境变量 VOLCENGINE_SECRET_ACCESS_KEY"
             )
         
         # 根据即梦 API 文档构建请求体
+        # 参考：https://www.volcengine.com/docs/85621/1791184?lang=zh
+        
+        # 确定 req_key：根据是否有首尾帧选择不同的 req_key
+        if request.first_frame and request.last_frame:
+            req_key = "jimeng_i2v_first_tail_v30"  # 首尾帧
+        elif request.first_frame:
+            req_key = "jimeng_i2v_first_v30"  # 仅首帧
+        else:
+            req_key = "jimeng_i2v_first_v30"  # 默认使用首帧（如果没有首尾帧，可能需要文生视频）
+        
+        # 构建图片 URL 数组（即梦 API 使用 image_urls，不是 base64）
+        image_urls = []
+        
+        # 处理首帧和尾帧
+        # 注意：即梦 API 需要图片 URL，如果传入的是 base64，需要先上传到对象存储或转换为 URL
+        # 这里暂时使用 base64 数据，实际使用时可能需要先上传图片获取 URL
+        if request.first_frame:
+            # TODO: 如果 first_frame 是 base64，需要先上传获取 URL
+            # 暂时假设是 URL 或需要处理
+            if request.first_frame.startswith("http"):
+                image_urls.append(request.first_frame)
+            else:
+                # base64 数据，需要转换为 URL 或使用 binary_data_base64
+                # 根据文档，可以使用 binary_data_base64 数组
+                pass
+        
+        if request.last_frame:
+            if request.last_frame.startswith("http"):
+                image_urls.append(request.last_frame)
+            else:
+                # base64 数据
+                pass
+        
+        # 根据即梦 API 文档构建请求体
+        # 文档：https://www.volcengine.com/docs/85621/1785204?lang=zh
         api_payload = {
-            "req_key": "video_generation_720p",  # 即梦 API 的 req_key
-            "prompt": enhanced_prompt,  # 使用增强后的提示词
-            "width": request.width,
-            "height": request.height,
-            "duration": request.duration,
-            "fps": request.fps,
+            "req_key": req_key,
+            "prompt": enhanced_prompt,  # 使用增强后的提示词（必选）
         }
+        
+        # 处理图片输入（二选一：binary_data_base64 或 image_urls）
+        binary_data_base64 = []
+        image_urls = []
+        
+        if request.first_frame:
+            if request.first_frame.startswith("http"):
+                image_urls.append(request.first_frame)
+            else:
+                # base64 数据，移除 data:image/...;base64, 前缀
+                base64_data = request.first_frame
+                if "," in base64_data:
+                    base64_data = base64_data.split(",")[1]
+                binary_data_base64.append(base64_data)
+        
+        if request.last_frame:
+            if request.last_frame.startswith("http"):
+                image_urls.append(request.last_frame)
+            else:
+                base64_data = request.last_frame
+                if "," in base64_data:
+                    base64_data = base64_data.split(",")[1]
+                binary_data_base64.append(base64_data)
+        
+        # 根据文档，binary_data_base64 和 image_urls 二选一
+        if binary_data_base64:
+            api_payload["binary_data_base64"] = binary_data_base64
+        elif image_urls:
+            api_payload["image_urls"] = image_urls
+        
+        # 计算 frames（总帧数）
+        # 根据文档：frames = 24 * n + 1，支持 5秒(121帧) 和 10秒(241帧)
+        calculated_frames = request.duration * request.fps
+        if calculated_frames <= 121:
+            frames = 121  # 5秒
+        elif calculated_frames <= 241:
+            frames = 241  # 10秒
+        else:
+            frames = 241  # 默认 10秒
+        
+        api_payload["frames"] = frames
         
         # 添加可选参数
         if request.seed is not None:
             api_payload["seed"] = request.seed
-        if request.negative_prompt:
-            api_payload["negative_prompt"] = request.negative_prompt
-        
-        # 首尾帧处理（根据即梦 API 文档格式）
-        if request.first_frame:
-            # 即梦 API 首帧参数格式：base64 编码的图片
-            api_payload["first_frame"] = request.first_frame
-        if request.last_frame:
-            # 即梦 API 尾帧参数格式：base64 编码的图片
-            api_payload["last_frame"] = request.last_frame
-        
-        # 构建请求 URI 和请求体
-        # 根据即梦 API 文档，完整的 API 端点
-        api_uri = "/video_generation/v1/video_generation_720p"  # API 路径
-        
-        # 确定基础端点
-        if SEEDANCE_API_ENDPOINT and SEEDANCE_API_ENDPOINT.startswith("http"):
-            # 如果 SEEDANCE_API_ENDPOINT 是完整 URL，直接使用
-            full_url = SEEDANCE_API_ENDPOINT
-            # 从完整 URL 中提取基础端点用于签名
-            from urllib.parse import urlparse
-            parsed = urlparse(SEEDANCE_API_ENDPOINT)
-            base_endpoint = f"{parsed.scheme}://{parsed.netloc}"
-            api_uri = parsed.path
-        elif JIMENG_API_ENDPOINT:
-            # 使用 JIMENG_API_ENDPOINT 作为基础端点
-            base_endpoint = JIMENG_API_ENDPOINT.rstrip("/")
-            full_url = f"{base_endpoint}{api_uri}"
         else:
-            # 默认端点
-            base_endpoint = "https://visual.volcengineapi.com"
-            full_url = f"{base_endpoint}{api_uri}"
+            api_payload["seed"] = -1  # 默认值（随机种子）
         
-        body_str = json.dumps(api_payload, ensure_ascii=False)
+        # 注意：即梦 API 不支持 negative_prompt、width、height 等参数
+        # 这些参数可能需要通过其他方式传递或忽略
         
-        # 生成签名
+        # 使用官方 SDK 调用即梦 API
+        # 官方 SDK 会自动处理签名、Action、Version 等参数
+        # 参考：https://github.com/volcengine/volc-sdk-python
         try:
-            # 尝试使用标准签名方式
-            auth_headers = generate_signature(
-                access_key_id=volc_access_key,
-                secret_access_key=volc_secret_key,
-                method="POST",
-                uri=api_uri,
-                headers={"Content-Type": "application/json"},
-                body=body_str
-            )
-        except Exception as e:
-            # 如果标准签名失败，尝试简化签名
-            print(f"标准签名失败，尝试简化签名: {e}")
-            auth_headers = generate_simple_signature(
-                access_key_id=volc_access_key,
-                secret_access_key=volc_secret_key,
-                method="POST",
-                uri=api_uri,
-                body=body_str
-            )
-        
-        # 调用即梦 API（火山引擎格式）
-        async with httpx.AsyncClient() as client:
-            headers = {
-                **auth_headers,
-                "Content-Type": "application/json"
-            }
+            # 创建 VisualService 实例
+            visual_service = create_visual_service(volc_access_key, volc_secret_key)
             
-            response = await client.post(
-                full_url,
-                headers=headers,
-                json=api_payload,
-                timeout=300.0
+            # 准备图片数据
+            image_urls_list = image_urls if image_urls else None
+            binary_data_list = binary_data_base64 if binary_data_base64 else None
+            
+            # 调用官方 SDK 提交任务
+            api_result = submit_video_task(
+                service=visual_service,
+                req_key=req_key,
+                prompt=enhanced_prompt,
+                frames=frames,
+                seed=api_payload.get("seed", -1),
+                image_urls=image_urls_list,
+                binary_data_base64=binary_data_list
             )
-            response.raise_for_status()
-            api_result = response.json()
+            
+            # 解析响应
+            # 官方 SDK 返回的格式可能是：
+            # 1. 直接返回 {"code": 10000, "data": {"task_id": "..."}, ...}
+            # 2. 或者返回 {"ResponseMetadata": {...}, "Result": {...}}
+            response_code = api_result.get("code")
+            if response_code is None:
+                # 可能是火山引擎格式，检查 ResponseMetadata
+                if "ResponseMetadata" in api_result:
+                    metadata = api_result["ResponseMetadata"]
+                    if "Error" in metadata:
+                        error_info = metadata["Error"]
+                        error_code = error_info.get("Code", "Unknown")
+                        error_message = error_info.get("Message", "未知错误")
+                        request_id = metadata.get("RequestId", "")
+                        raise Exception(f"即梦 API 调用失败: 错误码={error_code}, 错误信息={error_message}, RequestId={request_id}")
+                    # 如果没有错误，检查 Result
+                    if "Result" in api_result:
+                        result = api_result["Result"]
+                        task_id = result.get("task_id") or result.get("TaskId")
+                        if task_id:
+                            api_result = {"code": 10000, "data": {"task_id": task_id}, "message": "Success"}
+                        else:
+                            raise Exception("即梦 API 响应格式异常，未找到 task_id")
+            
+            if response_code != 10000:
+                error_msg = api_result.get("message", "未知错误")
+                request_id = api_result.get("request_id", "")
+                raise Exception(f"即梦 API 调用失败: code={response_code}, message={error_msg}, request_id={request_id}")
             
             # 从即梦 API 响应中提取任务 ID
-            # 即梦 API 返回格式可能包含 task_id、taskId 或 data.task_id
-            task_id = (
-                api_result.get("task_id") or 
-                api_result.get("taskId") or 
-                api_result.get("data", {}).get("task_id") or
-                api_result.get("data", {}).get("taskId") or
-                f"task_{hash(enhanced_prompt) % 1000000}"
+            task_id = api_result.get("data", {}).get("task_id")
+            if not task_id:
+                raise Exception("即梦 API 响应中未找到 task_id，请检查响应格式")
+            
+            response_data = {
+                "success": True,
+                "task_id": task_id,
+                "message": "视频生成任务已提交",
+            }
+        except Exception as e:
+            # 处理即梦 API 调用错误
+            error_msg = str(e)
+            print(f"即梦 API 调用错误: {error_msg}")
+            return VideoGenerationResponse(
+                success=False,
+                message=f"视频生成失败: {error_msg}",
+                error=error_msg
             )
-        
-        response_data = {
-            "success": True,
-            "task_id": task_id,
-            "message": "视频生成任务已提交",
-        }
         
         # 如果使用了 RAG，添加参考信息
         if rag_references:
@@ -253,11 +316,21 @@ async def generate_video(request: VideoGenerationRequest):
         
         return VideoGenerationResponse(**response_data)
         
+    except HTTPException as e:
+        return VideoGenerationResponse(
+            success=False,
+            message="请求错误",
+            error=e.detail
+        )
     except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"视频生成错误: {error_detail}\n{error_traceback}")
         return VideoGenerationResponse(
             success=False,
             message="视频生成失败",
-            error=str(e)
+            error=f"{error_detail}。请检查后端日志获取详细信息。"
         )
 
 
@@ -266,15 +339,142 @@ async def get_video_status(task_id: str):
     """
     查询视频生成状态
     
-    后续接入 Seedance 1.0 Fast API 的状态查询接口
+    调用即梦 API 查询任务状态
+    参考：https://www.volcengine.com/docs/85621/1785204?lang=zh
     """
-    # TODO: 接入实际的状态查询 API
-    return {
-        "task_id": task_id,
-        "status": "processing",  # processing, completed, failed
-        "progress": 50,
-        "video_url": None,
-    }
+    try:
+        # 使用火山引擎 AK/SK 认证
+        volc_access_key = VOLCENGINE_ACCESS_KEY_ID or API_KEY
+        volc_secret_key = VOLCENGINE_SECRET_ACCESS_KEY
+        
+        if not volc_access_key or not volc_secret_key:
+            return {
+                "task_id": task_id,
+                "status": "error",
+                "progress": 0,
+                "video_url": None,
+                "error": "即梦 API 认证信息未配置"
+            }
+        
+        # 创建 VisualService 实例
+        from backend.volcengine_sdk_helper import create_visual_service, query_video_task
+        
+        visual_service = create_visual_service(volc_access_key, volc_secret_key)
+        
+        # 尝试不同的 req_key（可能是首帧或首尾帧）
+        req_keys = ["jimeng_i2v_first_v30", "jimeng_i2v_first_tail_v30"]
+        
+        for req_key in req_keys:
+            try:
+                # 查询任务状态
+                api_result = query_video_task(
+                    service=visual_service,
+                    req_key=req_key,
+                    task_id=task_id
+                )
+                
+                # 解析响应
+                # 根据即梦 API 文档，响应格式为：
+                # {
+                #   "code": 10000,
+                #   "data": {
+                #     "status": "done",  # in_queue, generating, done, not_found, expired
+                #     "video_url": "https://..."
+                #   },
+                #   "message": "Success"
+                # }
+                response_code = api_result.get("code")
+                
+                if response_code == 10000:
+                    data = api_result.get("data", {})
+                    status = data.get("status", "processing")
+                    video_url = data.get("video_url")
+                    
+                    # 转换状态
+                    if status == "done":
+                        return {
+                            "task_id": task_id,
+                            "status": "completed",
+                            "progress": 100,
+                            "video_url": video_url
+                        }
+                    elif status == "in_queue":
+                        return {
+                            "task_id": task_id,
+                            "status": "processing",
+                            "progress": 10,
+                            "video_url": None
+                        }
+                    elif status == "generating":
+                        return {
+                            "task_id": task_id,
+                            "status": "processing",
+                            "progress": 50,
+                            "video_url": None
+                        }
+                    elif status in ["not_found", "expired"]:
+                        return {
+                            "task_id": task_id,
+                            "status": "failed",
+                            "progress": 0,
+                            "video_url": None,
+                            "error": f"任务状态: {status}"
+                        }
+                    else:
+                        return {
+                            "task_id": task_id,
+                            "status": "processing",
+                            "progress": 30,
+                            "video_url": None,
+                            "status_detail": status
+                        }
+                else:
+                    # 如果 code != 10000，记录错误但继续尝试下一个 req_key
+                    error_msg = api_result.get("message", "未知错误")
+                    print(f"查询任务失败 (req_key={req_key}): code={response_code}, message={error_msg}")
+                    # 检查是否是并发限制错误
+                    if response_code == 50430 or "Concurrent Limit" in error_msg:
+                        return {
+                            "task_id": task_id,
+                            "status": "processing",
+                            "progress": 30,
+                            "video_url": None,
+                            "warning": "API 并发限制，请稍后重试"
+                        }
+                    continue
+                    
+            except Exception as e:
+                # 如果查询失败，记录错误但继续尝试下一个 req_key
+                error_msg = str(e)
+                print(f"查询任务异常 (req_key={req_key}): {error_msg}")
+                # 检查是否是并发限制错误
+                if "Concurrent Limit" in error_msg or "50430" in error_msg:
+                    return {
+                        "task_id": task_id,
+                        "status": "processing",
+                        "progress": 30,
+                        "video_url": None,
+                        "warning": "API 并发限制，请稍后重试"
+                    }
+                continue
+        
+        # 所有 req_key 都失败，返回处理中状态（可能是任务不存在或查询失败）
+        return {
+            "task_id": task_id,
+            "status": "processing",
+            "progress": 30,
+            "video_url": None,
+            "note": "无法查询到任务状态，可能任务不存在或仍在处理中"
+        }
+        
+    except Exception as e:
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": str(e)
+        }
 
 
 # ========== 资产管理 API ==========

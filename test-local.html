@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>剧变时代 - 本地测试</title>
+    <style>
+      /* 内联样式，确保即使外部 CSS 加载失败也能显示 */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #070A12;
+        color: #EAF0FF;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      
+      .header {
+        text-align: center;
+        padding: 40px 20px;
+        margin-bottom: 40px;
+      }
+      
+      .header h1 {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      .header p {
+        color: rgba(234, 240, 255, 0.7);
+        font-size: 1.2rem;
+      }
+      
+      .status {
+        background: #0E1632;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+      
+      .status h2 {
+        margin-bottom: 15px;
+        color: #EAF0FF;
+      }
+      
+      .status-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .status-item:last-child {
+        border-bottom: none;
+      }
+      
+      .status-label {
+        flex: 1;
+        color: rgba(234, 240, 255, 0.7);
+      }
+      
+      .status-value {
+        font-weight: bold;
+      }
+      
+      .status-ok {
+        color: #4CAF50;
+      }
+      
+      .status-error {
+        color: #f44336;
+      }
+      
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+      }
+      
+      .card {
+        background: #0E1632;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+      
+      .card h3 {
+        margin-bottom: 10px;
+        color: #EAF0FF;
+      }
+      
+      .card p {
+        color: rgba(234, 240, 255, 0.7);
+        line-height: 1.6;
+      }
+      
+      .test-section {
+        background: #0E1632;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+      }
+      
+      .test-section h2 {
+        margin-bottom: 15px;
+      }
+      
+      .test-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin: 5px;
+        transition: opacity 0.2s;
+      }
+      
+      .test-button:hover {
+        opacity: 0.9;
+      }
+      
+      .test-result {
+        margin-top: 15px;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.9rem;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      
+      .footer {
+        text-align: center;
+        padding: 40px 20px;
+        margin-top: 40px;
+        color: rgba(234, 240, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>剧变时代</h1>
+        <p>本地测试页面</p>
+      </div>
+      
+      <div class="status">
+        <h2>系统状态</h2>
+        <div class="status-item">
+          <span class="status-label">页面加载</span>
+          <span class="status-value status-ok">✓ 正常</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">CSS 样式</span>
+          <span class="status-value status-ok">✓ 已加载（内联）</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">JavaScript</span>
+          <span class="status-value" id="jsStatus">检查中...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">API 连接</span>
+          <span class="status-value" id="apiStatus">未测试</span>
+        </div>
+      </div>
+      
+      <div class="card-grid">
+        <div class="card">
+          <h3>📄 静态文件测试</h3>
+          <p>这个页面使用内联 CSS，不依赖外部文件，可以直接在浏览器中打开测试。</p>
+        </div>
+        
+        <div class="card">
+          <h3>🔧 功能说明</h3>
+          <p>这是一个独立的测试页面，包含所有必要的样式和功能，无需服务器即可运行。</p>
+        </div>
+        
+        <div class="card">
+          <h3>✅ 测试项目</h3>
+          <p>可以测试页面布局、样式、基本交互功能，以及 API 连接（如果可用）。</p>
+        </div>
+      </div>
+      
+      <div class="test-section">
+        <h2>API 测试</h2>
+        <button class="test-button" onclick="testAPI()">测试 API 连接</button>
+        <button class="test-button" onclick="testLocalStorage()">测试本地存储</button>
+        <button class="test-button" onclick="testConsole()">测试控制台</button>
+        <div class="test-result" id="testResult" style="display: none;"></div>
+      </div>
+      
+      <div class="footer">
+        <p>本地测试页面 | 无需服务器 | 直接打开即可使用</p>
+      </div>
+    </div>
+    
+    <script>
+      // 检查 JavaScript 是否加载
+      document.addEventListener('DOMContentLoaded', function() {
+        const jsStatus = document.getElementById('jsStatus');
+        jsStatus.textContent = '✓ 正常';
+        jsStatus.className = 'status-value status-ok';
+      });
+      
+      // API 测试
+      async function testAPI() {
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '正在测试 API 连接...';
+        
+        try {
+          const response = await fetch('https://www.jubianai.cn/api/health');
+          const data = await response.json();
+          resultDiv.innerHTML = `
+            <strong>✓ API 连接成功</strong><br>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+          document.getElementById('apiStatus').textContent = '✓ 可用';
+          document.getElementById('apiStatus').className = 'status-value status-ok';
+        } catch (error) {
+          resultDiv.innerHTML = `
+            <strong>✗ API 连接失败</strong><br>
+            <pre>${error.message}</pre>
+            <p style="margin-top: 10px; color: rgba(234, 240, 255, 0.7);">
+              这可能是因为：<br>
+              - API 服务未运行<br>
+              - 网络连接问题<br>
+              - CORS 限制
+            </p>
+          `;
+          document.getElementById('apiStatus').textContent = '✗ 不可用';
+          document.getElementById('apiStatus').className = 'status-value status-error';
+        }
+      }
+      
+      // 本地存储测试
+      function testLocalStorage() {
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        
+        try {
+          localStorage.setItem('test', 'Hello from 剧变时代!');
+          const value = localStorage.getItem('test');
+          resultDiv.innerHTML = `
+            <strong>✓ 本地存储正常</strong><br>
+            <pre>存储的值: ${value}</pre>
+          `;
+        } catch (error) {
+          resultDiv.innerHTML = `
+            <strong>✗ 本地存储失败</strong><br>
+            <pre>${error.message}</pre>
+          `;
+        }
+      }
+      
+      // 控制台测试
+      function testConsole() {
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        
+        console.log('测试日志输出');
+        console.info('测试信息输出');
+        console.warn('测试警告输出');
+        
+        resultDiv.innerHTML = `
+          <strong>✓ 控制台测试完成</strong><br>
+          <p style="margin-top: 10px; color: rgba(234, 240, 255, 0.7);">
+            请打开浏览器开发者工具（F12）查看控制台输出
+          </p>
+        `;
+      }
+      
+      // 页面加载完成提示
+      window.addEventListener('load', function() {
+        console.log('剧变时代 - 本地测试页面已加载');
+        console.log('页面功能正常，可以开始测试');
+      });
+    </script>
+  </body>
+</html>
+
