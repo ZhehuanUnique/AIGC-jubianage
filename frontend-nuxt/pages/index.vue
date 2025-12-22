@@ -10,40 +10,123 @@
       </div>
 
       <!-- 主输入区域 -->
-      <div class="input-area mb-6">
-        <div class="flex items-start gap-4 h-full min-h-[400px]">
-          <!-- 图片上传图标（参考图片设计） -->
-          <div class="flex-shrink-0 pt-2">
-            <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center rotate-12 shadow-sm">
-              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
+      <div class="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+        <!-- 输入框 -->
+        <textarea
+          v-model="prompt"
+          placeholder="请描述你想生成的视频"
+          class="w-full min-h-[120px] bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 text-lg leading-relaxed"
+          @input="handleInput"
+        />
+
+        <!-- 首尾帧上传卡片 -->
+        <div class="flex items-center gap-4 mt-6">
+          <!-- 首帧卡片 -->
+          <div
+            class="relative flex-1 cursor-pointer group"
+            @mouseenter="hoveredFrame = 'first'"
+            @mouseleave="hoveredFrame = null"
+            @click="triggerFirstFrameUpload"
+          >
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleFirstFrame"
+              class="hidden"
+              ref="firstFrameInput"
+            />
+            <div
+              :class="[
+                'relative w-full h-48 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                hoveredFrame === 'first' ? 'border-primary-500 shadow-lg transform -translate-y-2' : 'border-gray-300',
+                firstFramePreview ? 'border-primary-500 bg-white' : ''
+              ]"
+            >
+              <!-- 已上传图片预览 -->
+              <img
+                v-if="firstFramePreview"
+                :src="firstFramePreview"
+                alt="首帧"
+                class="absolute inset-0 w-full h-full object-cover rounded-xl"
+              />
+              <!-- 加号和文字 -->
+              <div
+                v-if="!firstFramePreview"
+                class="flex flex-col items-center justify-center z-10"
+              >
+                <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span class="text-sm text-gray-600 font-medium">首帧</span>
+              </div>
+              <!-- 删除按钮 -->
+              <button
+                v-if="firstFramePreview"
+                @click.stop="clearFirstFrame"
+                class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+              >
+                ×
+              </button>
             </div>
           </div>
 
-          <!-- 输入框 -->
-          <div class="flex-1 flex flex-col">
-            <textarea
-              v-model="prompt"
-              placeholder="请描述你想生成的视频"
-              class="w-full flex-1 bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 text-lg leading-relaxed"
-              @input="handleInput"
+          <!-- 双向箭头 -->
+          <div class="flex-shrink-0">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </div>
+
+          <!-- 尾帧卡片 -->
+          <div
+            class="relative flex-1 cursor-pointer group"
+            @mouseenter="hoveredFrame = 'last'"
+            @mouseleave="hoveredFrame = null"
+            @click="triggerLastFrameUpload"
+          >
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleLastFrame"
+              class="hidden"
+              ref="lastFrameInput"
             />
-            
-            <!-- 首尾帧预览（如果已上传） -->
-            <div v-if="firstFramePreview || lastFramePreview" class="flex gap-4 mt-4">
-              <div v-if="firstFramePreview" class="relative">
-                <img :src="firstFramePreview" alt="首帧" class="w-24 h-24 object-cover rounded-lg border-2 border-primary-500" />
-                <button @click="clearFirstFrame" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">
-                  ×
-                </button>
+            <div
+              :class="[
+                'relative w-full h-48 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                hoveredFrame === 'last' ? 'border-primary-500 shadow-lg transform -translate-y-2' : 'border-gray-300',
+                lastFramePreview ? 'border-primary-500 bg-white' : ''
+              ]"
+            >
+              <!-- 已上传图片预览 -->
+              <img
+                v-if="lastFramePreview"
+                :src="lastFramePreview"
+                alt="尾帧"
+                class="absolute inset-0 w-full h-full object-cover rounded-xl"
+              />
+              <!-- 加号和文字 -->
+              <div
+                v-if="!lastFramePreview"
+                class="flex flex-col items-center justify-center z-10"
+              >
+                <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span class="text-sm text-gray-600 font-medium">尾帧</span>
               </div>
-              <div v-if="lastFramePreview" class="relative">
-                <img :src="lastFramePreview" alt="尾帧" class="w-24 h-24 object-cover rounded-lg border-2 border-primary-500" />
-                <button @click="clearLastFrame" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">
-                  ×
-                </button>
-              </div>
+              <!-- 删除按钮 -->
+              <button
+                v-if="lastFramePreview"
+                @click.stop="clearLastFrame"
+                class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+              >
+                ×
+              </button>
             </div>
           </div>
         </div>
@@ -81,41 +164,17 @@
             </button>
           </div>
 
-          <!-- 首尾帧上传 -->
-          <div class="flex items-center gap-2">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleFirstFrame"
-                class="hidden"
-                ref="firstFrameInput"
-              />
-              <span class="text-sm text-gray-600 hover:text-primary-500">首帧</span>
-            </label>
-            <span class="text-gray-300">|</span>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleLastFrame"
-                class="hidden"
-                ref="lastFrameInput"
-              />
-              <span class="text-sm text-gray-600 hover:text-primary-500">尾帧</span>
-            </label>
-          </div>
         </div>
 
-        <!-- 右侧：剩余次数和生成按钮 -->
-        <div class="flex items-center gap-4">
-          <span class="text-sm text-gray-500">◆ {{ remainingCount }}/次</span>
+        <!-- 右侧：生成按钮 -->
+        <div class="flex items-center">
           <button
+            type="button"
             @click="generateVideo"
-            :disabled="!prompt || isGenerating || videoStore.isGenerating"
+            :disabled="!prompt.trim() || isGenerating || videoStore.isGenerating"
             :class="[
               'px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl hover:from-primary-600 hover:to-primary-700 active:scale-95 transition-all flex items-center gap-2',
-              (!prompt || isGenerating || videoStore.isGenerating) && 'opacity-50 cursor-not-allowed'
+              (!prompt.trim() || isGenerating || videoStore.isGenerating) && 'opacity-50 cursor-not-allowed'
             ]"
           >
             <svg v-if="!isGenerating && !videoStore.isGenerating" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,12 +258,20 @@ const firstFrameInput = ref<HTMLInputElement | null>(null)
 const lastFrameInput = ref<HTMLInputElement | null>(null)
 const isGenerating = ref(false)
 const error = ref('')
-const remainingCount = ref(10) // 临时值，后续从后端获取
+const hoveredFrame = ref<'first' | 'last' | null>(null)
 
 const generatedVideo = computed(() => videoStore.currentVideo)
 
 const handleInput = () => {
   error.value = ''
+}
+
+const triggerFirstFrameUpload = () => {
+  firstFrameInput.value?.click()
+}
+
+const triggerLastFrameUpload = () => {
+  lastFrameInput.value?.click()
 }
 
 const handleFirstFrame = async (event: Event) => {
@@ -249,10 +316,20 @@ const fileToDataURL = (file: File): Promise<string> => {
 }
 
 const generateVideo = async () => {
+  console.log('生成视频按钮被点击')
+  
+  // 验证输入
   if (!prompt.value.trim()) {
     error.value = '请输入视频描述'
     return
   }
+
+  console.log('开始生成视频:', {
+    prompt: prompt.value,
+    duration: duration.value,
+    hasFirstFrame: !!firstFrame.value,
+    hasLastFrame: !!lastFrame.value
+  })
 
   isGenerating.value = true
   error.value = ''
@@ -271,13 +348,14 @@ const generateVideo = async () => {
 
     // 调用视频生成
     await videoStore.generateVideo({
-      prompt: prompt.value,
+      prompt: prompt.value.trim(),
       duration: duration.value,
       firstFrame: firstFrameBase64,
       lastFrame: lastFrameBase64,
       backendUrl: config.public.backendUrl
     })
   } catch (err: any) {
+    console.error('生成视频失败:', err)
     error.value = err.message || '生成失败，请重试'
   } finally {
     isGenerating.value = false
