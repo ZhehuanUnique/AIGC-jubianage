@@ -9,8 +9,36 @@
     <link rel="icon" type="image/png" href="/logo/favicon.png" />
     <link rel="apple-touch-icon" href="/logo/apple-touch-icon.png" />
     <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* 基础样式，确保即使外部 CSS 加载失败也能显示内容 */
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #070A12;
+        color: #EAF0FF;
+        min-height: 100vh;
+      }
+      .debug-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 9999;
+        display: none;
+      }
+    </style>
   </head>
   <body>
+    <!-- 调试信息 -->
+    <div class="debug-info" id="debugInfo">
+      <div>CSS: <span id="cssStatus">加载中...</span></div>
+      <div>JS: <span id="jsStatus">加载中...</span></div>
+    </div>
     <!-- 背景视频 -->
     <video class="bg-video" autoplay muted loop playsinline preload="auto">
       <source src="/index.mp4" type="video/mp4" />
@@ -19,12 +47,17 @@
     <main class="stage">
       <!-- Logo + 标题（左上角） -->
       <header class="header">
-        <img class="header__logo" src="/logo/logo.png" alt="剧变时代 Logo" />
+        <img class="header__logo" src="/logo/logo.png" alt="剧变时代 Logo" onerror="this.style.display='none';" />
         <span class="header__title">剧变时代</span>
       </header>
       
       <section class="hero">
         <h1 class="hero__title">剧变时代</h1>
+        <noscript>
+          <p style="color: #fff; text-align: center; padding: 20px;">
+            请启用 JavaScript 以查看完整内容
+          </p>
+        </noscript>
       </section>
 
       <section class="rail">
@@ -108,7 +141,55 @@
       </section>
     </main>
 
-    <script src="/main.js"></script>
+    <script>
+      // 检查资源加载状态
+      window.addEventListener('load', function() {
+        const debugInfo = document.getElementById('debugInfo');
+        const cssStatus = document.getElementById('cssStatus');
+        const jsStatus = document.getElementById('jsStatus');
+        
+        // 检查 CSS 是否加载
+        const testEl = document.createElement('div');
+        testEl.className = 'bg-video';
+        document.body.appendChild(testEl);
+        const styles = window.getComputedStyle(testEl);
+        if (styles.position === 'fixed' || styles.position === 'absolute') {
+          cssStatus.textContent = '✓ 已加载';
+          cssStatus.style.color = '#4CAF50';
+        } else {
+          cssStatus.textContent = '✗ 加载失败';
+          cssStatus.style.color = '#f44336';
+          debugInfo.style.display = 'block';
+        }
+        document.body.removeChild(testEl);
+        
+        // 检查 JS 是否加载
+        if (typeof setupMarquee === 'function') {
+          jsStatus.textContent = '✓ 已加载';
+          jsStatus.style.color = '#4CAF50';
+        } else {
+          jsStatus.textContent = '✗ 加载失败';
+          jsStatus.style.color = '#f44336';
+          debugInfo.style.display = 'block';
+        }
+        
+        // 3秒后隐藏调试信息
+        setTimeout(() => {
+          if (debugInfo) debugInfo.style.display = 'none';
+        }, 3000);
+      });
+      
+      // 捕获资源加载错误
+      window.addEventListener('error', function(e) {
+        console.error('资源加载错误:', e);
+        const debugInfo = document.getElementById('debugInfo');
+        if (debugInfo) {
+          debugInfo.style.display = 'block';
+          debugInfo.innerHTML += '<div style="color: #f44336;">错误: ' + (e.message || '未知错误') + '</div>';
+        }
+      }, true);
+    </script>
+    <script src="/main.js" onerror="document.getElementById('jsStatus').textContent='✗ 加载失败'; document.getElementById('jsStatus').style.color='#f44336'; document.getElementById('debugInfo').style.display='block';"></script>
   </body>
 </html>
 
