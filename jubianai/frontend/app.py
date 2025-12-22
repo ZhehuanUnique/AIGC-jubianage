@@ -399,13 +399,7 @@ def display_assets():
             st.markdown(f"### 👤 {character_name}")
             
             # 显示该人物的所有资产
-            if len(assets) == 0:
-                st.info("该人物暂无资产")
-                continue
-            
-            # 确保至少有1列（st.columns 不能为0）
-            num_cols = max(1, min(len(assets), 4))
-            cols = st.columns(num_cols)  # 每行最多4个
+            cols = st.columns(min(len(assets), 4))  # 每行最多4个
             
             for idx, asset in enumerate(assets):
                 col_idx = idx % 4
