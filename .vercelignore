@@ -1,6 +1,13 @@
 # 忽略 RAG 相关目录（不需要在 Vercel 上运行）
 doubao-rag/
 
+# 忽略后端代码（后端需要单独部署）
+jubianai/backend/
+jubianai/config.py
+jubianai/requirements.txt
+jubianai/init_db.py
+jubianai/render_server.py
+
 # 忽略大文件（视频文件），但保留主页需要的
 *.mp4
 !index.mp4

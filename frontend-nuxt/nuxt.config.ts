@@ -1,0 +1,29 @@
+// https://nuxt.com/docs/api/configuration/nuxt-config
+export default defineNuxtConfig({
+  devtools: { enabled: true },
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@pinia/nuxt'
+  ],
+  css: ['~/assets/css/main.css'],
+  devServer: {
+    port: 3001,
+    host: '0.0.0.0'
+  },
+  runtimeConfig: {
+    public: {
+      backendUrl: process.env.BACKEND_URL || 'https://jubianai-backend.onrender.com'
+    }
+  },
+  app: {
+    head: {
+      title: '剧变时代 - AI 视频生成',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: '基于即梦 AI 的视频生成平台' }
+      ]
+    }
+  }
+})
+

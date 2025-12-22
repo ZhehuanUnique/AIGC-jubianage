@@ -242,16 +242,39 @@ BACKEND_URL=https://your-backend-url.com  # 后端服务地址
    python -m uvicorn jubianai.backend.api:app --host 0.0.0.0 --port $PORT
    ```
 
-### Render 部署
+### Render 部署（推荐用于后端 API）
 
-#### 部署步骤
+#### 快速部署
 
-1. 在 Render 创建 Web Service
-2. 连接 GitHub 仓库
-3. 配置：
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `python -m uvicorn jubianai.backend.api:app --host 0.0.0.0 --port $PORT`
-4. 设置环境变量
+1. 登录 [Render Dashboard](https://dashboard.render.com/)
+2. 点击 "New +" → "Web Service"
+3. 连接 GitHub 仓库：`ZhehuanUnique/AIGC-jubianage`
+4. 配置服务：
+   - **Name**: `jubianai-backend`
+   - **Build Command**: `pip install -r jubianai/requirements.txt`
+   - **Start Command**: `python -m uvicorn jubianai.backend.api:app --host 0.0.0.0 --port $PORT`
+   - **Plan**: `Free`
+5. 配置环境变量：
+   - `VOLCENGINE_ACCESS_KEY_ID`
+   - `VOLCENGINE_SECRET_ACCESS_KEY`
+   - `JIMENG_API_ENDPOINT`
+6. 点击 "Create Web Service"
+
+#### 获取后端 URL
+
+部署完成后，Render 会提供一个 URL，格式类似：
+```
+https://jubianai-backend.onrender.com
+```
+
+在 Streamlit Cloud 的 Secrets 中配置：
+```toml
+BACKEND_URL = "https://jubianai-backend.onrender.com"
+```
+
+**⚠️ 注意**：免费计划的 Render 服务在 15 分钟无活动后会休眠，首次访问需要几秒钟唤醒。
+
+详细部署说明请参考 [RENDER_DEPLOY.md](./RENDER_DEPLOY.md)。
 
 ## 💾 数据库设置
 
