@@ -1,0 +1,15 @@
+services:
+  # Web 服务：同时处理 API 和静态文件
+  - type: web
+    name: jubianai
+    env: python
+    buildCommand: pip install -r jubianai/requirements.txt
+    startCommand: python jubianai/render_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    plan: free
+
