@@ -10,44 +10,79 @@ import os
 
 # 页面配置
 st.set_page_config(
-    page_title="视频生成 Playground",
+    page_title="即梦 AI 视频生成",
     page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# 自定义 CSS
+# 自定义 CSS - 现代化设计（参考图2）
 st.markdown("""
     <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
+    /* 首尾帧卡片样式 */
+    .frame-upload-area {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 12px;
+        padding: 2rem;
         text-align: center;
-        margin-bottom: 2rem;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s ease;
     }
+    
+    .frame-upload-area:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    
+    .frame-upload-area.has-image {
+        border-color: #28a745;
+        background: #d4edda;
+    }
+    
+    /* 生成按钮样式 */
     .stButton>button {
         width: 100%;
-        background-color: #1f77b4;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-weight: bold;
+        font-weight: 600;
         border-radius: 8px;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        border: none;
     }
+    
     .stButton>button:hover {
-        background-color: #1565c0;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
-    .info-box {
-        padding: 1rem;
-        border-radius: 8px;
-        background-color: #f0f2f6;
-        border-left: 4px solid #1f77b4;
-        margin: 1rem 0;
+    
+    /* 参数按钮组 */
+    .param-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    /* 隐藏 Streamlit 默认样式 */
+    .stApp {
+        background: #ffffff;
+    }
+    
+    h1 {
+        color: #212529;
+        font-weight: 700;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # API 配置（可以通过环境变量或侧边栏配置）
+# Streamlit Cloud 部署时，后端 URL 应该指向实际的后端服务地址
+# 如果环境变量中有 BACKEND_URL，优先使用；否则使用默认值
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # 初始化 session state
@@ -61,7 +96,8 @@ if "backend_url" not in st.session_state:
 
 def generate_video(prompt: str, width: int, height: int, duration: int, 
                    fps: int, seed: Optional[int], negative_prompt: Optional[str],
-                   api_key: str, backend_url: str) -> dict:
+                   api_key: str, backend_url: str, 
+                   first_frame: Optional[str] = None, last_frame: Optional[str] = None) -> dict:
     """调用后端 API 生成视频"""
     url = f"{backend_url}/api/v1/video/generate"
     
@@ -74,14 +110,35 @@ def generate_video(prompt: str, width: int, height: int, duration: int,
         "seed": seed,
         "negative_prompt": negative_prompt,
         "api_key": api_key if api_key else None,
+        "first_frame": first_frame,
+        "last_frame": last_frame,
     }
     
     try:
         response = requests.post(url, json=payload, timeout=300)
         response.raise_for_status()
         return response.json()
+    except requests.exceptions.ConnectionError as e:
+        return {
+            "success": False, 
+            "error": str(e), 
+            "message": "无法连接到后端服务",
+            "detail": "请检查: 1.后端服务是否运行 2. API 地址是否正确 3.网络连接是否正常"
+        }
+    except requests.exceptions.Timeout as e:
+        return {
+            "success": False, 
+            "error": str(e), 
+            "message": "请求超时",
+            "detail": "后端服务响应时间过长，请稍后重试"
+        }
     except requests.exceptions.RequestException as e:
-        return {"success": False, "error": str(e), "message": "请求失败"}
+        return {
+            "success": False, 
+            "error": str(e), 
+            "message": "请求失败",
+            "detail": f"错误信息: {str(e)} 请检查: 1.后端服务是否运行 2. API 地址是否正确 3.网络连接是否正常"
+        }
 
 
 def check_video_status(task_id: str, backend_url: str) -> dict:
@@ -119,40 +176,43 @@ def video_generation_page():
     with st.sidebar:
         st.header("⚙️ 配置")
         
-        # API Key 输入
-        api_key = st.text_input(
-            "API Key",
-            value=st.session_state.api_key,
-            type="password",
-            help="输入您的 API Key"
-        )
-        st.session_state.api_key = api_key
+        # 注意：即梦 API 使用环境变量中的 AK/SK，不需要在这里输入
+        st.info("💡 即梦 API 使用环境变量中的 AK/SK 认证，无需手动输入")
         
         # 后端 URL 配置
+        # Streamlit Cloud 部署时，如果后端在其他平台，需要设置正确的 URL
         backend_url = st.text_input(
             "后端 API 地址",
             value=st.session_state.backend_url,
-            help="后端 API 服务的地址"
+            help="后端 API 服务的地址（Streamlit Cloud 部署时需要设置为实际的后端 URL）"
         )
         st.session_state.backend_url = backend_url
+        
+        # 显示当前配置状态
+        if backend_url and backend_url != "http://localhost:8000":
+            st.success(f"✅ 后端地址: {backend_url}")
+        else:
+            st.warning("⚠️ 当前使用本地后端地址，Streamlit Cloud 部署时需要修改为实际的后端 URL")
         
         st.divider()
         
         st.markdown("### 📖 使用说明")
         st.markdown("""
         1. 输入视频描述（提示词）
-        2. 调整视频参数（可选）
-        3. 点击"生成视频"按钮
-        4. 等待视频生成完成
+        2. 上传首尾帧图片（可选，用于控制视频起始和结束画面）
+        3. 调整视频参数（可选）
+        4. 点击"生成视频"按钮
+        5. 等待视频生成完成
         """)
         
         st.divider()
         
         st.markdown("### ℹ️ 关于")
         st.markdown("""
-        - 模型: Seedance 1.0 Fast
+        - 模型: 即梦 API
         - 类型: 视频生成
-        - 后端: FastAPI + Seedance API
+        - 功能: 支持首尾帧控制
+        - 后端: FastAPI + 即梦 API
         """)
     
     # 主内容区域
@@ -161,90 +221,100 @@ def video_generation_page():
     with col1:
         st.header("📝 视频生成")
         
-        # 提示词输入
+        # 视频描述输入（参考图2设计）
+        st.markdown("### ✍️ 视频描述")
         prompt = st.text_area(
-            "视频描述（提示词）",
+            "输入文字，描述你想创作的画面内容、运动方式等",
             height=150,
-            placeholder="例如：一只可爱的小猫在花园里玩耍，阳光明媚，画面清晰",
-            help="详细描述您想要生成的视频内容"
+            placeholder="例如：一个3D形象的小男孩，在公园滑滑板。",
+            help="详细描述视频内容，包括场景、动作、风格等"
         )
         
-        # 负面提示词（可选）
-        negative_prompt = st.text_area(
-            "负面提示词（可选）",
-            height=100,
-            placeholder="例如：模糊、低质量、变形",
-            help="描述不希望在视频中出现的内容"
-        )
+        # 首尾帧上传（参考图2设计）
+        st.markdown("### 📸 首尾帧设置")
         
-        # 高级参数
-        with st.expander("⚙️ 高级参数", expanded=False):
-            col_width, col_height = st.columns(2)
-            with col_width:
-                width = st.selectbox(
-                    "宽度",
-                    options=[512, 768, 1024, 1280],
-                    index=2,
-                    help="视频宽度（像素）"
-                )
-            with col_height:
-                height = st.selectbox(
-                    "高度",
-                    options=[512, 576, 720, 1024],
-                    index=1,
-                    help="视频高度（像素）"
-                )
-            
-            col_duration, col_fps = st.columns(2)
-            with col_duration:
-                duration = st.slider(
-                    "时长（秒）",
-                    min_value=1,
-                    max_value=10,
-                    value=5,
-                    step=1,
-                    help="视频时长"
-                )
-            with col_fps:
-                fps = st.slider(
-                    "帧率（FPS）",
-                    min_value=12,
-                    max_value=30,
-                    value=24,
-                    step=6,
-                    help="视频帧率"
-                )
-            
-            seed = st.number_input(
-                "随机种子（可选）",
-                min_value=None,
-                max_value=None,
-                value=None,
-                step=1,
-                help="用于重现相同结果的种子值，留空则随机生成"
+        # 使用两列布局，类似图2的设计
+        frame_col1, frame_col2 = st.columns(2, gap="medium")
+        
+        with frame_col1:
+            st.markdown('<div class="frame-upload-area">', unsafe_allow_html=True)
+            st.markdown("#### ➕ 首帧")
+            first_frame_file = st.file_uploader(
+                "上传首帧图片",
+                type=['jpg', 'jpeg', 'png'],
+                help="上传视频的第一帧图片",
+                key="first_frame",
+                label_visibility="collapsed"
             )
+            if first_frame_file:
+                st.image(first_frame_file, use_container_width=True)
+                st.success("✅ 首帧已上传")
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        # 生成按钮
-        generate_button = st.button("🎬 生成视频", type="primary", use_container_width=True)
+        with frame_col2:
+            st.markdown('<div class="frame-upload-area">', unsafe_allow_html=True)
+            st.markdown("#### ➕ 尾帧")
+            last_frame_file = st.file_uploader(
+                "上传尾帧图片",
+                type=['jpg', 'jpeg', 'png'],
+                help="上传视频的最后一帧图片",
+                key="last_frame",
+                label_visibility="collapsed"
+            )
+            if last_frame_file:
+                st.image(last_frame_file, use_container_width=True)
+                st.success("✅ 尾帧已上传")
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 视频参数（参考图2设计 - 简化参数）
+        st.markdown("### 🎛️ 视频参数")
+        
+        # 时长选择（类似图2的 5s 按钮）
+        duration = st.radio(
+            "视频时长",
+            options=[5, 10],
+            format_func=lambda x: f"{x}秒",
+            horizontal=True,
+            index=0,
+            help="选择视频时长，5秒或10秒"
+        )
+        
+        # 生成按钮（参考图2设计）
+        st.markdown("<br>", unsafe_allow_html=True)
+        generate_button = st.button("🚀 视频生成", type="primary", use_container_width=True)
         
         # 生成视频
         if generate_button:
             if not prompt:
-                st.error("请输入视频描述！")
-            elif not api_key:
-                st.warning("⚠️ 请在侧边栏输入 API Key")
+                st.error("❌ 请输入视频描述！")
             else:
                 with st.spinner("正在生成视频，请稍候..."):
+                    # 处理首尾帧
+                    first_frame_data = None
+                    last_frame_data = None
+                    
+                    if first_frame_file:
+                        import base64
+                        first_frame_file.seek(0)  # 重置文件指针
+                        first_frame_data = base64.b64encode(first_frame_file.read()).decode('utf-8')
+                    
+                    if last_frame_file:
+                        import base64
+                        last_frame_file.seek(0)  # 重置文件指针
+                        last_frame_data = base64.b64encode(last_frame_file.read()).decode('utf-8')
+                    
                     result = generate_video(
                         prompt=prompt,
-                        width=width,
-                        height=height,
+                        width=720,  # 即梦 API 固定 720P
+                        height=720,
                         duration=duration,
-                        fps=fps,
-                        seed=int(seed) if seed is not None else None,
-                        negative_prompt=negative_prompt if negative_prompt else None,
-                        api_key=api_key,
-                        backend_url=st.session_state.backend_url
+                        fps=24,  # 固定帧率
+                        seed=None,
+                        negative_prompt=None,  # 即梦 API 不支持负面提示词
+                        api_key=None,  # 使用环境变量中的 AK/SK
+                        backend_url=st.session_state.backend_url,
+                        first_frame=first_frame_data,
+                        last_frame=last_frame_data
                     )
                     
                     if result.get("success"):
@@ -256,6 +326,9 @@ def video_generation_page():
                         st.session_state.generated_videos.append({
                             "task_id": task_id,
                             "prompt": prompt,
+                            "first_frame": first_frame_data is not None,
+                            "last_frame": last_frame_data is not None,
+                            "duration": duration,
                             "timestamp": time.time(),
                             "status": "processing"
                         })
@@ -264,50 +337,82 @@ def video_generation_page():
                         status_placeholder = st.empty()
                         progress_bar = st.progress(0)
                         
-                        max_attempts = 60  # 最多轮询 60 次
+                        max_attempts = 120  # 最多轮询 120 次（约 4 分钟，5秒视频通常需要1-3分钟）
                         for attempt in range(max_attempts):
                             status_info = check_video_status(task_id, st.session_state.backend_url)
                             status = status_info.get("status", "processing")
                             progress = status_info.get("progress", 0)
                             
+                            # 显示警告信息（如并发限制）
+                            warning = status_info.get("warning")
+                            note = status_info.get("note")
+                            
                             progress_bar.progress(progress / 100)
-                            status_placeholder.text(f"状态: {status} ({progress}%)")
+                            status_text = f"状态: {status} ({progress}%) - 已等待 {attempt * 2} 秒"
+                            if warning:
+                                status_text += f" ⚠️ {warning}"
+                            elif note:
+                                status_text += f" ℹ️ {note}"
+                            status_placeholder.text(status_text)
                             
                             if status == "completed":
                                 video_url = status_info.get("video_url")
                                 if video_url:
+                                    st.success("✅ 视频生成完成！")
                                     st.video(video_url)
                                     st.session_state.generated_videos[-1]["video_url"] = video_url
                                     st.session_state.generated_videos[-1]["status"] = "completed"
                                 break
                             elif status == "failed":
-                                st.error("视频生成失败")
+                                error_msg = status_info.get("error", "未知错误")
+                                st.error(f"❌ 视频生成失败: {error_msg}")
                                 break
                             
-                            time.sleep(2)  # 每 2 秒查询一次
+                            # 如果遇到并发限制，增加等待时间
+                            if warning and "并发限制" in warning:
+                                time.sleep(5)  # 并发限制时等待 5 秒
+                            else:
+                                time.sleep(2)  # 正常情况每 2 秒查询一次
+                        
+                        if attempt >= max_attempts - 1:
+                            st.warning("⏰ 查询超时，请稍后手动刷新状态")
                         else:
                             st.warning("⏰ 生成时间较长，请稍后刷新页面查看结果")
                     else:
-                        st.error(f"❌ {result.get('message', '生成失败')}")
-                        if result.get("error"):
-                            st.error(f"错误详情: {result.get('error')}")
+                        error_msg = result.get('message', '生成失败')
+                        error_detail = result.get('detail', result.get('error', ''))
+                        st.error(f"❌ {error_msg}")
+                        if error_detail:
+                            st.error(f"错误信息: {error_detail}")
+                        # 提供故障排查建议
+                        st.info("💡 故障排查：\n1. 检查后端服务是否运行: `ps aux | grep uvicorn`\n2. 检查 API 地址是否正确: " + st.session_state.backend_url + "\n3. 尝试访问健康检查: " + st.session_state.backend_url + "/health")
     
     with col2:
-        st.header("📚 历史记录")
+        st.subheader("📚 生成历史")
         
         if st.session_state.generated_videos:
             for idx, video_info in enumerate(reversed(st.session_state.generated_videos[-10:])):
-                with st.container():
-                    st.markdown(f"**任务 {idx + 1}**")
-                    st.caption(f"提示词: {video_info['prompt'][:50]}...")
+                with st.expander(f"视频 {len(st.session_state.generated_videos) - idx}: {video_info.get('prompt', '')[:50]}..."):
+                    st.write(f"**任务 ID:** {video_info.get('task_id')}")
+                    st.write(f"**提示词:** {video_info.get('prompt')}")
+                    
+                    # 显示帧设置信息
+                    frame_info = []
+                    if video_info.get('first_frame'):
+                        frame_info.append("首帧")
+                    if video_info.get('last_frame'):
+                        frame_info.append("尾帧")
+                    if frame_info:
+                        st.write(f"**帧设置:** {', '.join(frame_info)}")
+                    if video_info.get('duration'):
+                        st.write(f"**时长:** {video_info.get('duration')}秒")
+                    
                     st.caption(f"状态: {video_info.get('status', 'unknown')}")
                     
                     if video_info.get("video_url"):
                         st.video(video_info["video_url"])
-                    
-                    st.divider()
         else:
-            st.info("暂无历史记录")
+            st.info("暂无生成历史")
 
 
 def assets_management_page():
