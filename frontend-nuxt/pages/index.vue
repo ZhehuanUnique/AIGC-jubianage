@@ -396,9 +396,6 @@ const handleScroll = () => {
     // 如果不在底部附近（距离底部超过100px），则收缩
     if (distanceFromBottom > 100) {
       isBottomBarCollapsed.value = true
-    } else {
-      // 接近底部时展开
-      isBottomBarCollapsed.value = false
     }
   }, 100)
 }
@@ -419,15 +416,7 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
     bottomEdgeHoverTimeout = setTimeout(() => {
       // 如果输入框没有焦点且鼠标不在悬浮窗口上，则收缩
       if (!isInputFocused.value && !isBottomBarHovered.value) {
-        const scrollY = window.scrollY
-        const windowHeight = window.innerHeight
-        const documentHeight = document.documentElement.scrollHeight
-        const distanceFromBottom = documentHeight - (scrollY + windowHeight)
-        
-        // 如果不在底部附近（超过100px），则收缩
-        if (distanceFromBottom > 100) {
-          isBottomBarCollapsed.value = true
-        }
+        isBottomBarCollapsed.value = true
       }
     }, 300)
   }
@@ -449,15 +438,7 @@ const handleBottomBarHover = (isHovering: boolean) => {
     bottomBarHoverTimeout = setTimeout(() => {
       // 如果输入框没有焦点且鼠标不在底部边缘，则收缩
       if (!isInputFocused.value && !isBottomEdgeHovered.value) {
-        const scrollY = window.scrollY
-        const windowHeight = window.innerHeight
-        const documentHeight = document.documentElement.scrollHeight
-        const distanceFromBottom = documentHeight - (scrollY + windowHeight)
-        
-        // 如果不在底部附近（超过100px），则收缩
-        if (distanceFromBottom > 100) {
-          isBottomBarCollapsed.value = true
-        }
+        isBottomBarCollapsed.value = true
       }
     }, 300)
   }

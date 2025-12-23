@@ -142,17 +142,27 @@
     <div
       class="fixed left-0 top-0 bottom-0 z-40 transition-all duration-300"
       :class="isLeftMenuVisible ? 'translate-x-0' : '-translate-x-full'"
-      @mouseenter="isLeftMenuVisible = true"
-      @mouseleave="isLeftMenuVisible = false"
+      @mouseenter="handleLeftMenuHover(true)"
+      @mouseleave="handleLeftMenuHover(false)"
     >
       <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标 -->
       <div 
-        class="absolute left-0 top-0 bottom-0 w-4 bg-transparent hover:bg-primary-500/10 transition-colors z-50"
-        @mouseenter="isLeftMenuVisible = true"
-      ></div>
+        class="absolute left-0 top-0 bottom-0 w-4 z-50"
+        @mouseenter="handleLeftMenuHover(true)"
+      >
+        <!-- 竖向光效提示 -->
+        <div 
+          class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 opacity-60 transition-opacity duration-300"
+          :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-30'"
+        ></div>
+      </div>
       
       <!-- 菜单内容 -->
-      <div class="absolute left-4 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px]">
+      <div 
+        class="absolute left-4 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px] transition-all duration-300"
+        @mouseenter="handleLeftMenuHover(true)"
+        @mouseleave="handleLeftMenuHover(false)"
+      >
         <div class="flex flex-col space-y-2">
           <NuxtLink
             to="/"
@@ -191,6 +201,8 @@ import { ref, onMounted, onUnmounted, provide } from 'vue'
 
 const route = useRoute()
 const isLeftMenuVisible = ref(false)
+const isLeftMenuHovered = ref(false)
+let leftMenuHoverTimeout: NodeJS.Timeout | null = null
 
 // 筛选相关（从子组件传递或使用provide/inject）
 const showTimeFilter = ref(false)
@@ -230,6 +242,25 @@ const isActive = (path: string) => {
   return route.path.startsWith(path)
 }
 
+// 左侧菜单悬停处理
+const handleLeftMenuHover = (isHovering: boolean) => {
+  if (leftMenuHoverTimeout) {
+    clearTimeout(leftMenuHoverTimeout)
+  }
+  
+  isLeftMenuHovered.value = isHovering
+  
+  if (isHovering) {
+    // 鼠标悬停时，立即显示菜单
+    isLeftMenuVisible.value = true
+  } else {
+    // 延迟隐藏，避免快速移动时闪烁
+    leftMenuHoverTimeout = setTimeout(() => {
+      isLeftMenuVisible.value = false
+    }, 300)
+  }
+}
+
 const selectTimeRange = (value: string) => {
   filters.value.timeRange = value as any
   showTimeFilter.value = false
@@ -264,6 +295,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (leftMenuHoverTimeout) {
+    clearTimeout(leftMenuHoverTimeout)
+  }
 })
 
 // 提供筛选功能给子组件
