@@ -621,16 +621,20 @@ const generateVideo = async () => {
     }
   } catch (err: any) {
     console.error('生成视频失败:', err)
+    console.error('错误详情:', {
+      message: err.message,
+      statusCode: err.statusCode,
+      name: err.name,
+      stack: err.stack
+    })
     error.value = err.message || '生成失败，请重试'
     
     // 失败时恢复输入状态（包括图片）
-    if (typeof savedPrompt !== 'undefined') {
-      prompt.value = savedPrompt
-      firstFrame.value = savedFirstFrame
-      lastFrame.value = savedLastFrame
-      firstFramePreview.value = savedFirstFramePreview
-      lastFramePreview.value = savedLastFramePreview
-    }
+    prompt.value = savedPrompt
+    firstFrame.value = savedFirstFrame
+    lastFrame.value = savedLastFrame
+    firstFramePreview.value = savedFirstFramePreview
+    lastFramePreview.value = savedLastFramePreview
     
     // 即使失败也尝试刷新历史记录（可能之前有记录）
     try {
