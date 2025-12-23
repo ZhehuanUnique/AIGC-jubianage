@@ -80,19 +80,21 @@
 
     <!-- 底部边缘触发区域（用于检测鼠标靠近） -->
     <div
-      class="fixed bottom-0 left-0 right-0 h-8 z-30"
+      class="fixed bottom-0 left-0 right-0 h-16 z-30 cursor-pointer"
       @mouseenter="handleBottomEdgeHover(true)"
       @mouseleave="handleBottomEdgeHover(false)"
+      @click="isBottomBarCollapsed = false"
     ></div>
 
     <!-- 底部悬浮输入区域 -->
     <div
       :class="[
-        'fixed bottom-0 left-0 right-0 z-40 transition-all duration-300',
-        isBottomBarCollapsed ? 'translate-y-[calc(100%-12px)]' : 'translate-y-0'
+        'fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out',
+        isBottomBarCollapsed ? 'translate-y-[calc(100%-16px)]' : 'translate-y-0'
       ]"
       @mouseenter="handleBottomBarHover(true)"
       @mouseleave="handleBottomBarHover(false)"
+      @click="isBottomBarCollapsed = false"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div
@@ -102,8 +104,13 @@
           ]"
         >
           <!-- 收缩时只显示一个提示条 -->
-          <div v-if="isBottomBarCollapsed" class="flex items-center justify-center py-2">
-            <span class="text-sm text-gray-500">点击或悬停展开输入区域</span>
+          <div v-if="isBottomBarCollapsed" class="flex items-center justify-center py-1 cursor-pointer" @click.stop="isBottomBarCollapsed = false">
+            <div class="flex items-center gap-2 text-xs text-gray-500 hover:text-primary-500 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+              </svg>
+              <span>点击或悬停展开输入区域</span>
+            </div>
           </div>
           
           <!-- 展开时的完整内容 -->
@@ -378,11 +385,12 @@ const handleScroll = () => {
     const scrollY = window.scrollY
     const windowHeight = window.innerHeight
     const documentHeight = document.documentElement.scrollHeight
+    const distanceFromBottom = documentHeight - (scrollY + windowHeight)
     
     // 向上滚动时收缩到底部边缘（只显示一小条）
-    // 如果不在底部附近（距离底部超过100px），则收缩
-    if (scrollY + windowHeight < documentHeight - 100) {
-      // 如果输入框没有焦点且鼠标不在底部边缘，则收缩
+    // 如果不在底部附近（距离底部超过150px），则收缩
+    if (distanceFromBottom > 150) {
+      // 如果输入框没有焦点且鼠标不在底部边缘和悬浮窗口上，则收缩
       if (!isInputFocused.value && !isBottomEdgeHovered.value) {
         isBottomBarCollapsed.value = true
       }
@@ -390,7 +398,7 @@ const handleScroll = () => {
       // 接近底部时展开
       isBottomBarCollapsed.value = false
     }
-  }, 100)
+  }, 50)
 }
 
 // 底部边缘鼠标悬停（检测鼠标靠近底部）
@@ -402,7 +410,7 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
   isBottomEdgeHovered.value = isHovering
   
   if (isHovering) {
-    // 鼠标靠近底部边缘时，展开悬浮窗口
+    // 鼠标靠近底部边缘时，立即展开悬浮窗口
     isBottomBarCollapsed.value = false
   } else {
     // 延迟检查是否需要收缩
@@ -410,12 +418,13 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
       const documentHeight = document.documentElement.scrollHeight
+      const distanceFromBottom = documentHeight - (scrollY + windowHeight)
       
-      // 如果不在底部附近且输入框没有焦点，则收缩
-      if (scrollY + windowHeight < documentHeight - 100 && !isInputFocused.value) {
+      // 如果不在底部附近（超过150px）且输入框没有焦点，则收缩
+      if (distanceFromBottom > 150 && !isInputFocused.value) {
         isBottomBarCollapsed.value = true
       }
-    }, 300)
+    }, 500)
   }
 }
 
@@ -426,6 +435,7 @@ const handleBottomBarHover = (isHovering: boolean) => {
   }
   
   if (isHovering) {
+    // 鼠标悬停在悬浮窗口上时，保持展开
     isBottomBarCollapsed.value = false
   } else {
     // 延迟检查是否需要收缩
@@ -433,12 +443,13 @@ const handleBottomBarHover = (isHovering: boolean) => {
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
       const documentHeight = document.documentElement.scrollHeight
+      const distanceFromBottom = documentHeight - (scrollY + windowHeight)
       
-      // 如果不在底部附近且输入框没有焦点，则收缩
-      if (scrollY + windowHeight < documentHeight - 100 && !isInputFocused.value) {
+      // 如果不在底部附近（超过150px）且输入框没有焦点，则收缩
+      if (distanceFromBottom > 150 && !isInputFocused.value && !isBottomEdgeHovered.value) {
         isBottomBarCollapsed.value = true
       }
-    }, 300)
+    }, 500)
   }
 }
 
@@ -473,6 +484,10 @@ const loadHistory = async () => {
     })
   } catch (err: any) {
     console.error('加载历史记录失败:', err)
+    // 如果是404错误，可能是API路径不对或后端未部署，静默处理
+    if (err.status === 404 || err.statusCode === 404) {
+      console.warn('历史记录API未找到，可能是后端未部署或路径配置错误')
+    }
   }
 }
 
