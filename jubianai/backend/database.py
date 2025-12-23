@@ -1,0 +1,111 @@
+"""
+数据库配置和连接
+使用 Supabase PostgreSQL
+"""
+import os
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime
+from typing import Optional
+
+# Supabase 数据库连接字符串格式：
+# postgresql://postgres:[YOUR-PASSWORD]@[PROJECT-REF].supabase.co:5432/postgres
+SUPABASE_DB_URL = os.getenv(
+    "SUPABASE_DB_URL",
+    os.getenv("DATABASE_URL")  # 兼容 Render 等平台的 DATABASE_URL
+)
+
+if not SUPABASE_DB_URL:
+    raise ValueError(
+        "请设置 SUPABASE_DB_URL 环境变量。"
+        "格式: postgresql://postgres:[PASSWORD]@[PROJECT-REF].supabase.co:5432/postgres"
+    )
+
+# 创建数据库引擎
+engine = create_engine(
+    SUPABASE_DB_URL,
+    pool_pre_ping=True,  # 连接前检查连接是否有效
+    pool_size=5,
+    max_overflow=10
+)
+
+# 创建会话工厂
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 声明基类
+Base = declarative_base()
+
+
+class User(Base):
+    """用户表"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, index=True)
+    password_hash = Column(String(255))  # 如果使用密码登录
+    api_key = Column(String(255), unique=True, index=True)  # API密钥
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+
+class VideoGeneration(Base):
+    """视频生成历史表"""
+    __tablename__ = "video_generations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(String(255), unique=True, nullable=False, index=True)  # 即梦 API 返回的任务ID
+    user_id = Column(Integer, nullable=False, index=True)  # 用户ID
+    
+    # 生成参数
+    prompt = Column(Text, nullable=False)  # 提示词
+    negative_prompt = Column(Text, nullable=True)  # 负面提示词
+    duration = Column(Integer, nullable=False)  # 视频时长（秒）
+    fps = Column(Integer, default=24)  # 帧率
+    width = Column(Integer, default=720)  # 宽度
+    height = Column(Integer, default=720)  # 高度
+    seed = Column(Integer, nullable=True)  # 随机种子
+    
+    # 首尾帧
+    first_frame_url = Column(Text, nullable=True)  # 首帧图片URL（base64或URL）
+    last_frame_url = Column(Text, nullable=True)  # 尾帧图片URL（base64或URL）
+    
+    # 视频信息
+    video_url = Column(Text, nullable=True)  # 生成的视频URL（对象存储URL）
+    video_name = Column(String(255), nullable=True)  # 视频名称
+    video_size = Column(Integer, nullable=True)  # 视频大小（字节）
+    
+    # 状态
+    status = Column(String(50), nullable=False, default="pending", index=True)  # pending/processing/completed/failed
+    error_message = Column(Text, nullable=True)  # 错误信息
+    
+    # 时间戳
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # 扩展元数据
+    metadata = Column(JSON, nullable=True)  # 扩展元数据（JSON格式）
+    
+    # 用户操作标记
+    is_ultra_hd = Column(Boolean, default=False)  # 是否已超清
+    is_favorite = Column(Boolean, default=False)  # 是否收藏
+    is_liked = Column(Boolean, default=False)  # 是否点赞
+
+
+# 数据库依赖注入
+def get_db():
+    """获取数据库会话"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# 初始化数据库表
+def init_db():
+    """初始化数据库表（创建表）"""
+    Base.metadata.create_all(bind=engine)
+

@@ -1,0 +1,187 @@
+import { defineStore } from 'pinia'
+
+export interface VideoHistoryItem {
+  id: number
+  task_id: string
+  prompt: string
+  duration: number
+  fps: number
+  width: number
+  height: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  video_url?: string
+  video_name?: string
+  created_at: string
+  completed_at?: string
+  is_ultra_hd?: boolean
+  is_favorite?: boolean
+  is_liked?: boolean
+}
+
+export interface VideoHistoryResponse {
+  total: number
+  items: VideoHistoryItem[]
+  limit: number
+  offset: number
+}
+
+export interface HistoryFilters {
+  timeRange?: 'all' | 'week' | 'month' | 'quarter' | 'custom'
+  startDate?: string
+  endDate?: string
+  videoType?: 'all' | 'personal'
+  operationType?: 'all' | 'ultra_hd' | 'favorite' | 'liked'
+  status?: 'pending' | 'processing' | 'completed' | 'failed'
+}
+
+export const useHistoryStore = defineStore('history', {
+  state: () => ({
+    videos: [] as VideoHistoryItem[],
+    total: 0,
+    loading: false,
+    error: null as string | null,
+    filters: {
+      timeRange: 'all' as const,
+      videoType: 'all' as const,
+      operationType: 'all' as const
+    } as HistoryFilters
+  }),
+
+  actions: {
+    async fetchHistory(params: {
+      backendUrl: string
+      limit?: number
+      offset?: number
+      filters?: HistoryFilters
+    }) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const queryParams: Record<string, string> = {
+          limit: String(params.limit || 20),
+          offset: String(params.offset || 0)
+        }
+
+        // 添加筛选参数
+        if (params.filters?.status) {
+          queryParams.status = params.filters.status
+        }
+
+        const queryString = new URLSearchParams(queryParams).toString()
+        const response = await $fetch<VideoHistoryResponse>(
+          `${params.backendUrl}/api/v1/video/history?${queryString}`
+        )
+
+        this.videos = response.items
+        this.total = response.total
+
+        // 应用前端筛选（时间范围、视频类型、操作类型）
+        this.applyFilters(params.filters || {})
+
+        return response
+      } catch (error: any) {
+        this.error = error.message || '获取历史记录失败'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    applyFilters(filters: HistoryFilters) {
+      let filtered = [...this.videos]
+
+      // 时间范围筛选
+      if (filters.timeRange && filters.timeRange !== 'all') {
+        const now = new Date()
+        let cutoffDate: Date
+
+        switch (filters.timeRange) {
+          case 'week':
+            cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            break
+          case 'month':
+            cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            break
+          case 'quarter':
+            cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+            break
+          default:
+            cutoffDate = new Date(0)
+        }
+
+        filtered = filtered.filter(video => {
+          const videoDate = new Date(video.created_at)
+          return videoDate >= cutoffDate
+        })
+      }
+
+      // 自定义日期范围
+      if (filters.startDate && filters.endDate) {
+        const start = new Date(filters.startDate)
+        const end = new Date(filters.endDate)
+        filtered = filtered.filter(video => {
+          const videoDate = new Date(video.created_at)
+          return videoDate >= start && videoDate <= end
+        })
+      }
+
+      // 操作类型筛选
+      if (filters.operationType && filters.operationType !== 'all') {
+        switch (filters.operationType) {
+          case 'ultra_hd':
+            filtered = filtered.filter(v => v.is_ultra_hd === true)
+            break
+          case 'favorite':
+            filtered = filtered.filter(v => v.is_favorite === true)
+            break
+          case 'liked':
+            filtered = filtered.filter(v => v.is_liked === true)
+            break
+        }
+      }
+
+      // 视频类型筛选（全部/个人）- 目前所有视频都是个人的
+      // 未来可以扩展为区分个人和共享视频
+
+      this.videos = filtered
+    },
+
+    setFilters(filters: Partial<HistoryFilters>) {
+      this.filters = { ...this.filters, ...filters }
+    },
+
+    async toggleFavorite(videoId: number, backendUrl: string) {
+      try {
+        const response = await $fetch<{ success: boolean; is_favorite: boolean }>(
+          `${backendUrl}/api/v1/video/history/${videoId}/favorite`,
+          { method: 'PATCH' }
+        )
+        const video = this.videos.find(v => v.id === videoId)
+        if (video) {
+          video.is_favorite = response.is_favorite
+        }
+      } catch (error: any) {
+        console.error('切换收藏状态失败:', error)
+        throw error
+      }
+    },
+
+    async toggleLike(videoId: number, backendUrl: string) {
+      try {
+        const response = await $fetch<{ success: boolean; is_liked: boolean }>(
+          `${backendUrl}/api/v1/video/history/${videoId}/like`,
+          { method: 'PATCH' }
+        )
+        const video = this.videos.find(v => v.id === videoId)
+        if (video) {
+          video.is_liked = response.is_liked
+        }
+      } catch (error: any) {
+        console.error('切换点赞状态失败:', error)
+        throw error
+      }
+    }
+  }
+})
+

@@ -24,9 +24,13 @@ from backend.assets_api import (
 )
 from backend.volcengine_auth import generate_signature, generate_simple_signature
 from backend.volcengine_sdk_helper import create_visual_service, submit_video_task
+from backend.api_history import router as history_router
 import json
 
 app = FastAPI(title="视频生成 API", version="1.0.0")
+
+# 注册历史记录 API 路由
+app.include_router(history_router)
 
 # 配置 CORS
 app.add_middleware(
@@ -74,7 +78,10 @@ async def health_check():
 
 
 @app.post("/api/v1/video/generate", response_model=VideoGenerationResponse)
-async def generate_video(request: VideoGenerationRequest):
+async def generate_video(
+    request: VideoGenerationRequest,
+    x_api_key: Optional[str] = None
+):
     """
     生成视频接口
     
@@ -291,6 +298,48 @@ async def generate_video(request: VideoGenerationRequest):
             task_id = api_result.get("data", {}).get("task_id")
             if not task_id:
                 raise Exception("即梦 API 响应中未找到 task_id，请检查响应格式")
+            
+            # 保存到数据库
+            try:
+                from backend.database import get_db
+                from backend.video_history import VideoHistoryService
+                from backend.auth import AuthService
+                
+                # 获取数据库会话
+                db = next(get_db())
+                
+                # 获取用户ID
+                user_id = None
+                if x_api_key:
+                    user = AuthService.get_user_by_api_key(db, x_api_key)
+                    if user:
+                        user_id = user.id
+                
+                if not user_id:
+                    # 使用默认用户
+                    default_user = AuthService.get_or_create_default_user(db)
+                    user_id = default_user.id
+                
+                # 创建生成记录
+                VideoHistoryService.create_generation_record(
+                    db=db,
+                    task_id=task_id,
+                    user_id=user_id,
+                    prompt=request.prompt,
+                    duration=request.duration,
+                    fps=request.fps or DEFAULT_VIDEO_SETTINGS["fps"],
+                    width=request.width or DEFAULT_VIDEO_SETTINGS["width"],
+                    height=request.height or DEFAULT_VIDEO_SETTINGS["height"],
+                    seed=request.seed,
+                    negative_prompt=request.negative_prompt,
+                    first_frame_url=request.first_frame,
+                    last_frame_url=request.last_frame,
+                    status="pending"
+                )
+                print(f"视频生成记录已保存: task_id={task_id}, user_id={user_id}")
+            except Exception as db_error:
+                # 数据库保存失败不影响视频生成，只记录错误
+                print(f"保存视频生成记录失败: {str(db_error)}")
         
         response_data = {
             "success": True,
@@ -392,13 +441,75 @@ async def get_video_status(task_id: str):
                     
                     # 转换状态
                     if status == "done":
+                        # 视频生成完成，上传到对象存储并更新数据库
+                        final_video_url = video_url
+                        
+                        try:
+                            from backend.database import get_db
+                            from backend.video_history import VideoHistoryService
+                            from backend.storage import get_storage_service
+                            import uuid
+                            from datetime import datetime
+                            
+                            # 获取数据库会话
+                            db = next(get_db())
+                            
+                            # 获取生成记录
+                            generation = VideoHistoryService.get_generation_by_task_id(db, task_id)
+                            
+                            if generation and video_url:
+                                # 尝试上传到对象存储
+                                storage_service = get_storage_service()
+                                if storage_service:
+                                    try:
+                                        # 生成视频文件名
+                                        video_name = f"{task_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4"
+                                        
+                                        # 上传到对象存储
+                                        storage_url = await storage_service.upload_video(video_url, video_name)
+                                        
+                                        if storage_url:
+                                            final_video_url = storage_url
+                                            print(f"视频已上传到对象存储: {storage_url}")
+                                        else:
+                                            print(f"对象存储上传失败，使用原始URL: {video_url}")
+                                    except Exception as storage_error:
+                                        print(f"对象存储上传错误: {str(storage_error)}")
+                                        # 上传失败不影响，使用原始URL
+                                
+                                # 更新数据库状态
+                                VideoHistoryService.update_generation_status(
+                                    db=db,
+                                    task_id=task_id,
+                                    status="completed",
+                                    video_url=final_video_url,
+                                    video_name=generation.video_name or f"{task_id}.mp4"
+                                )
+                                print(f"视频生成记录已更新: task_id={task_id}, video_url={final_video_url}")
+                        except Exception as db_error:
+                            # 数据库更新失败不影响状态返回，只记录错误
+                            print(f"更新视频生成记录失败: {str(db_error)}")
+                        
                         return {
                             "task_id": task_id,
                             "status": "completed",
                             "progress": 100,
-                            "video_url": video_url
+                            "video_url": final_video_url
                         }
                     elif status == "in_queue":
+                        # 更新数据库状态为 processing
+                        try:
+                            from backend.database import get_db
+                            from backend.video_history import VideoHistoryService
+                            db = next(get_db())
+                            VideoHistoryService.update_generation_status(
+                                db=db,
+                                task_id=task_id,
+                                status="processing"
+                            )
+                        except Exception:
+                            pass
+                        
                         return {
                             "task_id": task_id,
                             "status": "processing",
@@ -406,13 +517,40 @@ async def get_video_status(task_id: str):
                             "video_url": None
                         }
                     elif status == "generating":
-    return {
-        "task_id": task_id,
+                        # 更新数据库状态为 processing
+                        try:
+                            from backend.database import get_db
+                            from backend.video_history import VideoHistoryService
+                            db = next(get_db())
+                            VideoHistoryService.update_generation_status(
+                                db=db,
+                                task_id=task_id,
+                                status="processing"
+                            )
+                        except Exception:
+                            pass
+                        
+                        return {
+                            "task_id": task_id,
                             "status": "processing",
-        "progress": 50,
+                            "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired"]:
+                        # 更新数据库状态为 failed
+                        try:
+                            from backend.database import get_db
+                            from backend.video_history import VideoHistoryService
+                            db = next(get_db())
+                            VideoHistoryService.update_generation_status(
+                                db=db,
+                                task_id=task_id,
+                                status="failed",
+                                error_message=f"任务状态: {status}"
+                            )
+                        except Exception:
+                            pass
+                        
                         return {
                             "task_id": task_id,
                             "status": "failed",
