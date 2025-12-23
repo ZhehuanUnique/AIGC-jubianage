@@ -286,17 +286,17 @@ async def generate_video(request: VideoGenerationRequest):
                 error_msg = api_result.get("message", "未知错误")
                 request_id = api_result.get("request_id", "")
                 raise Exception(f"即梦 API 调用失败: code={response_code}, message={error_msg}, request_id={request_id}")
-            
+        
             # 从即梦 API 响应中提取任务 ID
             task_id = api_result.get("data", {}).get("task_id")
             if not task_id:
                 raise Exception("即梦 API 响应中未找到 task_id，请检查响应格式")
-            
-            response_data = {
-                "success": True,
-                "task_id": task_id,
-                "message": "视频生成任务已提交",
-            }
+        
+        response_data = {
+            "success": True,
+            "task_id": task_id,
+            "message": "视频生成任务已提交",
+        }
         except Exception as e:
             # 处理即梦 API 调用错误
             error_msg = str(e)
@@ -406,10 +406,10 @@ async def get_video_status(task_id: str):
                             "video_url": None
                         }
                     elif status == "generating":
-                        return {
-                            "task_id": task_id,
+    return {
+        "task_id": task_id,
                             "status": "processing",
-                            "progress": 50,
+        "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired"]:
@@ -463,7 +463,7 @@ async def get_video_status(task_id: str):
             "task_id": task_id,
             "status": "processing",
             "progress": 30,
-            "video_url": None,
+        "video_url": None,
             "note": "无法查询到任务状态，可能任务不存在或仍在处理中"
         }
         
@@ -474,7 +474,7 @@ async def get_video_status(task_id: str):
             "progress": 0,
             "video_url": None,
             "error": str(e)
-        }
+    }
 
 
 # ========== 资产管理 API ==========
