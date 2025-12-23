@@ -170,6 +170,13 @@ async def get_video_history(
             limit=limit,
             offset=offset
         )
+    finally:
+        # 确保关闭数据库连接
+        if 'db' in locals() and db:
+            try:
+                db.close()
+            except:
+                pass
 
 
 @router.get("/history/{task_id}")
