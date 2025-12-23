@@ -145,11 +145,14 @@
       @mouseenter="isLeftMenuVisible = true"
       @mouseleave="isLeftMenuVisible = false"
     >
-      <!-- 触发区域（左侧边沿） -->
-      <div class="absolute left-0 top-0 bottom-0 w-2 bg-transparent hover:bg-primary-500/10 transition-colors"></div>
+      <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标 -->
+      <div 
+        class="absolute left-0 top-0 bottom-0 w-4 bg-transparent hover:bg-primary-500/10 transition-colors z-50"
+        @mouseenter="isLeftMenuVisible = true"
+      ></div>
       
       <!-- 菜单内容 -->
-      <div class="absolute left-2 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px]">
+      <div class="absolute left-4 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px]">
         <div class="flex flex-col space-y-2">
           <NuxtLink
             to="/"

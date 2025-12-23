@@ -641,23 +641,20 @@ onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('filters-updated', handleFiltersUpdated as EventListener)
   
-  // 初始检查：如果不在底部，默认收缩
-  const checkInitialState = () => {
+  // 初始状态：默认收缩
+  // 延迟检查，确保DOM已渲染
+  setTimeout(() => {
     const scrollY = window.scrollY
     const windowHeight = window.innerHeight
     const documentHeight = document.documentElement.scrollHeight
     const distanceFromBottom = documentHeight - (scrollY + windowHeight)
     
     // 如果不在底部附近（超过100px），默认收缩
+    // 否则保持展开（用户可能在底部）
     if (distanceFromBottom > 100) {
       isBottomBarCollapsed.value = true
-    } else {
-      isBottomBarCollapsed.value = false
     }
-  }
-  
-  // 延迟检查，确保DOM已渲染
-  setTimeout(checkInitialState, 100)
+  }, 200)
 })
 
 onUnmounted(() => {
