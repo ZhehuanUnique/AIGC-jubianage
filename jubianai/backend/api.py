@@ -353,6 +353,15 @@ async def generate_video(
                 "message": "视频生成任务已提交",
             }
             
+            # 如果使用了 RAG，添加参考信息
+            if rag_references:
+                response_data["rag_enhanced"] = True
+                response_data["original_prompt"] = request.prompt
+                response_data["enhanced_prompt"] = enhanced_prompt
+                response_data["rag_references_count"] = len(rag_references)
+            
+            return VideoGenerationResponse(**response_data)
+            
         except Exception as e:
             # 处理即梦 API 调用错误
             error_msg = str(e)
@@ -362,15 +371,6 @@ async def generate_video(
                 message=f"视频生成失败: {error_msg}",
                 error=error_msg
             )
-        
-        # 如果使用了 RAG，添加参考信息
-        if rag_references:
-            response_data["rag_enhanced"] = True
-            response_data["original_prompt"] = request.prompt
-            response_data["enhanced_prompt"] = enhanced_prompt
-            response_data["rag_references_count"] = len(rag_references)
-        
-        return VideoGenerationResponse(**response_data)
         
     except HTTPException as e:
         return VideoGenerationResponse(
