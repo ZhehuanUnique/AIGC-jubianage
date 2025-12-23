@@ -202,6 +202,7 @@ const route = useRoute()
 const isLeftMenuVisible = ref(false)
 const isLeftMenuHovered = ref(false)
 let leftMenuHoverTimeout: NodeJS.Timeout | null = null
+let leftMenuEdgeHoverTimeout: NodeJS.Timeout | null = null
 
 // 筛选相关（从子组件传递或使用provide/inject）
 const showTimeFilter = ref(false)
@@ -245,6 +246,9 @@ const isActive = (path: string) => {
 const handleLeftMenuHover = (isHovering: boolean) => {
   if (leftMenuHoverTimeout) {
     clearTimeout(leftMenuHoverTimeout)
+  }
+  if (leftMenuEdgeHoverTimeout) {
+    clearTimeout(leftMenuEdgeHoverTimeout)
   }
   
   isLeftMenuHovered.value = isHovering
@@ -299,6 +303,9 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   if (leftMenuHoverTimeout) {
     clearTimeout(leftMenuHoverTimeout)
+  }
+  if (leftMenuEdgeHoverTimeout) {
+    clearTimeout(leftMenuEdgeHoverTimeout)
   }
 })
 
