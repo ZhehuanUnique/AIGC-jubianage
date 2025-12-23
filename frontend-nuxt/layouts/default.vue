@@ -255,7 +255,10 @@ const handleLeftMenuHover = (isHovering: boolean) => {
   } else {
     // 延迟隐藏，避免快速移动时闪烁
     leftMenuHoverTimeout = setTimeout(() => {
-      isLeftMenuVisible.value = false
+      // 再次检查是否真的没有悬停
+      if (!isLeftMenuHovered.value) {
+        isLeftMenuVisible.value = false
+      }
     }, 300)
   }
 }
