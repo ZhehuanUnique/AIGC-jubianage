@@ -548,23 +548,35 @@ const generateVideo = async () => {
   isGenerating.value = true
   error.value = ''
 
+  // 保存当前输入状态，以便失败时恢复
+  const savedPrompt = prompt.value.trim()
+  const savedFirstFrame = firstFrame.value
+  const savedLastFrame = lastFrame.value
+  const savedFirstFramePreview = firstFramePreview.value
+  const savedLastFramePreview = lastFramePreview.value
+
   try {
     let firstFrameBase64 = null
     let lastFrameBase64 = null
 
     if (firstFrame.value) {
+      console.log('正在转换首帧图片为base64...')
       firstFrameBase64 = await fileToBase64(firstFrame.value)
+      console.log('首帧图片转换完成，长度:', firstFrameBase64.length)
     }
     if (lastFrame.value) {
+      console.log('正在转换尾帧图片为base64...')
       lastFrameBase64 = await fileToBase64(lastFrame.value)
+      console.log('尾帧图片转换完成，长度:', lastFrameBase64.length)
     }
 
-    // 保存当前输入状态，以便失败时恢复
-    const savedPrompt = prompt.value.trim()
-    const savedFirstFrame = firstFrame.value
-    const savedLastFrame = lastFrame.value
-    const savedFirstFramePreview = firstFramePreview.value
-    const savedLastFramePreview = lastFramePreview.value
+    console.log('开始调用视频生成API...', {
+      prompt: savedPrompt,
+      duration: duration.value,
+      hasFirstFrame: !!firstFrameBase64,
+      hasLastFrame: !!lastFrameBase64,
+      backendUrl: config.public.backendUrl
+    })
 
     console.log('开始调用视频生成API...', {
       prompt: savedPrompt,
