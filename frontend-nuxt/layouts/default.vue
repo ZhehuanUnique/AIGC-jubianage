@@ -142,17 +142,16 @@
     <div
       class="fixed left-0 top-0 bottom-0 z-40 transition-all duration-300"
       :class="isLeftMenuVisible ? 'translate-x-0' : '-translate-x-full'"
-      @mouseenter="handleLeftMenuHover(true)"
-      @mouseleave="handleLeftMenuHover(false)"
     >
       <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标 -->
       <div 
         class="absolute left-0 top-0 bottom-0 w-4 z-50"
         @mouseenter="handleLeftMenuHover(true)"
+        @mouseleave="handleLeftMenuHover(false)"
       >
         <!-- 竖向光效提示 -->
         <div 
-          class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 opacity-60 transition-opacity duration-300"
+          class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 transition-opacity duration-300"
           :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-30'"
         ></div>
       </div>
