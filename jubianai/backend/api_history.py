@@ -47,10 +47,14 @@ class VideoGenerationHistoryResponse(BaseModel):
 
 def get_current_user_id(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    db: Session = Depends(get_db)
+    db: Optional[Session] = None
 ) -> int:
     """获取当前用户ID（通过 API Key 或默认用户）"""
     try:
+        # 如果数据库未配置，返回默认用户ID（1）
+        if not db:
+            return 1
+        
         if x_api_key:
             user = AuthService.get_user_by_api_key(db, x_api_key)
             if user:
@@ -62,11 +66,9 @@ def get_current_user_id(
     except HTTPException:
         raise
     except Exception as e:
-        # 如果数据库不可用，抛出 HTTPException
-        raise HTTPException(
-            status_code=503,
-            detail=f"数据库不可用: {str(e)}。请配置 SUPABASE_DB_URL 环境变量。"
-        )
+        # 如果数据库不可用，返回默认用户ID（1）而不是抛出异常
+        print(f"获取用户ID失败，使用默认用户: {str(e)}")
+        return 1
 
 
 @router.get("/history", response_model=VideoGenerationHistoryResponse)
@@ -75,7 +77,7 @@ async def get_video_history(
     offset: int = Query(0, ge=0),
     status: Optional[str] = Query(None, regex="^(pending|processing|completed|failed)$"),
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    db: Session = Depends(get_db)
+    db: Optional[Session] = None
 ):
     """
     获取视频生成历史记录
@@ -86,7 +88,17 @@ async def get_video_history(
     - **x_api_key**: API Key（可选，用于多用户模式）
     """
     try:
-        # 如果数据库未初始化，返回空列表
+        # 尝试获取数据库连接
+        try:
+            from .database import get_db
+            db_gen = get_db()
+            db = next(db_gen)
+        except Exception as db_error:
+            # 数据库未配置，返回空列表
+            print(f"数据库未配置，返回空历史记录: {str(db_error)}")
+            db = None
+        
+        # 获取用户ID（如果数据库不可用，返回默认用户ID）
         try:
             user_id = get_current_user_id(x_api_key, db)
         except Exception as db_init_error:
