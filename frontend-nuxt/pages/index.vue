@@ -78,17 +78,36 @@
       </div>
     </div>
 
+    <!-- 底部边缘触发区域（用于检测鼠标靠近） -->
+    <div
+      class="fixed bottom-0 left-0 right-0 h-8 z-30"
+      @mouseenter="handleBottomEdgeHover(true)"
+      @mouseleave="handleBottomEdgeHover(false)"
+    ></div>
+
     <!-- 底部悬浮输入区域 -->
     <div
       :class="[
         'fixed bottom-0 left-0 right-0 z-40 transition-all duration-300',
-        isBottomBarCollapsed ? 'translate-y-full' : 'translate-y-0'
+        isBottomBarCollapsed ? 'translate-y-[calc(100%-12px)]' : 'translate-y-0'
       ]"
       @mouseenter="handleBottomBarHover(true)"
       @mouseleave="handleBottomBarHover(false)"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <div
+          :class="[
+            'bg-white rounded-2xl shadow-lg border border-gray-200 transition-all duration-300 overflow-hidden',
+            isBottomBarCollapsed ? 'p-2' : 'p-6'
+          ]"
+        >
+          <!-- 收缩时只显示一个提示条 -->
+          <div v-if="isBottomBarCollapsed" class="flex items-center justify-center py-2">
+            <span class="text-sm text-gray-500">点击或悬停展开输入区域</span>
+          </div>
+          
+          <!-- 展开时的完整内容 -->
+          <div v-else>
           <!-- 主要内容区域：首尾帧上传（左）和提示词输入（右） -->
           <div class="flex items-start gap-6 mb-4">
             <!-- 左侧：首尾帧上传块 -->
@@ -262,6 +281,7 @@
               </button>
             </div>
           </div>
+          </div>
         </div>
       </div>
     </div>
@@ -322,8 +342,10 @@ const hoveredFrame = ref<'first' | 'last' | null>(null)
 // 悬浮窗口状态
 const isBottomBarCollapsed = ref(false)
 const isInputFocused = ref(false)
+const isBottomEdgeHovered = ref(false)
 let scrollTimeout: NodeJS.Timeout | null = null
 let bottomBarHoverTimeout: NodeJS.Timeout | null = null
+let bottomEdgeHoverTimeout: NodeJS.Timeout | null = null
 
 // 视频引用管理
 const videoRefs = new Map<number, HTMLVideoElement | null>()
@@ -357,13 +379,44 @@ const handleScroll = () => {
     const windowHeight = window.innerHeight
     const documentHeight = document.documentElement.scrollHeight
     
-    // 向上滚动时隐藏底部悬浮栏
-    if (scrollY + windowHeight < documentHeight - 200) {
-      isBottomBarCollapsed.value = true
+    // 向上滚动时收缩到底部边缘（只显示一小条）
+    // 如果不在底部附近（距离底部超过100px），则收缩
+    if (scrollY + windowHeight < documentHeight - 100) {
+      // 如果输入框没有焦点且鼠标不在底部边缘，则收缩
+      if (!isInputFocused.value && !isBottomEdgeHovered.value) {
+        isBottomBarCollapsed.value = true
+      }
     } else {
+      // 接近底部时展开
       isBottomBarCollapsed.value = false
     }
   }, 100)
+}
+
+// 底部边缘鼠标悬停（检测鼠标靠近底部）
+const handleBottomEdgeHover = (isHovering: boolean) => {
+  if (bottomEdgeHoverTimeout) {
+    clearTimeout(bottomEdgeHoverTimeout)
+  }
+  
+  isBottomEdgeHovered.value = isHovering
+  
+  if (isHovering) {
+    // 鼠标靠近底部边缘时，展开悬浮窗口
+    isBottomBarCollapsed.value = false
+  } else {
+    // 延迟检查是否需要收缩
+    bottomEdgeHoverTimeout = setTimeout(() => {
+      const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+      
+      // 如果不在底部附近且输入框没有焦点，则收缩
+      if (scrollY + windowHeight < documentHeight - 100 && !isInputFocused.value) {
+        isBottomBarCollapsed.value = true
+      }
+    }, 300)
+  }
 }
 
 // 底部悬浮栏鼠标悬停
@@ -375,14 +428,14 @@ const handleBottomBarHover = (isHovering: boolean) => {
   if (isHovering) {
     isBottomBarCollapsed.value = false
   } else {
-    // 延迟隐藏，避免快速移动时闪烁
+    // 延迟检查是否需要收缩
     bottomBarHoverTimeout = setTimeout(() => {
       const scrollY = window.scrollY
       const windowHeight = window.innerHeight
       const documentHeight = document.documentElement.scrollHeight
       
-      // 如果不在底部附近，则隐藏
-      if (scrollY + windowHeight < documentHeight - 200) {
+      // 如果不在底部附近且输入框没有焦点，则收缩
+      if (scrollY + windowHeight < documentHeight - 100 && !isInputFocused.value) {
         isBottomBarCollapsed.value = true
       }
     }, 300)
@@ -397,6 +450,16 @@ const handleInputFocus = () => {
 
 const handleInputBlur = () => {
   isInputFocused.value = false
+  // 失去焦点后，如果不在底部附近，则收缩
+  setTimeout(() => {
+    const scrollY = window.scrollY
+    const windowHeight = window.innerHeight
+    const documentHeight = document.documentElement.scrollHeight
+    
+    if (scrollY + windowHeight < documentHeight - 100 && !isBottomEdgeHovered.value) {
+      isBottomBarCollapsed.value = true
+    }
+  }, 200)
 }
 
 // 加载历史记录
@@ -572,6 +635,7 @@ onUnmounted(() => {
   window.removeEventListener('filters-updated', handleFiltersUpdated as EventListener)
   if (scrollTimeout) clearTimeout(scrollTimeout)
   if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
+  if (bottomEdgeHoverTimeout) clearTimeout(bottomEdgeHoverTimeout)
 })
 </script>
 
