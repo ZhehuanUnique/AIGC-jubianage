@@ -61,3 +61,4 @@ print(f"\n使用环境变量配置:")
 print(f"  数据库路径: {config.get_db_path()}")
 print(f"  关键帧目录: {config.get_frames_dir()}")
 
+

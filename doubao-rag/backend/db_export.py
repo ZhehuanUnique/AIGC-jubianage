@@ -247,3 +247,4 @@ if __name__ == "__main__":
     if result.get('package_created'):
         print("独立包已创建在: rag_package/")
 
+
