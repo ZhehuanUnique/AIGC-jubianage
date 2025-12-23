@@ -559,16 +559,42 @@ const generateVideo = async () => {
       lastFrameBase64 = await fileToBase64(lastFrame.value)
     }
 
+    // 保存当前输入状态，以便失败时恢复
+    const savedPrompt = prompt.value.trim()
+    const savedFirstFrame = firstFrame.value
+    const savedLastFrame = lastFrame.value
+    const savedFirstFramePreview = firstFramePreview.value
+    const savedLastFramePreview = lastFramePreview.value
+
+    console.log('开始调用视频生成API...', {
+      prompt: savedPrompt,
+      duration: duration.value,
+      hasFirstFrame: !!firstFrameBase64,
+      hasLastFrame: !!lastFrameBase64,
+      backendUrl: config.public.backendUrl
+    })
+
     const result = await videoStore.generateVideo({
-      prompt: prompt.value.trim(),
+      prompt: savedPrompt,
       duration: duration.value,
       firstFrame: firstFrameBase64,
       lastFrame: lastFrameBase64,
       backendUrl: config.public.backendUrl
     })
 
+    console.log('视频生成API响应:', result)
+
     // 如果成功提交任务，刷新历史记录（延迟一下，确保后端已保存）
     if (result && result.task_id) {
+      console.log('视频生成任务已提交，task_id:', result.task_id)
+      
+      // 成功后才清空输入
+      prompt.value = ''
+      firstFrame.value = null
+      lastFrame.value = null
+      firstFramePreview.value = null
+      lastFramePreview.value = null
+      
       // 延迟刷新，确保后端已保存记录
       setTimeout(async () => {
         try {
@@ -578,17 +604,22 @@ const generateVideo = async () => {
           // 不阻止用户继续使用，静默处理
         }
       }, 1000)
+    } else {
+      throw new Error('视频生成失败：未返回task_id')
     }
-
-    // 清空输入
-    prompt.value = ''
-    firstFrame.value = null
-    lastFrame.value = null
-    firstFramePreview.value = null
-    lastFramePreview.value = null
   } catch (err: any) {
     console.error('生成视频失败:', err)
     error.value = err.message || '生成失败，请重试'
+    
+    // 失败时恢复输入状态（包括图片）
+    if (typeof savedPrompt !== 'undefined') {
+      prompt.value = savedPrompt
+      firstFrame.value = savedFirstFrame
+      lastFrame.value = savedLastFrame
+      firstFramePreview.value = savedFirstFramePreview
+      lastFramePreview.value = savedLastFramePreview
+    }
+    
     // 即使失败也尝试刷新历史记录（可能之前有记录）
     try {
       await loadHistory()
