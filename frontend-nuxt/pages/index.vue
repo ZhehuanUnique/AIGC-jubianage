@@ -1,140 +1,8 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
-    <!-- 历史视频区域（可滚动） -->
-    <div class="flex-1 overflow-y-auto" ref="historyScrollContainer" @scroll="handleScroll">
+  <div class="relative min-h-screen bg-gray-50">
+    <!-- 历史视频区域（全屏滚动） -->
+    <div class="pb-96 pt-24">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- 标题和筛选栏 -->
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">
-              开启你的<span class="text-primary-500">视频生成</span>
-              <span class="text-primary-600">剧变时代</span>!
-            </h1>
-            <h2 class="text-2xl font-bold text-gray-800">今天</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <!-- 时间筛选 -->
-            <div class="relative">
-              <button
-                @click.stop="showTimeFilter = !showTimeFilter"
-                :class="[
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-                  filters.timeRange !== 'all' ? 'bg-primary-50 text-primary-600' : 'bg-white text-gray-700 hover:bg-gray-50'
-                ]"
-              >
-                时间
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="showTimeFilter ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
-                </svg>
-              </button>
-              <!-- 时间筛选下拉 -->
-              <div
-                v-if="showTimeFilter"
-                class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4"
-                @click.stop
-              >
-                <div class="mb-4 flex items-center gap-2">
-                  <input
-                    v-model="filters.startDate"
-                    type="date"
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    placeholder="开始日期"
-                  />
-                  <span class="text-gray-400">-</span>
-                  <input
-                    v-model="filters.endDate"
-                    type="date"
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    placeholder="结束日期"
-                  />
-                </div>
-                <div class="space-y-2">
-                  <button
-                    v-for="option in timeOptions"
-                    :key="option.value"
-                    @click="selectTimeRange(option.value)"
-                    :class="[
-                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                      filters.timeRange === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                    ]"
-                  >
-                    {{ option.label }}
-                    <svg v-if="filters.timeRange === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 视频类型筛选 -->
-            <div class="relative">
-              <button
-                @click.stop="showVideoFilter = !showVideoFilter"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50"
-              >
-                视频
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div
-                v-if="showVideoFilter"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
-                @click.stop
-              >
-                <button
-                  v-for="option in videoTypeOptions"
-                  :key="option.value"
-                  @click="selectVideoType(option.value)"
-                  :class="[
-                    'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                    filters.videoType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                  ]"
-                >
-                  {{ option.label }}
-                  <svg v-if="filters.videoType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- 操作类型筛选 -->
-            <div class="relative">
-              <button
-                @click.stop="showOperationFilter = !showOperationFilter"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50"
-              >
-                操作类型
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div
-                v-if="showOperationFilter"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
-                @click.stop
-              >
-                <button
-                  v-for="option in operationTypeOptions"
-                  :key="option.value"
-                  @click="selectOperationType(option.value)"
-                  :class="[
-                    'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                    filters.operationType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                  ]"
-                >
-                  {{ option.label }}
-                  <svg v-if="filters.operationType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 历史视频网格 -->
         <div v-if="historyStore.loading" class="text-center py-12">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -207,32 +75,159 @@
       </div>
     </div>
 
-    <!-- 固定底部输入区域 -->
+    <!-- 顶部悬浮筛选栏 -->
     <div
       :class="[
-        'bg-white border-t border-gray-200 transition-all duration-300',
-        isInputCollapsed ? 'py-2' : 'py-4'
+        'fixed top-16 left-0 right-0 z-40 transition-all duration-300',
+        isTopBarCollapsed ? '-translate-y-full' : 'translate-y-0'
       ]"
+      @mouseenter="handleTopBarHover(true)"
+      @mouseleave="handleTopBarHover(false)"
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- 回到底部按钮（滚动时显示） -->
-        <div v-if="isInputCollapsed && showBackToBottom" class="flex justify-end mb-2">
-          <button
-            @click="scrollToBottom"
-            class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1 rounded-lg hover:bg-gray-50 transition-all"
-          >
-            回到底部
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </button>
-        </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-800">今天</h2>
+            <div class="flex items-center gap-2">
+              <!-- 时间筛选 -->
+              <div class="relative">
+                <button
+                  @click.stop="showTimeFilter = !showTimeFilter"
+                  :class="[
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+                    filters.timeRange !== 'all' ? 'bg-primary-50 text-primary-600' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  ]"
+                >
+                  时间
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="showTimeFilter ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
+                  </svg>
+                </button>
+                <!-- 时间筛选下拉 -->
+                <div
+                  v-if="showTimeFilter"
+                  class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4"
+                  @click.stop
+                >
+                  <div class="mb-4 flex items-center gap-2">
+                    <input
+                      v-model="filters.startDate"
+                      type="date"
+                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="开始日期"
+                    />
+                    <span class="text-gray-400">-</span>
+                    <input
+                      v-model="filters.endDate"
+                      type="date"
+                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="结束日期"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <button
+                      v-for="option in timeOptions"
+                      :key="option.value"
+                      @click="selectTimeRange(option.value)"
+                      :class="[
+                        'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
+                        filters.timeRange === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
+                      ]"
+                    >
+                      {{ option.label }}
+                      <svg v-if="filters.timeRange === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-        <!-- 输入区域 -->
+              <!-- 视频类型筛选 -->
+              <div class="relative">
+                <button
+                  @click.stop="showVideoFilter = !showVideoFilter"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                >
+                  视频
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div
+                  v-if="showVideoFilter"
+                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
+                  @click.stop
+                >
+                  <button
+                    v-for="option in videoTypeOptions"
+                    :key="option.value"
+                    @click="selectVideoType(option.value)"
+                    :class="[
+                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
+                      filters.videoType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
+                    ]"
+                  >
+                    {{ option.label }}
+                    <svg v-if="filters.videoType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 操作类型筛选 -->
+              <div class="relative">
+                <button
+                  @click.stop="showOperationFilter = !showOperationFilter"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                >
+                  操作类型
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div
+                  v-if="showOperationFilter"
+                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
+                  @click.stop
+                >
+                  <button
+                    v-for="option in operationTypeOptions"
+                    :key="option.value"
+                    @click="selectOperationType(option.value)"
+                    :class="[
+                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
+                      filters.operationType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
+                    ]"
+                  >
+                    {{ option.label }}
+                    <svg v-if="filters.operationType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部悬浮输入区域 -->
+    <div
+      :class="[
+        'fixed bottom-0 left-0 right-0 z-40 transition-all duration-300',
+        isBottomBarCollapsed ? 'translate-y-full' : 'translate-y-0'
+      ]"
+      @mouseenter="handleBottomBarHover(true)"
+      @mouseleave="handleBottomBarHover(false)"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div
           :class="[
-            'bg-white rounded-2xl transition-all duration-300',
-            isInputCollapsed ? 'p-3' : 'p-6',
+            'bg-white rounded-2xl shadow-lg border border-gray-200 transition-all duration-300',
+            isInputExpanded ? 'p-6' : 'p-4',
             isInputFocused ? 'ring-2 ring-primary-500' : ''
           ]"
           @click="expandInput"
@@ -240,18 +235,18 @@
           <!-- 输入框 -->
           <textarea
             v-model="prompt"
-            :placeholder="isInputCollapsed ? '输入文字,描述你想创作的画面内容、运动方式等。例如:一个3D形象的小男孩,在公园滑滑板。' : '请描述你想生成的视频'"
+            placeholder="输入文字,描述你想创作的画面内容、运动方式等。例如:一个3D形象的小男孩,在公园滑滑板。"
             :class="[
               'w-full bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 transition-all',
-              isInputCollapsed ? 'min-h-[40px] text-sm' : 'min-h-[120px] text-lg leading-relaxed'
+              isInputExpanded ? 'min-h-[120px] text-lg leading-relaxed' : 'min-h-[60px] text-base'
             ]"
             @input="handleInput"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
           />
 
-          <!-- 首尾帧上传卡片（折叠时隐藏） -->
-          <div v-if="!isInputCollapsed" class="flex items-center gap-4 mt-6">
+          <!-- 首尾帧上传卡片（展开时显示） -->
+          <div v-if="isInputExpanded" class="flex items-center gap-4 mt-6">
             <!-- 首帧卡片 -->
             <div
               class="relative flex-1 cursor-pointer group"
@@ -355,62 +350,62 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 控制栏（固定在底部） -->
-        <div class="flex items-center justify-between mt-4">
-          <div class="flex items-center gap-4">
-            <button class="flex items-center gap-2 text-primary-500 font-medium hover:text-primary-600">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              视频生成
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div class="flex items-center gap-2">
+          <!-- 控制栏 -->
+          <div class="flex items-center justify-between mt-4">
+            <div class="flex items-center gap-4">
+              <button class="flex items-center gap-2 text-primary-500 font-medium hover:text-primary-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                视频生成
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  v-for="dur in durations"
+                  :key="dur"
+                  @click="duration = dur"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    duration === dur
+                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ]"
+                >
+                  {{ dur }}秒
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center">
               <button
-                v-for="dur in durations"
-                :key="dur"
-                @click="duration = dur"
+                type="button"
+                @click="generateVideo"
+                :disabled="!prompt.trim() || isGenerating || videoStore.isGenerating"
                 :class="[
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                  duration === dur
-                    ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  'px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl hover:from-primary-600 hover:to-primary-700 active:scale-95 transition-all flex items-center gap-2',
+                  (!prompt.trim() || isGenerating || videoStore.isGenerating) && 'opacity-50 cursor-not-allowed'
                 ]"
               >
-                {{ dur }}秒
+                <svg v-if="!isGenerating && !videoStore.isGenerating" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ (isGenerating || videoStore.isGenerating) ? '生成中...' : '生成视频' }}
               </button>
             </div>
-          </div>
-          <div class="flex items-center">
-            <button
-              type="button"
-              @click="generateVideo"
-              :disabled="!prompt.trim() || isGenerating || videoStore.isGenerating"
-              :class="[
-                'px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl hover:from-primary-600 hover:to-primary-700 active:scale-95 transition-all flex items-center gap-2',
-                (!prompt.trim() || isGenerating || videoStore.isGenerating) && 'opacity-50 cursor-not-allowed'
-              ]"
-            >
-              <svg v-if="!isGenerating && !videoStore.isGenerating" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {{ (isGenerating || videoStore.isGenerating) ? '生成中...' : '生成视频' }}
-            </button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 错误提示 -->
-    <div v-if="error || videoStore.error" class="bg-red-50 border-t border-red-200 px-4 py-3">
+    <div v-if="error || videoStore.error" class="fixed bottom-0 left-0 right-0 z-50 bg-red-50 border-t border-red-200 px-4 py-3">
       <div class="max-w-7xl mx-auto flex items-start gap-3">
         <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -425,7 +420,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '~/stores/video'
 import { useHistoryStore } from '~/stores/history'
 
@@ -478,11 +473,14 @@ const operationTypeOptions = [
   { label: '已点赞', value: 'liked' }
 ]
 
-// 输入框折叠状态
-const isInputCollapsed = ref(false)
+// 悬浮窗口状态
+const isTopBarCollapsed = ref(false)
+const isBottomBarCollapsed = ref(false)
+const isInputExpanded = ref(false)
 const isInputFocused = ref(false)
-const showBackToBottom = ref(false)
-const historyScrollContainer = ref<HTMLElement | null>(null)
+let scrollTimeout: NodeJS.Timeout | null = null
+let topBarHoverTimeout: NodeJS.Timeout | null = null
+let bottomBarHoverTimeout: NodeJS.Timeout | null = null
 
 // 视频引用管理
 const videoRefs = new Map<number, HTMLVideoElement | null>()
@@ -507,44 +505,70 @@ const handleVideoHover = (videoId: number, isHovering: boolean) => {
 
 // 滚动处理
 const handleScroll = () => {
-  if (!historyScrollContainer.value) return
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout)
+  }
   
-  const scrollTop = historyScrollContainer.value.scrollTop
-  const scrollHeight = historyScrollContainer.value.scrollHeight
-  const clientHeight = historyScrollContainer.value.clientHeight
+  scrollTimeout = setTimeout(() => {
+    const scrollY = window.scrollY
+    
+    // 向上滚动时隐藏悬浮窗口
+    if (scrollY > 100) {
+      isTopBarCollapsed.value = true
+      isBottomBarCollapsed.value = true
+    } else {
+      isTopBarCollapsed.value = false
+      isBottomBarCollapsed.value = false
+    }
+  }, 100)
+}
+
+// 顶部悬浮栏鼠标悬停
+const handleTopBarHover = (isHovering: boolean) => {
+  if (topBarHoverTimeout) {
+    clearTimeout(topBarHoverTimeout)
+  }
   
-  // 如果滚动超过一定距离，折叠输入框
-  if (scrollTop > 100) {
-    isInputCollapsed.value = true
-    showBackToBottom.value = true
+  if (isHovering) {
+    isTopBarCollapsed.value = false
   } else {
-    isInputCollapsed.value = false
-    showBackToBottom.value = false
+    // 延迟隐藏，避免快速移动时闪烁
+    topBarHoverTimeout = setTimeout(() => {
+      const scrollY = window.scrollY
+      if (scrollY > 100) {
+        isTopBarCollapsed.value = true
+      }
+    }, 300)
   }
 }
 
-// 回到底部
-const scrollToBottom = () => {
-  if (historyScrollContainer.value) {
-    historyScrollContainer.value.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-    isInputCollapsed.value = false
-    showBackToBottom.value = false
+// 底部悬浮栏鼠标悬停
+const handleBottomBarHover = (isHovering: boolean) => {
+  if (bottomBarHoverTimeout) {
+    clearTimeout(bottomBarHoverTimeout)
+  }
+  
+  if (isHovering) {
+    isBottomBarCollapsed.value = false
+  } else {
+    // 延迟隐藏，避免快速移动时闪烁
+    bottomBarHoverTimeout = setTimeout(() => {
+      const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+      
+      // 如果不在底部附近，则隐藏
+      if (scrollY + windowHeight < documentHeight - 100) {
+        isBottomBarCollapsed.value = true
+      }
+    }, 300)
   }
 }
 
 // 展开输入框
 const expandInput = () => {
-  isInputCollapsed.value = false
-  showBackToBottom.value = false
-  if (historyScrollContainer.value) {
-    historyScrollContainer.value.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
+  isInputExpanded.value = true
+  isBottomBarCollapsed.value = false
 }
 
 // 输入框焦点处理
@@ -555,6 +579,10 @@ const handleInputFocus = () => {
 
 const handleInputBlur = () => {
   isInputFocused.value = false
+  // 如果没有内容，可以自动收起
+  if (!prompt.value.trim() && !firstFramePreview.value && !lastFramePreview.value) {
+    isInputExpanded.value = false
+  }
 }
 
 // 筛选函数
@@ -613,6 +641,7 @@ const handleFirstFrame = async (event: Event) => {
   if (target.files && target.files[0]) {
     firstFrame.value = target.files[0]
     firstFramePreview.value = await fileToDataURL(target.files[0])
+    expandInput()
   }
 }
 
@@ -621,6 +650,7 @@ const handleLastFrame = async (event: Event) => {
   if (target.files && target.files[0]) {
     lastFrame.value = target.files[0]
     lastFramePreview.value = await fileToDataURL(target.files[0])
+    expandInput()
   }
 }
 
@@ -685,8 +715,7 @@ const generateVideo = async () => {
     lastFrame.value = null
     firstFramePreview.value = null
     lastFramePreview.value = null
-    // 回到底部
-    scrollToBottom()
+    isInputExpanded.value = false
   } catch (err: any) {
     console.error('生成视频失败:', err)
     error.value = err.message || '生成失败，请重试'
@@ -743,11 +772,30 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   loadHistory()
+  window.addEventListener('scroll', handleScroll, { passive: true })
   document.addEventListener('click', handleClickOutside)
+  
+  // 检测鼠标是否在底部附近
+  const checkBottomProximity = () => {
+    const scrollY = window.scrollY
+    const windowHeight = window.innerHeight
+    const documentHeight = document.documentElement.scrollHeight
+    
+    // 如果接近底部（100px内），显示底部悬浮栏
+    if (documentHeight - (scrollY + windowHeight) < 100) {
+      isBottomBarCollapsed.value = false
+    }
+  }
+  
+  window.addEventListener('scroll', checkBottomProximity, { passive: true })
 })
 
 onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
   document.removeEventListener('click', handleClickOutside)
+  if (scrollTimeout) clearTimeout(scrollTimeout)
+  if (topBarHoverTimeout) clearTimeout(topBarHoverTimeout)
+  if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
 })
 </script>
 

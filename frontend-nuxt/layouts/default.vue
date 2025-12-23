@@ -5,7 +5,8 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <!-- Logo/标题 -->
-          <div class="flex items-center">
+          <div class="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" class="h-8 w-8 object-contain" />
             <h1 class="text-xl font-bold text-gray-800">
               剧变时代
             </h1>
