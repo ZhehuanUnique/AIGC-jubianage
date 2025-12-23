@@ -143,9 +143,9 @@
       class="fixed left-0 top-0 bottom-0 z-40 transition-all duration-300"
       :class="isLeftMenuVisible ? 'translate-x-0' : '-translate-x-full'"
     >
-      <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标 -->
+      <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标，确保完整覆盖 -->
       <div 
-        class="absolute left-0 top-0 bottom-0 w-4 z-50"
+        class="fixed left-0 top-0 bottom-0 w-4 z-50"
         @mouseenter="handleLeftMenuHover(true)"
         @mouseleave="handleLeftMenuHover(false)"
       >

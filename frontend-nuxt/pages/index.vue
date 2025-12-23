@@ -86,11 +86,11 @@
       @mouseleave="handleBottomEdgeHover(false)"
       @click="isBottomBarCollapsed = false"
     >
-      <!-- 收缩时显示提示条（只有小箭头） -->
-      <div v-if="isBottomBarCollapsed" class="h-full flex items-center justify-center">
-        <div class="bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-lg border-t border-x border-gray-200 px-3 py-2 cursor-pointer hover:bg-white transition-colors">
-          <svg class="w-4 h-4 text-gray-400 hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+      <!-- 收缩时显示提示条（只有小箭头，贴近底部边缘） -->
+      <div v-if="isBottomBarCollapsed" class="h-full flex items-end justify-center pb-1">
+        <div class="bg-white/95 backdrop-blur-sm rounded-t-lg shadow-md border-t border-x border-gray-200 px-2 py-1.5 cursor-pointer hover:bg-white transition-all hover:shadow-lg">
+          <svg class="w-3 h-3 text-gray-400 hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
           </svg>
         </div>
       </div>
