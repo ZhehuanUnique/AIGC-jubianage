@@ -138,29 +138,29 @@
       </div>
     </nav>
 
-    <!-- 左侧边沿导航菜单 -->
+    <!-- 左侧边缘触发区域（完全独立，不受菜单容器影响） -->
     <div
-      class="fixed left-0 top-0 bottom-0 z-40 transition-all duration-300"
-      :class="isLeftMenuVisible ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed left-0 top-0 bottom-0 w-4 z-50"
+      @mouseenter="handleLeftMenuHover(true)"
+      @mouseleave="handleLeftMenuHover(false)"
     >
-      <!-- 触发区域（左侧边沿）- 始终可见，用于检测鼠标，确保完整覆盖 -->
+      <!-- 竖向光效提示 -->
       <div 
-        class="fixed left-0 top-0 bottom-0 w-4 z-50"
-        @mouseenter="handleLeftMenuHover(true)"
-        @mouseleave="handleLeftMenuHover(false)"
-      >
-        <!-- 竖向光效提示 -->
-        <div 
-          class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 transition-opacity duration-300"
-          :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-20'"
-        ></div>
-      </div>
-      
+        class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 transition-opacity duration-300"
+        :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-20'"
+      ></div>
+    </div>
+
+    <!-- 左侧边沿导航菜单（独立容器，可以隐藏） -->
+    <div
+      class="fixed left-0 top-0 bottom-0 z-40 transition-all duration-300 ease-in-out"
+      :class="isLeftMenuVisible ? 'translate-x-0' : '-translate-x-full'"
+      @mouseenter="handleLeftMenuHover(true)"
+      @mouseleave="handleLeftMenuHover(false)"
+    >
       <!-- 菜单内容 -->
       <div 
-        class="absolute left-4 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px] transition-all duration-300"
-        @mouseenter="handleLeftMenuHover(true)"
-        @mouseleave="handleLeftMenuHover(false)"
+        class="absolute left-4 top-16 bg-white rounded-r-xl shadow-xl border border-gray-200 p-4 min-w-[180px]"
       >
         <div class="flex flex-col space-y-2">
           <NuxtLink
@@ -202,7 +202,6 @@ const route = useRoute()
 const isLeftMenuVisible = ref(false)
 const isLeftMenuHovered = ref(false)
 let leftMenuHoverTimeout: NodeJS.Timeout | null = null
-let leftMenuEdgeHoverTimeout: NodeJS.Timeout | null = null
 
 // 筛选相关（从子组件传递或使用provide/inject）
 const showTimeFilter = ref(false)
@@ -246,9 +245,7 @@ const isActive = (path: string) => {
 const handleLeftMenuHover = (isHovering: boolean) => {
   if (leftMenuHoverTimeout) {
     clearTimeout(leftMenuHoverTimeout)
-  }
-  if (leftMenuEdgeHoverTimeout) {
-    clearTimeout(leftMenuEdgeHoverTimeout)
+    leftMenuHoverTimeout = null
   }
   
   isLeftMenuHovered.value = isHovering
@@ -303,9 +300,6 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   if (leftMenuHoverTimeout) {
     clearTimeout(leftMenuHoverTimeout)
-  }
-  if (leftMenuEdgeHoverTimeout) {
-    clearTimeout(leftMenuEdgeHoverTimeout)
   }
 })
 
