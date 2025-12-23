@@ -292,6 +292,11 @@ async def generate_video(
             if response_code != 10000:
                 error_msg = api_result.get("message", "未知错误")
                 request_id = api_result.get("request_id", "")
+                
+                # 特殊处理并发限制错误
+                if response_code == 50430 or "concurrent" in error_msg.lower() or "Concurrent Limit" in error_msg:
+                    raise Exception(f"即梦 API 并发限制: {error_msg}。请稍后重试，或等待其他任务完成。")
+                
                 raise Exception(f"即梦 API 调用失败: code={response_code}, message={error_msg}, request_id={request_id}")
         
             # 从即梦 API 响应中提取任务 ID
@@ -571,13 +576,13 @@ async def get_video_status(task_id: str):
                     error_msg = api_result.get("message", "未知错误")
                     print(f"查询任务失败 (req_key={req_key}): code={response_code}, message={error_msg}")
                     # 检查是否是并发限制错误
-                    if response_code == 50430 or "Concurrent Limit" in error_msg:
+                    if response_code == 50430 or "Concurrent Limit" in error_msg or "concurrent" in error_msg.lower():
                         return {
                             "task_id": task_id,
-                            "status": "processing",
-                            "progress": 30,
+                            "status": "failed",
+                            "progress": 0,
                             "video_url": None,
-                            "warning": "API 并发限制，请稍后重试"
+                            "error": "API 并发限制，请稍后重试。即梦 API 有并发请求限制，请等待其他任务完成后再试。"
                         }
                     continue
                     

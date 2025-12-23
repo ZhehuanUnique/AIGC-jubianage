@@ -46,7 +46,7 @@ class VideoGenerationHistoryResponse(BaseModel):
 
 
 def get_current_user_id(
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ) -> int:
     """获取当前用户ID（通过 API Key 或默认用户）"""
@@ -65,7 +65,7 @@ async def get_video_history(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     status: Optional[str] = Query(None, regex="^(pending|processing|completed|failed)$"),
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """
@@ -77,15 +77,36 @@ async def get_video_history(
     - **x_api_key**: API Key（可选，用于多用户模式）
     """
     try:
-        user_id = get_current_user_id(x_api_key, db)
+        # 如果数据库未初始化，返回空列表
+        try:
+            user_id = get_current_user_id(x_api_key, db)
+        except Exception as db_init_error:
+            # 数据库未初始化或表不存在，返回空列表
+            print(f"数据库初始化错误: {str(db_init_error)}")
+            return VideoGenerationHistoryResponse(
+                total=0,
+                items=[],
+                limit=limit,
+                offset=offset
+            )
         
         # 获取历史记录
-        generations = VideoHistoryService.get_user_generations(
-            db, user_id, limit=limit, offset=offset, status=status
-        )
-        
-        # 获取总数
-        total = VideoHistoryService.get_user_generation_count(db, user_id, status=status)
+        try:
+            generations = VideoHistoryService.get_user_generations(
+                db, user_id, limit=limit, offset=offset, status=status
+            )
+            
+            # 获取总数
+            total = VideoHistoryService.get_user_generation_count(db, user_id, status=status)
+        except Exception as query_error:
+            # 查询失败，可能是表不存在，返回空列表
+            print(f"查询历史记录失败: {str(query_error)}")
+            return VideoGenerationHistoryResponse(
+                total=0,
+                items=[],
+                limit=limit,
+                offset=offset
+            )
         
         # 转换为响应模型
         items = [
@@ -115,8 +136,19 @@ async def get_video_history(
             limit=limit,
             offset=offset
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
+        # 其他错误，返回空列表而不是抛出异常
+        print(f"获取历史记录异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return VideoGenerationHistoryResponse(
+            total=0,
+            items=[],
+            limit=limit,
+            offset=offset
+        )
 
 
 @router.get("/history/{task_id}")
@@ -164,7 +196,7 @@ async def get_video_by_task_id(
 @router.delete("/history/{generation_id}")
 async def delete_video_history(
     generation_id: int,
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """删除视频生成记录"""
@@ -186,7 +218,7 @@ async def delete_video_history(
 @router.patch("/history/{generation_id}/favorite")
 async def toggle_favorite(
     generation_id: int,
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """切换收藏状态"""
@@ -214,7 +246,7 @@ async def toggle_favorite(
 @router.patch("/history/{generation_id}/like")
 async def toggle_like(
     generation_id: int,
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """切换点赞状态"""
@@ -242,7 +274,7 @@ async def toggle_like(
 @router.patch("/history/{generation_id}/ultra-hd")
 async def toggle_ultra_hd(
     generation_id: int,
-    x_api_key: Optional[str] = None,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
     """切换超清标记"""

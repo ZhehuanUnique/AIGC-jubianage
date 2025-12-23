@@ -97,11 +97,17 @@ class VideoGeneration(Base):
 # 数据库依赖注入
 def get_db():
     """获取数据库会话"""
-    db = SessionLocal()
     try:
-        yield db
-    finally:
-        db.close()
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        # 如果数据库连接失败，返回 None 或抛出异常
+        # 让调用方处理
+        print(f"数据库连接错误: {str(e)}")
+        raise
 
 
 # 初始化数据库表
