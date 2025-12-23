@@ -50,14 +50,23 @@ def get_current_user_id(
     db: Session = Depends(get_db)
 ) -> int:
     """获取当前用户ID（通过 API Key 或默认用户）"""
-    if x_api_key:
-        user = AuthService.get_user_by_api_key(db, x_api_key)
-        if user:
-            return user.id
-    
-    # 如果没有提供 API Key 或无效，使用默认用户
-    default_user = AuthService.get_or_create_default_user(db)
-    return default_user.id
+    try:
+        if x_api_key:
+            user = AuthService.get_user_by_api_key(db, x_api_key)
+            if user:
+                return user.id
+        
+        # 如果没有提供 API Key 或无效，使用默认用户
+        default_user = AuthService.get_or_create_default_user(db)
+        return default_user.id
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 如果数据库不可用，抛出 HTTPException
+        raise HTTPException(
+            status_code=503,
+            detail=f"数据库不可用: {str(e)}。请配置 SUPABASE_DB_URL 环境变量。"
+        )
 
 
 @router.get("/history", response_model=VideoGenerationHistoryResponse)

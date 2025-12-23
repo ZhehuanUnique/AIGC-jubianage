@@ -304,44 +304,48 @@ async def generate_video(
             if not task_id:
                 raise Exception("即梦 API 响应中未找到 task_id，请检查响应格式")
             
-            # 保存到数据库
+            # 保存到数据库（可选，如果数据库未配置则跳过）
             try:
-                from backend.database import get_db
+                from backend.database import get_db, SessionLocal
                 from backend.video_history import VideoHistoryService
                 from backend.auth import AuthService
                 
-                # 获取数据库会话
-                db = next(get_db())
-                
-                # 获取用户ID
-                user_id = None
-                if x_api_key:
-                    user = AuthService.get_user_by_api_key(db, x_api_key)
-                    if user:
-                        user_id = user.id
-                
-                if not user_id:
-                    # 使用默认用户
-                    default_user = AuthService.get_or_create_default_user(db)
-                    user_id = default_user.id
-                
-                # 创建生成记录
-                VideoHistoryService.create_generation_record(
-                    db=db,
-                    task_id=task_id,
-                    user_id=user_id,
-                    prompt=request.prompt,
-                    duration=request.duration,
-                    fps=request.fps or DEFAULT_VIDEO_SETTINGS["fps"],
-                    width=request.width or DEFAULT_VIDEO_SETTINGS["width"],
-                    height=request.height or DEFAULT_VIDEO_SETTINGS["height"],
-                    seed=request.seed,
-                    negative_prompt=request.negative_prompt,
-                    first_frame_url=request.first_frame,
-                    last_frame_url=request.last_frame,
-                    status="pending"
-                )
-                print(f"视频生成记录已保存: task_id={task_id}, user_id={user_id}")
+                # 检查数据库是否可用
+                if SessionLocal:
+                    # 获取数据库会话
+                    db = next(get_db())
+                    
+                    # 获取用户ID
+                    user_id = None
+                    if x_api_key:
+                        user = AuthService.get_user_by_api_key(db, x_api_key)
+                        if user:
+                            user_id = user.id
+                    
+                    if not user_id:
+                        # 使用默认用户
+                        default_user = AuthService.get_or_create_default_user(db)
+                        user_id = default_user.id
+                    
+                    # 创建生成记录
+                    VideoHistoryService.create_generation_record(
+                        db=db,
+                        task_id=task_id,
+                        user_id=user_id,
+                        prompt=request.prompt,
+                        duration=request.duration,
+                        fps=request.fps or DEFAULT_VIDEO_SETTINGS["fps"],
+                        width=request.width or DEFAULT_VIDEO_SETTINGS["width"],
+                        height=request.height or DEFAULT_VIDEO_SETTINGS["height"],
+                        seed=request.seed,
+                        negative_prompt=request.negative_prompt,
+                        first_frame_url=request.first_frame,
+                        last_frame_url=request.last_frame,
+                        status="pending"
+                    )
+                    print(f"视频生成记录已保存: task_id={task_id}, user_id={user_id}")
+                else:
+                    print("数据库未配置，跳过保存历史记录")
             except Exception as db_error:
                 # 数据库保存失败不影响视频生成，只记录错误
                 print(f"保存视频生成记录失败: {str(db_error)}")

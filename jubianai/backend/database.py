@@ -16,22 +16,30 @@ SUPABASE_DB_URL = os.getenv(
     os.getenv("DATABASE_URL")  # 兼容 Render 等平台的 DATABASE_URL
 )
 
-if not SUPABASE_DB_URL:
-    raise ValueError(
-        "请设置 SUPABASE_DB_URL 环境变量。"
-        "格式: postgresql://postgres:[PASSWORD]@[PROJECT-REF].supabase.co:5432/postgres"
-    )
+# 数据库连接变为可选，如果没有配置则使用 None
+# 这样后端可以在没有数据库的情况下启动
+engine = None
+if SUPABASE_DB_URL:
+    try:
+        # 创建数据库引擎
+        engine = create_engine(
+            SUPABASE_DB_URL,
+            pool_pre_ping=True,  # 连接前检查连接是否有效
+            pool_size=5,
+            max_overflow=10
+        )
+    except Exception as e:
+        print(f"警告: 数据库连接失败: {str(e)}")
+        print("后端将在没有数据库的情况下运行，历史记录功能将不可用")
+        engine = None
+else:
+    print("警告: SUPABASE_DB_URL 未设置，数据库功能将不可用")
+    print("历史记录功能需要配置数据库，请参考 SUPABASE_SETUP.md")
 
-# 创建数据库引擎
-engine = create_engine(
-    SUPABASE_DB_URL,
-    pool_pre_ping=True,  # 连接前检查连接是否有效
-    pool_size=5,
-    max_overflow=10
-)
-
-# 创建会话工厂
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 创建会话工厂（如果引擎存在）
+SessionLocal = None
+if engine:
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 声明基类
 Base = declarative_base()
@@ -97,21 +105,23 @@ class VideoGeneration(Base):
 # 数据库依赖注入
 def get_db():
     """获取数据库会话"""
+    if not SessionLocal:
+        raise HTTPException(
+            status_code=503,
+            detail="数据库未配置。请设置 SUPABASE_DB_URL 环境变量。"
+        )
+    
+    db = SessionLocal()
     try:
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-    except Exception as e:
-        # 如果数据库连接失败，返回 None 或抛出异常
-        # 让调用方处理
-        print(f"数据库连接错误: {str(e)}")
-        raise
+        yield db
+    finally:
+        db.close()
 
 
 # 初始化数据库表
 def init_db():
     """初始化数据库表（创建表）"""
+    if not engine:
+        raise ValueError("数据库未配置，无法初始化表。请设置 SUPABASE_DB_URL 环境变量。")
     Base.metadata.create_all(bind=engine)
 
