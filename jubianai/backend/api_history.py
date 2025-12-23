@@ -76,8 +76,7 @@ async def get_video_history(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     status: Optional[str] = Query(None, regex="^(pending|processing|completed|failed)$"),
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    db: Optional[Session] = None
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
 ):
     """
     获取视频生成历史记录
