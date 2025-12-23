@@ -2,7 +2,7 @@
 视频生成历史记录 API
 新增的 API 端点，用于查询和管理视频生成历史
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
