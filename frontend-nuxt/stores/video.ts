@@ -78,11 +78,13 @@ export const useVideoStore = defineStore('video', {
               this.currentVideo = response
               this.videos.unshift(response)
               
+              console.log('视频生成任务已提交:', response.task_id)
+              
               // 开始轮询状态
               this.pollVideoStatus(response.task_id, params.backendUrl)
-              return
+              return response
             } else {
-              throw new Error(response.message || '生成失败')
+              throw new Error(response.message || response.error || '生成失败')
             }
           } catch (error: any) {
             lastError = error
