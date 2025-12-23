@@ -164,7 +164,7 @@
               <!-- 横向双箭头连接符 -->
               <div class="flex items-center justify-center">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 0l4-4m-4 4l4 4m0 6H8m0 0l4 4m-4-4l4-4" />
+                  <path d="M8 12h8M8 12l-3-3M8 12l3-3M16 12l-3 3M16 12l3 3" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </div>
 
