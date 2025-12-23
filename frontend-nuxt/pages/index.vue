@@ -1,8 +1,11 @@
 <template>
   <div class="relative min-h-screen bg-gray-50">
     <!-- 历史视频区域（全屏滚动） -->
-    <div class="pb-96 pt-24">
+    <div class="pb-96 pt-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 日期标题 -->
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">今天</h2>
+
         <!-- 历史视频网格 -->
         <div v-if="historyStore.loading" class="text-center py-12">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -75,145 +78,6 @@
       </div>
     </div>
 
-    <!-- 顶部悬浮筛选栏 -->
-    <div
-      :class="[
-        'fixed top-16 left-0 right-0 z-40 transition-all duration-300',
-        isTopBarCollapsed ? '-translate-y-full' : 'translate-y-0'
-      ]"
-      @mouseenter="handleTopBarHover(true)"
-      @mouseleave="handleTopBarHover(false)"
-    >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold text-gray-800">今天</h2>
-            <div class="flex items-center gap-2">
-              <!-- 时间筛选 -->
-              <div class="relative">
-                <button
-                  @click.stop="showTimeFilter = !showTimeFilter"
-                  :class="[
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-                    filters.timeRange !== 'all' ? 'bg-primary-50 text-primary-600' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                  ]"
-                >
-                  时间
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="showTimeFilter ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'" />
-                  </svg>
-                </button>
-                <!-- 时间筛选下拉 -->
-                <div
-                  v-if="showTimeFilter"
-                  class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4"
-                  @click.stop
-                >
-                  <div class="mb-4 flex items-center gap-2">
-                    <input
-                      v-model="filters.startDate"
-                      type="date"
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="开始日期"
-                    />
-                    <span class="text-gray-400">-</span>
-                    <input
-                      v-model="filters.endDate"
-                      type="date"
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="结束日期"
-                    />
-                  </div>
-                  <div class="space-y-2">
-                    <button
-                      v-for="option in timeOptions"
-                      :key="option.value"
-                      @click="selectTimeRange(option.value)"
-                      :class="[
-                        'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                        filters.timeRange === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                      ]"
-                    >
-                      {{ option.label }}
-                      <svg v-if="filters.timeRange === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 视频类型筛选 -->
-              <div class="relative">
-                <button
-                  @click.stop="showVideoFilter = !showVideoFilter"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                >
-                  视频
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div
-                  v-if="showVideoFilter"
-                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
-                  @click.stop
-                >
-                  <button
-                    v-for="option in videoTypeOptions"
-                    :key="option.value"
-                    @click="selectVideoType(option.value)"
-                    :class="[
-                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                      filters.videoType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                    ]"
-                  >
-                    {{ option.label }}
-                    <svg v-if="filters.videoType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- 操作类型筛选 -->
-              <div class="relative">
-                <button
-                  @click.stop="showOperationFilter = !showOperationFilter"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                >
-                  操作类型
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div
-                  v-if="showOperationFilter"
-                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2"
-                  @click.stop
-                >
-                  <button
-                    v-for="option in operationTypeOptions"
-                    :key="option.value"
-                    @click="selectOperationType(option.value)"
-                    :class="[
-                      'w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between',
-                      filters.operationType === option.value ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50'
-                    ]"
-                  >
-                    {{ option.label }}
-                    <svg v-if="filters.operationType === option.value" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 底部悬浮输入区域 -->
     <div
       :class="[
@@ -224,135 +88,133 @@
       @mouseleave="handleBottomBarHover(false)"
     >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div
-          :class="[
-            'bg-white rounded-2xl shadow-lg border border-gray-200 transition-all duration-300',
-            isInputExpanded ? 'p-6' : 'p-4',
-            isInputFocused ? 'ring-2 ring-primary-500' : ''
-          ]"
-          @click="expandInput"
-        >
-          <!-- 输入框 -->
-          <textarea
-            v-model="prompt"
-            placeholder="输入文字,描述你想创作的画面内容、运动方式等。例如:一个3D形象的小男孩,在公园滑滑板。"
-            :class="[
-              'w-full bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 transition-all',
-              isInputExpanded ? 'min-h-[120px] text-lg leading-relaxed' : 'min-h-[60px] text-base'
-            ]"
-            @input="handleInput"
-            @focus="handleInputFocus"
-            @blur="handleInputBlur"
-          />
-
-          <!-- 首尾帧上传卡片（展开时显示） -->
-          <div v-if="isInputExpanded" class="flex items-center gap-4 mt-6">
-            <!-- 首帧卡片 -->
-            <div
-              class="relative flex-1 cursor-pointer group"
-              @mouseenter="hoveredFrame = 'first'"
-              @mouseleave="hoveredFrame = null"
-              @click.stop="triggerFirstFrameUpload"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleFirstFrame"
-                class="hidden"
-                ref="firstFrameInput"
-              />
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <!-- 主要内容区域：首尾帧上传（左）和提示词输入（右） -->
+          <div class="flex items-start gap-6 mb-4">
+            <!-- 左侧：首尾帧上传块 -->
+            <div class="flex-shrink-0 flex flex-col gap-3">
+              <!-- 首帧卡片 -->
               <div
-                :class="[
-                  'relative w-full h-48 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
-                  hoveredFrame === 'first' ? 'border-primary-500 shadow-lg transform -translate-y-2' : 'border-gray-300',
-                  firstFramePreview ? 'border-primary-500 bg-white' : ''
-                ]"
+                class="relative cursor-pointer group"
+                @mouseenter="hoveredFrame = 'first'"
+                @mouseleave="hoveredFrame = null"
+                @click.stop="triggerFirstFrameUpload"
               >
-                <img
-                  v-if="firstFramePreview"
-                  :src="firstFramePreview"
-                  alt="首帧"
-                  class="absolute inset-0 w-full h-full object-cover rounded-xl"
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleFirstFrame"
+                  class="hidden"
+                  ref="firstFrameInput"
                 />
                 <div
-                  v-if="!firstFramePreview"
-                  class="flex flex-col items-center justify-center z-10"
+                  :class="[
+                    'relative w-32 h-32 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                    hoveredFrame === 'first' ? 'border-primary-500 shadow-lg transform scale-105' : 'border-gray-300',
+                    firstFramePreview ? 'border-primary-500 bg-white' : ''
+                  ]"
                 >
-                  <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
-                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                  <img
+                    v-if="firstFramePreview"
+                    :src="firstFramePreview"
+                    alt="首帧"
+                    class="absolute inset-0 w-full h-full object-cover rounded-xl"
+                  />
+                  <div
+                    v-if="!firstFramePreview"
+                    class="flex flex-col items-center justify-center z-10"
+                  >
+                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
+                      <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <span class="text-sm text-gray-600 font-medium">首帧</span>
                   </div>
-                  <span class="text-sm text-gray-600 font-medium">首帧</span>
+                  <button
+                    v-if="firstFramePreview"
+                    @click.stop="clearFirstFrame"
+                    class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  v-if="firstFramePreview"
-                  @click.stop="clearFirstFrame"
-                  class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+              </div>
+
+              <!-- 等号连接符 -->
+              <div class="flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </div>
+
+              <!-- 尾帧卡片 -->
+              <div
+                class="relative cursor-pointer group"
+                @mouseenter="hoveredFrame = 'last'"
+                @mouseleave="hoveredFrame = null"
+                @click.stop="triggerLastFrameUpload"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleLastFrame"
+                  class="hidden"
+                  ref="lastFrameInput"
+                />
+                <div
+                  :class="[
+                    'relative w-32 h-32 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                    hoveredFrame === 'last' ? 'border-primary-500 shadow-lg transform scale-105' : 'border-gray-300',
+                    lastFramePreview ? 'border-primary-500 bg-white' : ''
+                  ]"
                 >
-                  ×
-                </button>
+                  <img
+                    v-if="lastFramePreview"
+                    :src="lastFramePreview"
+                    alt="尾帧"
+                    class="absolute inset-0 w-full h-full object-cover rounded-xl"
+                  />
+                  <div
+                    v-if="!lastFramePreview"
+                    class="flex flex-col items-center justify-center z-10"
+                  >
+                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
+                      <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                    <span class="text-sm text-gray-600 font-medium">尾帧</span>
+                  </div>
+                  <button
+                    v-if="lastFramePreview"
+                    @click.stop="clearLastFrame"
+                    class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- 双向箭头 -->
-            <div class="flex-shrink-0">
-              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </div>
-
-            <!-- 尾帧卡片 -->
-            <div
-              class="relative flex-1 cursor-pointer group"
-              @mouseenter="hoveredFrame = 'last'"
-              @mouseleave="hoveredFrame = null"
-              @click.stop="triggerLastFrameUpload"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleLastFrame"
-                class="hidden"
-                ref="lastFrameInput"
-              />
-              <div
+            <!-- 右侧：提示词输入框 -->
+            <div class="flex-1">
+              <textarea
+                v-model="prompt"
+                placeholder="输入文字,描述你想创作的画面内容、运动方式等。例如:一个3D形象的小男孩,在公园滑滑板。"
                 :class="[
-                  'relative w-full h-48 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
-                  hoveredFrame === 'last' ? 'border-primary-500 shadow-lg transform -translate-y-2' : 'border-gray-300',
-                  lastFramePreview ? 'border-primary-500 bg-white' : ''
+                  'w-full bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 transition-all min-h-[200px] text-base leading-relaxed',
+                  isInputFocused ? 'ring-2 ring-primary-500 rounded-lg' : ''
                 ]"
-              >
-                <img
-                  v-if="lastFramePreview"
-                  :src="lastFramePreview"
-                  alt="尾帧"
-                  class="absolute inset-0 w-full h-full object-cover rounded-xl"
-                />
-                <div
-                  v-if="!lastFramePreview"
-                  class="flex flex-col items-center justify-center z-10"
-                >
-                  <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-3">
-                    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <span class="text-sm text-gray-600 font-medium">尾帧</span>
-                </div>
-                <button
-                  v-if="lastFramePreview"
-                  @click.stop="clearLastFrame"
-                  class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
-                >
-                  ×
-                </button>
-              </div>
+                @input="handleInput"
+                @focus="handleInputFocus"
+                @blur="handleInputBlur"
+              />
             </div>
           </div>
 
           <!-- 控制栏 -->
-          <div class="flex items-center justify-between mt-4">
+          <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
               <button class="flex items-center gap-2 text-primary-500 font-medium hover:text-primary-600">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,6 +290,21 @@ const config = useRuntimeConfig()
 const videoStore = useVideoStore()
 const historyStore = useHistoryStore()
 
+// 筛选相关（从布局组件同步）
+const filters = ref({
+  timeRange: 'all' as 'all' | 'week' | 'month' | 'quarter' | 'custom',
+  startDate: '',
+  endDate: '',
+  videoType: 'all' as 'all' | 'personal',
+  operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
+})
+
+// 监听筛选更新事件
+const handleFiltersUpdated = (event: CustomEvent) => {
+  filters.value = { ...event.detail }
+  loadHistory()
+}
+
 // 视频生成相关
 const prompt = ref('')
 const duration = ref(5)
@@ -442,44 +319,10 @@ const isGenerating = ref(false)
 const error = ref('')
 const hoveredFrame = ref<'first' | 'last' | null>(null)
 
-// 筛选相关
-const showTimeFilter = ref(false)
-const showVideoFilter = ref(false)
-const showOperationFilter = ref(false)
-const filters = ref({
-  timeRange: 'all' as 'all' | 'week' | 'month' | 'quarter' | 'custom',
-  startDate: '',
-  endDate: '',
-  videoType: 'all' as 'all' | 'personal',
-  operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
-})
-
-const timeOptions = [
-  { label: '全部', value: 'all' },
-  { label: '最近一周', value: 'week' },
-  { label: '最近一个月', value: 'month' },
-  { label: '最近三个月', value: 'quarter' }
-]
-
-const videoTypeOptions = [
-  { label: '全部', value: 'all' },
-  { label: '个人', value: 'personal' }
-]
-
-const operationTypeOptions = [
-  { label: '全部', value: 'all' },
-  { label: '已超清', value: 'ultra_hd' },
-  { label: '收藏', value: 'favorite' },
-  { label: '已点赞', value: 'liked' }
-]
-
 // 悬浮窗口状态
-const isTopBarCollapsed = ref(false)
 const isBottomBarCollapsed = ref(false)
-const isInputExpanded = ref(false)
 const isInputFocused = ref(false)
 let scrollTimeout: NodeJS.Timeout | null = null
-let topBarHoverTimeout: NodeJS.Timeout | null = null
 let bottomBarHoverTimeout: NodeJS.Timeout | null = null
 
 // 视频引用管理
@@ -511,35 +354,16 @@ const handleScroll = () => {
   
   scrollTimeout = setTimeout(() => {
     const scrollY = window.scrollY
+    const windowHeight = window.innerHeight
+    const documentHeight = document.documentElement.scrollHeight
     
-    // 向上滚动时隐藏悬浮窗口
-    if (scrollY > 100) {
-      isTopBarCollapsed.value = true
+    // 向上滚动时隐藏底部悬浮栏
+    if (scrollY + windowHeight < documentHeight - 200) {
       isBottomBarCollapsed.value = true
     } else {
-      isTopBarCollapsed.value = false
       isBottomBarCollapsed.value = false
     }
   }, 100)
-}
-
-// 顶部悬浮栏鼠标悬停
-const handleTopBarHover = (isHovering: boolean) => {
-  if (topBarHoverTimeout) {
-    clearTimeout(topBarHoverTimeout)
-  }
-  
-  if (isHovering) {
-    isTopBarCollapsed.value = false
-  } else {
-    // 延迟隐藏，避免快速移动时闪烁
-    topBarHoverTimeout = setTimeout(() => {
-      const scrollY = window.scrollY
-      if (scrollY > 100) {
-        isTopBarCollapsed.value = true
-      }
-    }, 300)
-  }
 }
 
 // 底部悬浮栏鼠标悬停
@@ -558,55 +382,21 @@ const handleBottomBarHover = (isHovering: boolean) => {
       const documentHeight = document.documentElement.scrollHeight
       
       // 如果不在底部附近，则隐藏
-      if (scrollY + windowHeight < documentHeight - 100) {
+      if (scrollY + windowHeight < documentHeight - 200) {
         isBottomBarCollapsed.value = true
       }
     }, 300)
   }
 }
 
-// 展开输入框
-const expandInput = () => {
-  isInputExpanded.value = true
-  isBottomBarCollapsed.value = false
-}
-
 // 输入框焦点处理
 const handleInputFocus = () => {
   isInputFocused.value = true
-  expandInput()
+  isBottomBarCollapsed.value = false
 }
 
 const handleInputBlur = () => {
   isInputFocused.value = false
-  // 如果没有内容，可以自动收起
-  if (!prompt.value.trim() && !firstFramePreview.value && !lastFramePreview.value) {
-    isInputExpanded.value = false
-  }
-}
-
-// 筛选函数
-const selectTimeRange = (value: string) => {
-  filters.value.timeRange = value as any
-  showTimeFilter.value = false
-  applyFilters()
-}
-
-const selectVideoType = (value: string) => {
-  filters.value.videoType = value as any
-  showVideoFilter.value = false
-  applyFilters()
-}
-
-const selectOperationType = (value: string) => {
-  filters.value.operationType = value as any
-  showOperationFilter.value = false
-  applyFilters()
-}
-
-const applyFilters = () => {
-  historyStore.setFilters(filters.value)
-  historyStore.applyFilters(filters.value)
 }
 
 // 加载历史记录
@@ -641,7 +431,6 @@ const handleFirstFrame = async (event: Event) => {
   if (target.files && target.files[0]) {
     firstFrame.value = target.files[0]
     firstFramePreview.value = await fileToDataURL(target.files[0])
-    expandInput()
   }
 }
 
@@ -650,7 +439,6 @@ const handleLastFrame = async (event: Event) => {
   if (target.files && target.files[0]) {
     lastFrame.value = target.files[0]
     lastFramePreview.value = await fileToDataURL(target.files[0])
-    expandInput()
   }
 }
 
@@ -715,7 +503,6 @@ const generateVideo = async () => {
     lastFrame.value = null
     firstFramePreview.value = null
     lastFramePreview.value = null
-    isInputExpanded.value = false
   } catch (err: any) {
     console.error('生成视频失败:', err)
     error.value = err.message || '生成失败，请重试'
@@ -760,20 +547,10 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 
-// 点击外部关闭筛选下拉
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as HTMLElement
-  if (!target.closest('.relative')) {
-    showTimeFilter.value = false
-    showVideoFilter.value = false
-    showOperationFilter.value = false
-  }
-}
-
 onMounted(() => {
   loadHistory()
   window.addEventListener('scroll', handleScroll, { passive: true })
-  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('filters-updated', handleFiltersUpdated as EventListener)
   
   // 检测鼠标是否在底部附近
   const checkBottomProximity = () => {
@@ -781,8 +558,8 @@ onMounted(() => {
     const windowHeight = window.innerHeight
     const documentHeight = document.documentElement.scrollHeight
     
-    // 如果接近底部（100px内），显示底部悬浮栏
-    if (documentHeight - (scrollY + windowHeight) < 100) {
+    // 如果接近底部（200px内），显示底部悬浮栏
+    if (documentHeight - (scrollY + windowHeight) < 200) {
       isBottomBarCollapsed.value = false
     }
   }
@@ -792,9 +569,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
-  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('filters-updated', handleFiltersUpdated as EventListener)
   if (scrollTimeout) clearTimeout(scrollTimeout)
-  if (topBarHoverTimeout) clearTimeout(topBarHoverTimeout)
   if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
 })
 </script>
