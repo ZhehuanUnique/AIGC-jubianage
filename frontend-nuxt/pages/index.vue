@@ -111,8 +111,8 @@
           <div>
           <!-- 主要内容区域：首尾帧上传（左）和提示词输入（右） -->
           <div class="flex items-start gap-6 mb-4">
-            <!-- 左侧：首尾帧上传块 -->
-            <div class="flex-shrink-0 flex flex-col gap-3">
+            <!-- 左侧：首尾帧上传块（横向排列） -->
+            <div class="flex-shrink-0 flex items-center gap-3">
               <!-- 首帧卡片 -->
               <div
                 class="relative cursor-pointer group"
@@ -129,7 +129,7 @@
                 />
                 <div
                   :class="[
-                    'relative w-32 h-32 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                    'relative w-24 h-24 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
                     hoveredFrame === 'first' ? 'border-primary-500 shadow-lg transform scale-105' : 'border-gray-300',
                     firstFramePreview ? 'border-primary-500 bg-white' : ''
                   ]"
@@ -144,27 +144,27 @@
                     v-if="!firstFramePreview"
                     class="flex flex-col items-center justify-center z-10"
                   >
-                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
-                      <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-1">
+                      <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                       </svg>
                     </div>
-                    <span class="text-sm text-gray-600 font-medium">首帧</span>
+                    <span class="text-xs text-gray-600 font-medium">首帧</span>
                   </div>
                   <button
                     v-if="firstFramePreview"
                     @click.stop="clearFirstFrame"
-                    class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+                    class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
                   >
                     ×
                   </button>
                 </div>
               </div>
 
-              <!-- 等号连接符 -->
+              <!-- 横向双箭头连接符 -->
               <div class="flex items-center justify-center">
-                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 0l4-4m-4 4l4 4m0 6H8m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
 
@@ -184,7 +184,7 @@
                 />
                 <div
                   :class="[
-                    'relative w-32 h-32 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
+                    'relative w-24 h-24 bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300',
                     hoveredFrame === 'last' ? 'border-primary-500 shadow-lg transform scale-105' : 'border-gray-300',
                     lastFramePreview ? 'border-primary-500 bg-white' : ''
                   ]"
@@ -199,17 +199,17 @@
                     v-if="!lastFramePreview"
                     class="flex flex-col items-center justify-center z-10"
                   >
-                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
-                      <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mb-1">
+                      <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                       </svg>
                     </div>
-                    <span class="text-sm text-gray-600 font-medium">尾帧</span>
+                    <span class="text-xs text-gray-600 font-medium">尾帧</span>
                   </div>
                   <button
                     v-if="lastFramePreview"
                     @click.stop="clearLastFrame"
-                    class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
+                    class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 z-20"
                   >
                     ×
                   </button>
