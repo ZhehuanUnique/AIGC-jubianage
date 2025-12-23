@@ -33,12 +33,29 @@ app = FastAPI(title="视频生成 API", version="1.0.0")
 app.include_router(history_router)
 
 # 配置 CORS
+# 允许的源列表
+allowed_origins = [
+    "http://localhost:3001",
+    "http://localhost:3000",
+    "https://www.jubianai.cn",
+    "https://jubianai.cn",
+    "https://aigc-jubianage.vercel.app",
+    "https://*.vercel.app",  # Vercel 预览域名
+]
+
+# 从环境变量读取额外的允许源
+import os
+extra_origins = os.getenv("CORS_ORIGINS", "").split(",")
+if extra_origins and extra_origins[0]:
+    allowed_origins.extend([origin.strip() for origin in extra_origins if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该限制特定域名
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
