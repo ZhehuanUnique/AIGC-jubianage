@@ -152,7 +152,7 @@
         <!-- 竖向光效提示 -->
         <div 
           class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400/30 via-primary-500/40 to-primary-400/30 transition-opacity duration-300"
-          :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-30'"
+          :class="isLeftMenuHovered ? 'opacity-100' : 'opacity-20'"
         ></div>
       </div>
       

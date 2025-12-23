@@ -86,17 +86,12 @@
       @mouseleave="handleBottomEdgeHover(false)"
       @click="isBottomBarCollapsed = false"
     >
-      <!-- 收缩时显示提示条 -->
-      <div v-if="isBottomBarCollapsed" class="h-full flex items-end">
-        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2">
-          <div class="bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-lg border-t border-x border-gray-200 px-4 py-2 cursor-pointer hover:bg-white transition-colors">
-            <div class="flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-primary-500 transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-              </svg>
-              <span>悬停或点击展开输入区域</span>
-            </div>
-          </div>
+      <!-- 收缩时显示提示条（只有小箭头） -->
+      <div v-if="isBottomBarCollapsed" class="h-full flex items-center justify-center">
+        <div class="bg-white/90 backdrop-blur-sm rounded-t-2xl shadow-lg border-t border-x border-gray-200 px-3 py-2 cursor-pointer hover:bg-white transition-colors">
+          <svg class="w-4 h-4 text-gray-400 hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+          </svg>
         </div>
       </div>
     </div>
