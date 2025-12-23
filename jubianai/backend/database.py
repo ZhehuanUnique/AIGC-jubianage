@@ -93,8 +93,8 @@ class VideoGeneration(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     completed_at = Column(DateTime, nullable=True)
     
-    # 扩展元数据
-    metadata = Column(JSON, nullable=True)  # 扩展元数据（JSON格式）
+    # 扩展元数据（使用 name 参数映射到数据库的 metadata 列）
+    extra_metadata = Column('metadata', JSON, nullable=True)  # 扩展元数据（JSON格式）
     
     # 用户操作标记
     is_ultra_hd = Column(Boolean, default=False)  # 是否已超清
