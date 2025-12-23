@@ -345,12 +345,14 @@ async def generate_video(
             except Exception as db_error:
                 # 数据库保存失败不影响视频生成，只记录错误
                 print(f"保存视频生成记录失败: {str(db_error)}")
-        
-        response_data = {
-            "success": True,
-            "task_id": task_id,
-            "message": "视频生成任务已提交",
-        }
+            
+            # 构建响应数据（在 try 块内）
+            response_data = {
+                "success": True,
+                "task_id": task_id,
+                "message": "视频生成任务已提交",
+            }
+            
         except Exception as e:
             # 处理即梦 API 调用错误
             error_msg = str(e)
