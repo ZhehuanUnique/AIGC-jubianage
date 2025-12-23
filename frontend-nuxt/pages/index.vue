@@ -223,7 +223,7 @@
                 v-model="prompt"
                 placeholder="输入文字,描述你想创作的画面内容、运动方式等。例如:一个3D形象的小男孩,在公园滑滑板。"
                 :class="[
-                  'w-full bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 transition-all min-h-[200px] text-base leading-relaxed',
+                  'w-full bg-transparent border-none outline-none resize-none text-gray-700 placeholder-gray-400 transition-all min-h-[100px] text-base leading-relaxed',
                   isInputFocused ? 'ring-2 ring-primary-500 rounded-lg' : ''
                 ]"
                 @input="handleInput"
