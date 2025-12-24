@@ -71,6 +71,7 @@ class VideoGenerationRequest(BaseModel):
     api_key: Optional[str] = None  # 前端传入的 API Key
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
+    resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p
 
 
 class VideoGenerationResponse(BaseModel):
@@ -170,15 +171,33 @@ async def generate_video(
             )
         
         # 根据即梦 API 文档构建请求体
-        # 参考：https://www.volcengine.com/docs/85621/1791184?lang=zh
+        # 参考：
+        # 720P: https://www.volcengine.com/docs/85621/1791184?lang=zh
+        # 1080P-首帧: https://www.volcengine.com/docs/85621/1798092?lang=zh
+        # 1080P-首尾帧: https://www.volcengine.com/docs/85621/1802721?lang=zh
         
-        # 确定 req_key：根据是否有首尾帧选择不同的 req_key
-        if request.first_frame and request.last_frame:
-            req_key = "jimeng_i2v_first_tail_v30"  # 首尾帧
-        elif request.first_frame:
-            req_key = "jimeng_i2v_first_v30"  # 仅首帧
+        # 确定分辨率（默认720p）
+        resolution = request.resolution or "720p"
+        if resolution not in ["720p", "1080p"]:
+            resolution = "720p"  # 默认使用720p
+        
+        # 确定 req_key：根据分辨率和是否有首尾帧选择不同的 req_key
+        if resolution == "1080p":
+            # 1080P 接口
+            if request.first_frame and request.last_frame:
+                req_key = "i2v_first_tail_v30_1080_jimeng"  # 1080P 首尾帧
+            elif request.first_frame:
+                req_key = "jimeng_i2v_first_v30_1080"  # 1080P 仅首帧
+            else:
+                req_key = "jimeng_i2v_first_v30_1080"  # 1080P 默认使用首帧
         else:
-            req_key = "jimeng_i2v_first_v30"  # 默认使用首帧（如果没有首尾帧，可能需要文生视频）
+            # 720P 接口（默认）
+            if request.first_frame and request.last_frame:
+                req_key = "i2v_first_tail_v30_jimeng"  # 720P 首尾帧
+            elif request.first_frame:
+                req_key = "jimeng_i2v_first_v30"  # 720P 仅首帧
+            else:
+                req_key = "jimeng_i2v_first_v30"  # 720P 默认使用首帧
         
         # 构建图片 URL 数组（即梦 API 使用 image_urls，不是 base64）
         image_urls = []
@@ -462,8 +481,15 @@ async def get_video_status(task_id: str):
         
         visual_service = create_visual_service(volc_access_key, volc_secret_key)
         
-        # 尝试不同的 req_key（可能是首帧或首尾帧）
-        req_keys = ["jimeng_i2v_first_v30", "jimeng_i2v_first_tail_v30"]
+        # 尝试不同的 req_key（可能是首帧或首尾帧，720P或1080P）
+        # 注意：这里需要根据实际使用的分辨率来尝试对应的req_key
+        # 由于查询时不知道原始分辨率，需要尝试所有可能的组合
+        req_keys = [
+            "jimeng_i2v_first_v30",  # 720P 首帧
+            "i2v_first_tail_v30_jimeng",  # 720P 首尾帧
+            "jimeng_i2v_first_v30_1080",  # 1080P 首帧
+            "i2v_first_tail_v30_1080_jimeng"  # 1080P 首尾帧
+        ]
         
         for req_key in req_keys:
             try:

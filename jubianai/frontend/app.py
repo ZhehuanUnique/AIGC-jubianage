@@ -97,7 +97,8 @@ if "backend_url" not in st.session_state:
 def generate_video(prompt: str, width: int, height: int, duration: int, 
                    fps: int, seed: Optional[int], negative_prompt: Optional[str],
                    api_key: str, backend_url: str, 
-                   first_frame: Optional[str] = None, last_frame: Optional[str] = None) -> dict:
+                   first_frame: Optional[str] = None, last_frame: Optional[str] = None,
+                   resolution: str = "720p") -> dict:
     """调用后端 API 生成视频"""
     url = f"{backend_url}/api/v1/video/generate"
     
@@ -112,6 +113,7 @@ def generate_video(prompt: str, width: int, height: int, duration: int,
         "api_key": api_key if api_key else None,
         "first_frame": first_frame,
         "last_frame": last_frame,
+        "resolution": resolution,
     }
     
     try:
@@ -269,6 +271,16 @@ def video_generation_page():
         # 视频参数（参考图2设计 - 简化参数）
         st.markdown("### 🎛️ 视频参数")
         
+        # 分辨率选择（720P / 1080P 切换）
+        resolution = st.radio(
+            "视频分辨率",
+            options=["720p", "1080p"],
+            format_func=lambda x: f"{x.upper()}",
+            horizontal=True,
+            index=0,
+            help="选择视频分辨率：720P（标准）或 1080P（高清）"
+        )
+        
         # 时长选择（类似图2的 5s 按钮）
         duration = st.radio(
             "视频时长",
@@ -303,10 +315,18 @@ def video_generation_page():
                         last_frame_file.seek(0)  # 重置文件指针
                         last_frame_data = base64.b64encode(last_frame_file.read()).decode('utf-8')
                     
+                    # 根据分辨率设置宽高（即梦 API 会根据 req_key 自动处理，这里只是记录）
+                    if resolution == "1080p":
+                        video_width = 1920
+                        video_height = 1080
+                    else:
+                        video_width = 1280
+                        video_height = 720
+                    
                     result = generate_video(
                         prompt=prompt,
-                        width=720,  # 即梦 API 固定 720P
-                        height=720,
+                        width=video_width,
+                        height=video_height,
                         duration=duration,
                         fps=24,  # 固定帧率
                         seed=None,
@@ -314,7 +334,8 @@ def video_generation_page():
                         api_key=None,  # 使用环境变量中的 AK/SK
                         backend_url=st.session_state.backend_url,
                         first_frame=first_frame_data,
-                        last_frame=last_frame_data
+                        last_frame=last_frame_data,
+                        resolution=resolution
                     )
                     
                     if result.get("success"):
