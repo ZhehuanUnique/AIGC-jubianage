@@ -22,15 +22,46 @@ engine = None
 if SUPABASE_DB_URL:
     try:
         # 创建数据库引擎
+        # 注意：如果遇到 IPv6 连接问题，请使用 Supabase Connection Pooling（端口 6543）
+        # Connection Pooling URL 格式：
+        # postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
         engine = create_engine(
             SUPABASE_DB_URL,
             pool_pre_ping=True,  # 连接前检查连接是否有效
             pool_size=5,
-            max_overflow=10
+            max_overflow=10,
+            pool_recycle=3600,  # 1小时后回收连接
+            connect_args={
+                "connect_timeout": 10,
+                "sslmode": "require"  # Supabase 需要 SSL
+            }
         )
+        
+        # 测试连接
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print("✅ 数据库连接成功")
+        except Exception as test_error:
+            error_msg = str(test_error)
+            print(f"❌ 数据库连接测试失败: {error_msg}")
+            
+            # 检查是否是 IPv6 连接问题
+            if "Network is unreachable" in error_msg or "IPv6" in error_msg or "2406:" in error_msg:
+                print("⚠️ 检测到 IPv6 连接问题")
+                print("💡 解决方案：请使用 Supabase Connection Pooling URL（端口 6543）")
+                print("   在 Supabase Dashboard → Settings → Database → Connection Pooling")
+                print("   复制 Connection String（使用端口 6543 的那个）")
+                print("   然后在 Render Dashboard 中更新 SUPABASE_DB_URL 环境变量")
+            
+            raise test_error
+                
     except Exception as e:
         print(f"警告: 数据库连接失败: {str(e)}")
         print("后端将在没有数据库的情况下运行，历史记录功能将不可用")
+        import traceback
+        traceback.print_exc()
         engine = None
 else:
     print("警告: SUPABASE_DB_URL 未设置，数据库功能将不可用")
