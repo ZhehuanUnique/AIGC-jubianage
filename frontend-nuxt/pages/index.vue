@@ -251,6 +251,21 @@
                 </svg>
               </button>
               <div class="flex items-center gap-2">
+                <!-- 分辨率选择 -->
+                <button
+                  v-for="res in resolutions"
+                  :key="res"
+                  @click="resolution = res"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    resolution === res
+                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ]"
+                >
+                  {{ res.toUpperCase() }}
+                </button>
+                <!-- 时长选择 -->
                 <button
                   v-for="dur in durations"
                   :key="dur"
@@ -335,6 +350,8 @@ const handleFiltersUpdated = (event: CustomEvent) => {
 const prompt = ref('')
 const duration = ref(5)
 const durations = [5, 10]
+const resolution = ref<'720p' | '1080p'>('720p')
+const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
 const firstFrame = ref<File | null>(null)
 const lastFrame = ref<File | null>(null)
 const firstFramePreview = ref<string | null>(null)
@@ -591,6 +608,7 @@ const generateVideo = async () => {
       duration: duration.value,
       firstFrame: firstFrameBase64,
       lastFrame: lastFrameBase64,
+      resolution: resolution.value,
       backendUrl: config.public.backendUrl
     })
 

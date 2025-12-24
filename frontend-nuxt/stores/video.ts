@@ -9,6 +9,7 @@ interface VideoGenerationRequest {
   first_frame?: string | null
   last_frame?: string | null
   seed?: number | null
+  resolution?: '720p' | '1080p'
 }
 
 interface VideoGenerationResponse {
@@ -41,6 +42,7 @@ export const useVideoStore = defineStore('video', {
       duration: number
       firstFrame?: string | null
       lastFrame?: string | null
+      resolution?: '720p' | '1080p'
       backendUrl: string
     }) {
       this.isGenerating = true
@@ -54,6 +56,11 @@ export const useVideoStore = defineStore('video', {
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
+            // 根据分辨率设置宽高
+            const resolution = params.resolution || '720p'
+            const width = resolution === '1080p' ? 1920 : 1280
+            const height = resolution === '1080p' ? 1080 : 720
+
             const response = await $fetch<VideoGenerationResponse>(
               `${params.backendUrl}/api/v1/video/generate`,
               {
@@ -62,12 +69,13 @@ export const useVideoStore = defineStore('video', {
                   prompt: params.prompt,
                   duration: params.duration,
                   fps: 24,
-                  width: 720,
-                  height: 720,
+                  width: width,
+                  height: height,
                   first_frame: params.firstFrame,
                   last_frame: params.lastFrame,
                   seed: null,
-                  negative_prompt: null
+                  negative_prompt: null,
+                  resolution: resolution
                 } as VideoGenerationRequest,
                 timeout: 60000 // 60秒超时
               }
