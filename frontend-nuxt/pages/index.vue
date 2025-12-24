@@ -355,6 +355,7 @@ const lastFrameInput = ref<HTMLInputElement | null>(null)
 const isGenerating = ref(false)
 const error = ref('')
 const hoveredFrame = ref<'first' | 'last' | null>(null)
+let historyRefreshInterval: NodeJS.Timeout | null = null
 
 // 悬浮窗口状态 - 默认收缩
 const isBottomBarCollapsed = ref(true)
@@ -629,8 +630,14 @@ const generateVideo = async () => {
         }
       }, 1000)
       
+      // 清除之前的定时器（如果有）
+      if (historyRefreshInterval) {
+        clearInterval(historyRefreshInterval)
+        historyRefreshInterval = null
+      }
+      
       // 定期刷新历史记录（每30秒），直到视频生成完成
-      const refreshInterval = setInterval(async () => {
+      historyRefreshInterval = setInterval(async () => {
         try {
           await loadHistory()
         } catch (err: any) {
@@ -640,7 +647,10 @@ const generateVideo = async () => {
       
       // 10分钟后停止定期刷新（视频应该已经完成或超时）
       setTimeout(() => {
-        clearInterval(refreshInterval)
+        if (historyRefreshInterval) {
+          clearInterval(historyRefreshInterval)
+          historyRefreshInterval = null
+        }
       }, 600000) // 10分钟
     } else {
       throw new Error('视频生成失败：未返回task_id')
@@ -709,16 +719,24 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 
+// 视频状态更新事件处理函数
+const handleVideoStatusUpdated = () => {
+  loadHistory().catch(err => {
+    console.warn('自动刷新历史记录失败:', err)
+  })
+  // 视频完成后，停止定期刷新
+  if (historyRefreshInterval) {
+    clearInterval(historyRefreshInterval)
+    historyRefreshInterval = null
+  }
+}
+
 onMounted(() => {
   loadHistory()
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('filters-updated', handleFiltersUpdated as EventListener)
   // 监听视频状态更新事件，自动刷新历史记录
-  window.addEventListener('video-status-updated', () => {
-    loadHistory().catch(err => {
-      console.warn('自动刷新历史记录失败:', err)
-    })
-  })
+  window.addEventListener('video-status-updated', handleVideoStatusUpdated)
   
   // 初始状态：默认收缩
   // 延迟检查，确保DOM已渲染
@@ -739,10 +757,14 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('filters-updated', handleFiltersUpdated as EventListener)
-  window.removeEventListener('video-status-updated', () => {})
+  window.removeEventListener('video-status-updated', handleVideoStatusUpdated)
   if (scrollTimeout) clearTimeout(scrollTimeout)
   if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
   if (bottomEdgeHoverTimeout) clearTimeout(bottomEdgeHoverTimeout)
+  if (historyRefreshInterval) {
+    clearInterval(historyRefreshInterval)
+    historyRefreshInterval = null
+  }
 })
 </script>
 
