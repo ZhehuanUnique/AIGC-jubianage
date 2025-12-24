@@ -310,6 +310,20 @@ async def generate_video(
                 error_msg = api_result.get("message", "未知错误")
                 request_id = api_result.get("request_id", "")
                 
+                # 特殊处理 Access Denied 错误 (50400)
+                if response_code == 50400 or "Access Denied" in error_msg:
+                    detailed_error = (
+                        f"即梦 API 认证失败 (50400): {error_msg}\n"
+                        f"请检查：\n"
+                        f"1. 环境变量 VOLCENGINE_ACCESS_KEY_ID 和 VOLCENGINE_SECRET_ACCESS_KEY 是否正确配置\n"
+                        f"2. API 密钥是否有权限访问即梦 API 服务\n"
+                        f"3. API 密钥是否已过期或被禁用\n"
+                        f"4. 即梦 API 服务是否已开通\n"
+                        f"RequestId: {request_id}\n"
+                        f"详细说明请查看: jubianai/ACCESS_DENIED_FIX.md"
+                    )
+                    raise Exception(detailed_error)
+                
                 # 特殊处理并发限制错误
                 if response_code == 50430 or "concurrent" in error_msg.lower() or "Concurrent Limit" in error_msg:
                     raise Exception(f"即梦 API 并发限制: {error_msg}。请稍后重试，或等待其他任务完成。")
@@ -387,9 +401,19 @@ async def generate_video(
             # 处理即梦 API 调用错误
             error_msg = str(e)
             print(f"即梦 API 调用错误: {error_msg}")
+            
+            # 提取更友好的错误信息（如果是 Access Denied）
+            if "50400" in error_msg or "Access Denied" in error_msg or "认证失败" in error_msg:
+                user_friendly_msg = (
+                    "即梦 API 认证失败：请检查 API 密钥配置。"
+                    "详细解决方案请查看 jubianai/ACCESS_DENIED_FIX.md"
+                )
+            else:
+                user_friendly_msg = error_msg
+            
             return VideoGenerationResponse(
                 success=False,
-                message=f"视频生成失败: {error_msg}",
+                message=f"视频生成失败:调用即梦API失败: {user_friendly_msg}",
                 error=error_msg
             )
         
@@ -558,10 +582,10 @@ async def get_video_status(task_id: str):
                         except Exception:
                             pass
                         
-                        return {
-                            "task_id": task_id,
+    return {
+        "task_id": task_id,
                             "status": "processing",
-                            "progress": 50,
+        "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired"]:
