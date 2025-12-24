@@ -393,13 +393,17 @@ async def generate_video(
                         last_frame_url=request.last_frame,
                         status="pending"
                     )
-                    print(f"视频生成记录已保存: task_id={task_id}, user_id={user_id}")
+                    print(f"✅ 视频生成记录已保存: task_id={task_id}, user_id={user_id}")
+                    db.close()
                 else:
-                    print("数据库未配置，跳过保存历史记录")
+                    print("⚠️ 数据库未配置，跳过保存历史记录（SUPABASE_DB_URL 未设置）")
             except Exception as db_error:
+                import traceback
+                print(f"❌ 保存视频生成记录失败: {str(db_error)}")
+                traceback.print_exc()
                 # 数据库保存失败不影响视频生成，只记录错误
                 print(f"保存视频生成记录失败: {str(db_error)}")
-            
+        
             # 构建响应数据（在 try 块内）
             response_data = {
                 "success": True,
@@ -608,10 +612,10 @@ async def get_video_status(task_id: str):
                         except Exception:
                             pass
                         
-                        return {
-                            "task_id": task_id,
+    return {
+        "task_id": task_id,
                             "status": "processing",
-                            "progress": 50,
+        "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired"]:

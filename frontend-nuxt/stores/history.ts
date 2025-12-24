@@ -73,15 +73,25 @@ export const useHistoryStore = defineStore('history', {
           `${params.backendUrl}/api/v1/video/history?${queryString}`
         )
 
-        this.videos = response.items
-        this.total = response.total
+        console.log('历史记录API响应:', {
+          total: response.total,
+          itemsCount: response.items?.length || 0,
+          items: response.items
+        })
+
+        this.videos = response.items || []
+        this.total = response.total || 0
 
         // 应用前端筛选（时间范围、视频类型、操作类型）
         this.applyFilters(params.filters || {})
 
         return response
       } catch (error: any) {
+        console.error('获取历史记录失败:', error)
         this.error = error.message || '获取历史记录失败'
+        // 即使失败也设置空数组，避免显示错误
+        this.videos = []
+        this.total = 0
         throw error
       } finally {
         this.loading = false

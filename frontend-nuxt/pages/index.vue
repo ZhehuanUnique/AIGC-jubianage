@@ -482,17 +482,30 @@ const handleInputBlur = () => {
 // 加载历史记录
 const loadHistory = async () => {
   try {
-    await historyStore.fetchHistory({
+    console.log('开始加载历史记录，后端URL:', config.public.backendUrl)
+    const result = await historyStore.fetchHistory({
       backendUrl: config.public.backendUrl,
       limit: 20,
       offset: 0,
       filters: filters.value
     })
+    console.log('历史记录加载成功:', {
+      total: result.total,
+      itemsCount: result.items?.length || 0
+    })
   } catch (err: any) {
-    console.error('加载历史记录失败:', err)
+    console.error('加载历史记录失败:', {
+      error: err,
+      message: err.message,
+      status: err.status || err.statusCode,
+      statusText: err.statusText,
+      data: err.data
+    })
     // 如果是404错误，可能是API路径不对或后端未部署，静默处理
     if (err.status === 404 || err.statusCode === 404) {
       console.warn('历史记录API未找到，可能是后端未部署或路径配置错误')
+    } else if (err.status === 0 || err.name === 'FetchError') {
+      console.warn('无法连接到后端服务，可能是后端未启动或网络问题')
     }
   }
 }
