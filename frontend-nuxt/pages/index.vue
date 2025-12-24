@@ -628,6 +628,20 @@ const generateVideo = async () => {
           // 不阻止用户继续使用，静默处理
         }
       }, 1000)
+      
+      // 定期刷新历史记录（每30秒），直到视频生成完成
+      const refreshInterval = setInterval(async () => {
+        try {
+          await loadHistory()
+        } catch (err: any) {
+          console.warn('定期刷新历史记录失败:', err)
+        }
+      }, 30000) // 每30秒刷新一次
+      
+      // 10分钟后停止定期刷新（视频应该已经完成或超时）
+      setTimeout(() => {
+        clearInterval(refreshInterval)
+      }, 600000) // 10分钟
     } else {
       throw new Error('视频生成失败：未返回task_id')
     }
@@ -699,6 +713,12 @@ onMounted(() => {
   loadHistory()
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('filters-updated', handleFiltersUpdated as EventListener)
+  // 监听视频状态更新事件，自动刷新历史记录
+  window.addEventListener('video-status-updated', () => {
+    loadHistory().catch(err => {
+      console.warn('自动刷新历史记录失败:', err)
+    })
+  })
   
   // 初始状态：默认收缩
   // 延迟检查，确保DOM已渲染
@@ -719,6 +739,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('filters-updated', handleFiltersUpdated as EventListener)
+  window.removeEventListener('video-status-updated', () => {})
   if (scrollTimeout) clearTimeout(scrollTimeout)
   if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
   if (bottomEdgeHoverTimeout) clearTimeout(bottomEdgeHoverTimeout)

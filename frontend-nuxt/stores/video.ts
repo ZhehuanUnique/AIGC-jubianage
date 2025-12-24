@@ -88,8 +88,13 @@ export const useVideoStore = defineStore('video', {
               
               console.log('视频生成任务已提交:', response.task_id)
               
-              // 开始轮询状态
-              this.pollVideoStatus(response.task_id, params.backendUrl)
+              // 开始轮询状态，完成后触发历史记录刷新
+              this.pollVideoStatus(response.task_id, params.backendUrl, () => {
+                // 视频生成完成或失败后，触发历史记录刷新事件
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('video-status-updated'))
+                }, 1000)
+              })
               return response
             } else {
               throw new Error(response.message || response.error || '生成失败')
@@ -129,13 +134,14 @@ export const useVideoStore = defineStore('video', {
       }
     },
 
-    async pollVideoStatus(taskId: string, backendUrl: string) {
+    async pollVideoStatus(taskId: string, backendUrl: string, onComplete?: () => void) {
       const maxAttempts = 60 // 最多轮询 60 次（5分钟）
       let attempts = 0
 
       const poll = async () => {
         if (attempts >= maxAttempts) {
           this.error = '生成超时，请稍后重试'
+          if (onComplete) onComplete()
           return
         }
 
@@ -154,11 +160,14 @@ export const useVideoStore = defineStore('video', {
               this.currentVideo.video_url = videoUrl
               this.currentVideo.status = 'done'
             }
+            // 视频生成完成，触发历史记录刷新
+            if (onComplete) onComplete()
             return
           }
 
           if (videoStatus === 'failed' || videoStatus === 'error') {
             this.error = status.message || status.error || '生成失败'
+            if (onComplete) onComplete()
             return
           }
 
@@ -172,6 +181,13 @@ export const useVideoStore = defineStore('video', {
           setTimeout(poll, 5000) // 每 5 秒轮询一次
         } catch (error: any) {
           this.error = error.message || '查询状态失败'
+          // 即使出错也继续轮询，除非达到最大次数
+          attempts++
+          if (attempts < maxAttempts) {
+            setTimeout(poll, 5000)
+          } else if (onComplete) {
+            onComplete()
+          }
         }
       }
 
