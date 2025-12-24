@@ -241,23 +241,15 @@
           <!-- 控制栏 -->
           <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
-              <button class="flex items-center gap-2 text-primary-500 font-medium hover:text-primary-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                视频生成
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+              <!-- 分辨率选择（放在最前面，更显眼） -->
               <div class="flex items-center gap-2">
-                <!-- 分辨率选择 -->
+                <span class="text-sm text-gray-600 font-medium">分辨率:</span>
                 <button
                   v-for="res in resolutions"
                   :key="res"
-                  @click="resolution = res"
+                  @click.stop="resolution = res"
                   :class="[
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
                     resolution === res
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -265,13 +257,15 @@
                 >
                   {{ res.toUpperCase() }}
                 </button>
-                <!-- 时长选择 -->
+              </div>
+              <!-- 时长选择 -->
+              <div class="flex items-center gap-2">
                 <button
                   v-for="dur in durations"
                   :key="dur"
-                  @click="duration = dur"
+                  @click.stop="duration = dur"
                   :class="[
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
                     duration === dur
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
