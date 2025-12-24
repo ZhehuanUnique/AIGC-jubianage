@@ -28,24 +28,36 @@ class VideoHistoryService:
         status: str = "pending"
     ) -> VideoGeneration:
         """创建视频生成记录"""
-        generation = VideoGeneration(
-            task_id=task_id,
-            user_id=user_id,
-            prompt=prompt,
-            duration=duration,
-            fps=fps,
-            width=width,
-            height=height,
-            seed=seed,
-            negative_prompt=negative_prompt,
-            first_frame_url=first_frame_url,
-            last_frame_url=last_frame_url,
-            status=status
-        )
-        db.add(generation)
-        db.commit()
-        db.refresh(generation)
-        return generation
+        try:
+            print(f"🔍 创建 VideoGeneration 对象: task_id={task_id}, user_id={user_id}")
+            generation = VideoGeneration(
+                task_id=task_id,
+                user_id=user_id,
+                prompt=prompt,
+                duration=duration,
+                fps=fps,
+                width=width,
+                height=height,
+                seed=seed,
+                negative_prompt=negative_prompt,
+                first_frame_url=first_frame_url,
+                last_frame_url=last_frame_url,
+                status=status
+            )
+            print(f"🔍 添加到数据库会话...")
+            db.add(generation)
+            print(f"🔍 提交事务...")
+            db.commit()
+            print(f"🔍 刷新对象...")
+            db.refresh(generation)
+            print(f"✅ 记录创建成功: id={generation.id}")
+            return generation
+        except Exception as e:
+            print(f"❌ 创建记录时出错: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            db.rollback()
+            raise
     
     @staticmethod
     def update_generation_status(
