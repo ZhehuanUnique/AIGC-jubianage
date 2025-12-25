@@ -34,30 +34,37 @@
               />
               <!-- 状态覆盖层 -->
               <div v-if="video.status !== 'completed'" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div class="text-center text-white">
+                <div class="text-center text-white px-4">
                   <div v-if="video.status === 'processing'" class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
-                  <p class="text-sm">{{ getStatusText(video.status) }}</p>
+                  <p class="text-sm font-medium">{{ getStatusText(video.status) }}</p>
+                  <p v-if="video.status === 'processing'" class="text-xs text-gray-300 mt-1">
+                    {{ getStatusHint(video) }}
+                  </p>
                 </div>
               </div>
               <!-- 操作按钮 -->
               <div class="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <!-- 收藏按钮（五角星） -->
                 <button
                   @click.stop="toggleFavorite(video.id)"
                   :class="[
                     'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
-                    video.is_favorite && 'bg-primary-500 bg-opacity-100'
+                    video.is_favorite && 'bg-yellow-500 bg-opacity-100'
                   ]"
+                  :title="video.is_favorite ? '取消收藏' : '收藏'"
                 >
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                   </svg>
                 </button>
+                <!-- 点赞按钮（爱心） -->
                 <button
                   @click.stop="toggleLike(video.id)"
                   :class="[
                     'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
                     video.is_liked && 'bg-red-500 bg-opacity-100'
                   ]"
+                  :title="video.is_liked ? '取消点赞' : '点赞'"
                 >
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
@@ -725,6 +732,25 @@ const getStatusText = (status: string) => {
     failed: '生成失败'
   }
   return statusMap[status] || status
+}
+
+const getStatusHint = (video: any) => {
+  if (video.status === 'processing') {
+    // 计算已等待时间
+    const createdTime = new Date(video.created_at).getTime()
+    const now = Date.now()
+    const elapsedSeconds = Math.floor((now - createdTime) / 1000)
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+    
+    if (elapsedMinutes < 1) {
+      return '通常需要 1-3 分钟，请稍候...'
+    } else if (elapsedMinutes < 3) {
+      return `已等待 ${elapsedMinutes} 分钟，即将完成...`
+    } else {
+      return `已等待 ${elapsedMinutes} 分钟，请耐心等待...`
+    }
+  }
+  return ''
 }
 
 const formatDate = (dateString: string) => {
