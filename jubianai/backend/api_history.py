@@ -229,18 +229,58 @@ async def delete_video_history(
 ):
     """删除视频生成记录"""
     try:
-        user_id = get_current_user_id(x_api_key, db)
+        # 获取用户ID
+        try:
+            user_id = get_current_user_id(x_api_key, db)
+            print(f"删除视频请求: generation_id={generation_id}, user_id={user_id}")
+        except Exception as user_error:
+            print(f"获取用户ID失败: {str(user_error)}")
+            raise HTTPException(status_code=500, detail=f"获取用户信息失败: {str(user_error)}")
         
-        success = VideoHistoryService.delete_generation(db, generation_id, user_id)
+        # 先检查记录是否存在
+        generation = db.query(VideoGeneration).filter(
+            VideoGeneration.id == generation_id
+        ).first()
         
-        if not success:
-            raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+        if not generation:
+            print(f"视频记录不存在: generation_id={generation_id}")
+            raise HTTPException(status_code=404, detail=f"视频记录不存在 (ID: {generation_id})")
         
-        return {"success": True, "message": "删除成功"}
+        # 检查权限
+        if generation.user_id != user_id:
+            print(f"权限不足: generation_id={generation_id}, generation.user_id={generation.user_id}, current_user_id={user_id}")
+            raise HTTPException(status_code=403, detail="无权删除此视频记录")
+        
+        # 执行删除
+        try:
+            success = VideoHistoryService.delete_generation(db, generation_id, user_id)
+            
+            if not success:
+                print(f"删除失败: generation_id={generation_id}, user_id={user_id}")
+                raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+            
+            print(f"删除成功: generation_id={generation_id}, user_id={user_id}")
+            return {"success": True, "message": "删除成功"}
+        except HTTPException:
+            raise
+        except Exception as delete_error:
+            print(f"删除操作失败: {str(delete_error)}")
+            raise HTTPException(status_code=500, detail=f"删除操作失败: {str(delete_error)}")
+            
     except HTTPException:
         raise
     except Exception as e:
+        print(f"删除视频异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"删除失败: {str(e)}")
+    finally:
+        # 确保关闭数据库连接
+        if 'db' in locals() and db:
+            try:
+                db.close()
+            except:
+                pass
 
 
 @router.patch("/history/{generation_id}/favorite")
