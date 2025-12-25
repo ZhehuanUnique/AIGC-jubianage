@@ -18,7 +18,8 @@
           <div
             v-for="video in historyStore.videos"
             :key="video.id"
-            class="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all"
+            class="group relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-all"
+            style="overflow: visible;"
             @mouseenter="handleVideoHover(video.id, true)"
             @mouseleave="handleVideoHover(video.id, false)"
           >
@@ -84,7 +85,7 @@
                     <div
                       v-if="showResolutionOptions === video.id"
                       @click.stop
-                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100] min-w-max"
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                       style="max-height: 200px; overflow-y: auto;"
                     >
                       <div class="text-xs font-semibold text-gray-700 mb-2">选择超分辨率方法</div>
@@ -123,7 +124,7 @@
                     <div
                       v-if="showFPSOptions === video.id"
                       @click.stop
-                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100] min-w-max"
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                       style="max-height: 200px; overflow-y: auto;"
                     >
                       <div class="text-xs font-semibold text-gray-700 mb-2">选择插帧方法</div>
@@ -427,6 +428,32 @@
         </div>
       </div>
     </div>
+
+    <!-- 删除确认对话框 -->
+    <div
+      v-if="showDeleteDialog"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50"
+      @click.self="cancelDeleteVideo"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">确认删除</h3>
+        <p class="text-gray-700 mb-6">确定要删除这个视频吗？此操作不可恢复。</p>
+        <div class="flex justify-end gap-3">
+          <button
+            @click="cancelDeleteVideo"
+            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            @click="confirmDeleteVideo"
+            class="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+          >
+            确定
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -478,6 +505,8 @@ const isBottomEdgeHovered = ref(false)
 const isBottomBarHovered = ref(false)
 const showResolutionOptions = ref<number | null>(null)
 const showFPSOptions = ref<number | null>(null)
+const showDeleteDialog = ref(false)
+const videoToDelete = ref<number | null>(null)
 let scrollTimeout: NodeJS.Timeout | null = null
 let bottomBarHoverTimeout: NodeJS.Timeout | null = null
 let bottomEdgeHoverTimeout: NodeJS.Timeout | null = null
@@ -833,18 +862,30 @@ const toggleLike = async (videoId: number) => {
   await historyStore.toggleLike(videoId, config.public.backendUrl)
 }
 
-const handleDeleteVideo = async (videoId: number) => {
-  if (!confirm('确定要删除这个视频吗？此操作不可恢复。')) {
-    return
-  }
+const handleDeleteVideo = (videoId: number) => {
+  videoToDelete.value = videoId
+  showDeleteDialog.value = true
+}
+
+const confirmDeleteVideo = async () => {
+  if (!videoToDelete.value) return
   
   try {
-    await historyStore.deleteVideo(videoId, config.public.backendUrl)
+    await historyStore.deleteVideo(videoToDelete.value, config.public.backendUrl)
     // 删除成功后，历史记录已经自动更新
+    showDeleteDialog.value = false
+    videoToDelete.value = null
   } catch (err: any) {
     console.error('删除视频失败:', err)
     alert('删除失败：' + (err.message || '未知错误'))
+    showDeleteDialog.value = false
+    videoToDelete.value = null
   }
+}
+
+const cancelDeleteVideo = () => {
+  showDeleteDialog.value = false
+  videoToDelete.value = null
 }
 
 const handleEnhanceResolution = async (videoId: number, method: 'real_esrgan' | 'waifu2x') => {
@@ -914,21 +955,39 @@ const getStatusHint = (video: any) => {
     }
     
     try {
-      const createdTime = new Date(video.created_at).getTime()
+      // 尝试解析时间，支持多种格式
+      let createdTime: number
+      if (typeof video.created_at === 'string') {
+        // 处理 ISO 格式字符串
+        createdTime = new Date(video.created_at).getTime()
+      } else if (typeof video.created_at === 'number') {
+        createdTime = video.created_at
+      } else {
+        return '正在生成中，请稍候...'
+      }
+      
       const now = Date.now()
       
       // 验证时间是否有效
       if (isNaN(createdTime) || createdTime <= 0) {
+        console.warn('无效的创建时间:', video.created_at)
         return '正在生成中，请稍候...'
       }
       
       // 如果创建时间在未来（可能是时区问题），使用当前时间
-      if (createdTime > now) {
+      if (createdTime > now + 60000) { // 允许1分钟的误差
+        console.warn('创建时间在未来，可能是时区问题:', video.created_at, 'now:', now)
         return '正在生成中，请稍候...'
       }
       
       const elapsedSeconds = Math.floor((now - createdTime) / 1000)
       const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+      
+      // 如果时间差异常大（超过1天），可能是数据错误，不显示具体时间
+      if (elapsedMinutes > 1440) {
+        console.warn('时间差异常大，可能是数据错误:', elapsedMinutes, '分钟')
+        return '正在生成中，请稍候...'
+      }
       
       // 如果超过10分钟，提示可能有问题
       if (elapsedMinutes > 10) {
@@ -943,7 +1002,7 @@ const getStatusHint = (video: any) => {
         return `已等待 ${elapsedMinutes} 分钟，请耐心等待...`
       }
     } catch (error) {
-      console.error('计算等待时间失败:', error)
+      console.error('计算等待时间失败:', error, 'created_at:', video.created_at)
       return '正在生成中，请稍候...'
     }
   }
@@ -963,15 +1022,28 @@ const getEstimatedProgress = (video: any): number => {
   }
   
   try {
-    const createdTime = new Date(video.created_at).getTime()
+    let createdTime: number
+    if (typeof video.created_at === 'string') {
+      createdTime = new Date(video.created_at).getTime()
+    } else if (typeof video.created_at === 'number') {
+      createdTime = video.created_at
+    } else {
+      return 10
+    }
+    
     const now = Date.now()
     
-    if (isNaN(createdTime) || createdTime <= 0 || createdTime > now) {
+    if (isNaN(createdTime) || createdTime <= 0 || createdTime > now + 60000) {
       return 10
     }
     
     const elapsedSeconds = Math.floor((now - createdTime) / 1000)
     const elapsedMinutes = elapsedSeconds / 60
+    
+    // 如果时间差异常大，返回固定值
+    if (elapsedMinutes > 1440) {
+      return 95 // 可能是旧数据，显示95%
+    }
     
     // 假设正常生成时间为 1-3 分钟
     // 1分钟内：10-40%
@@ -1014,7 +1086,7 @@ const handleVideoStatusUpdated = () => {
 // 点击外部关闭下拉菜单
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target.closest('.relative')) {
+  if (!target.closest('.relative') && !target.closest('.fixed')) {
     showResolutionOptions.value = null
     showFPSOptions.value = null
   }
