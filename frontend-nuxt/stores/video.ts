@@ -10,6 +10,7 @@ interface VideoGenerationRequest {
   last_frame?: string | null
   seed?: number | null
   resolution?: '720p' | '1080p'
+  version?: '3.0' | '3.0_pro' // 版本选择
 }
 
 interface VideoGenerationResponse {
@@ -43,6 +44,7 @@ export const useVideoStore = defineStore('video', {
       firstFrame?: string | null
       lastFrame?: string | null
       resolution?: '720p' | '1080p'
+      version?: '3.0' | '3.0_pro'
       backendUrl: string
     }) {
       this.isGenerating = true
@@ -75,7 +77,8 @@ export const useVideoStore = defineStore('video', {
                   last_frame: params.lastFrame,
                   seed: null,
                   negative_prompt: null,
-                  resolution: resolution
+                  resolution: resolution,
+                  version: params.version || '3.0'
                 } as VideoGenerationRequest,
                 timeout: 60000 // 60秒超时
               }

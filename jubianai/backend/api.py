@@ -73,6 +73,7 @@ class VideoGenerationRequest(BaseModel):
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
     resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p
+    version: Optional[str] = "3.0"  # 版本：3.0 或 3.0_pro
 
 
 class VideoGenerationResponse(BaseModel):
@@ -187,21 +188,39 @@ async def generate_video(
         if resolution not in ["720p", "1080p"]:
             resolution = "720p"  # 默认使用720p
         
-        # 确定 req_key：根据版本、分辨率和是否有首尾帧选择不同的 req_key
-        # 3.0 Pro 只支持 1080p 首帧，其他情况使用 3.0
-        use_pro = False
-        if JIMENG_VIDEO_VERSION == "3.0_pro" and resolution == "1080p" and request.first_frame and not request.last_frame:
-            # 3.0 Pro 只支持 1080p 首帧（不支持尾帧）
-            use_pro = True
+        # 确定版本（从前端传入，默认3.0）
+        version = request.version or "3.0"
+        if version not in ["3.0", "3.0_pro"]:
+            version = "3.0"
+        
+        # 验证 3.0 Pro 的限制：只支持 1080p 首帧（不支持尾帧）
+        if version == "3.0_pro":
+            if resolution != "1080p":
+                return VideoGenerationResponse(
+                    success=False,
+                    message="3.0 Pro 只支持 1080p 分辨率",
+                    error="3.0 Pro 只支持 1080p 分辨率，请切换到 1080p 或使用 3.0 版本"
+                )
+            if not request.first_frame:
+                return VideoGenerationResponse(
+                    success=False,
+                    message="3.0 Pro 需要首帧图片",
+                    error="3.0 Pro 只支持首帧功能，请上传首帧图片或使用 3.0 版本"
+                )
+            if request.last_frame:
+                return VideoGenerationResponse(
+                    success=False,
+                    message="3.0 Pro 不支持尾帧",
+                    error="3.0 Pro 只支持首帧功能（不支持尾帧），请移除尾帧或使用 3.0 版本"
+                )
+        
+        # 根据版本选择 req_key 映射
+        if version == "3.0_pro":
             req_key_map = JIMENG_V30_PRO_REQ_KEYS
-            print(f"使用即梦AI 3.0 Pro版本 (1080p 首帧)")
+            print(f"使用即梦AI 3.0 Pro版本")
         else:
-            # 使用 3.0 版本
             req_key_map = JIMENG_V30_REQ_KEYS
-            if JIMENG_VIDEO_VERSION == "3.0_pro" and resolution == "1080p":
-                print(f"3.0 Pro 不支持此配置，降级使用 3.0版本 (分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
-            else:
-                print(f"使用即梦AI 3.0版本")
+            print(f"使用即梦AI 3.0版本")
         
         # 确定 req_key：根据分辨率和是否有首尾帧选择不同的 req_key
         resolution_keys = req_key_map.get(resolution, req_key_map["720p"])
@@ -214,7 +233,7 @@ async def generate_video(
             # 没有首帧时，默认使用首帧接口
             req_key = resolution_keys["first_frame"]
         
-        print(f"选择的 req_key: {req_key} (分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
+        print(f"选择的 req_key: {req_key} (版本: {version}, 分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
         
         # 构建图片 URL 数组（即梦 API 使用 image_urls，不是 base64）
         image_urls = []
@@ -693,10 +712,10 @@ async def get_video_status(task_id: str):
                         except Exception:
                             pass
                         
-                        return {
-                            "task_id": task_id,
+    return {
+        "task_id": task_id,
                             "status": "processing",
-                            "progress": 50,
+        "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired"]:
@@ -810,7 +829,7 @@ async def get_video_status(task_id: str):
             "task_id": task_id,
             "status": "error",
             "progress": 0,
-            "video_url": None,
+        "video_url": None,
             "error": str(e)
     }
 

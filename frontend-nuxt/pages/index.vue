@@ -176,7 +176,7 @@
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2">{{ video.prompt }}</p>
               <div class="flex items-center justify-between text-xs text-gray-500">
-                <span>视频 3.0 | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
+                <span>视频 {{ video.version || '3.0' }} | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
                 <span>{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
@@ -348,6 +348,27 @@
           <!-- 控制栏 -->
           <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
+              <!-- 版本选择 -->
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600 font-medium">版本:</span>
+                <button
+                  v-for="ver in videoVersions"
+                  :key="ver"
+                  @click.stop="videoVersion = ver"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
+                    videoVersion === ver
+                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                    // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
+                    ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) && 'opacity-50 cursor-not-allowed'
+                  ]"
+                  :disabled="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame)"
+                  :title="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? '3.0 Pro 只支持 1080p 首帧（不支持尾帧）' : ''"
+                >
+                  {{ ver }}
+                </button>
+              </div>
               <!-- 分辨率选择（放在最前面，更显眼） -->
               <div class="flex items-center gap-2">
                 <span class="text-sm text-gray-600 font-medium">分辨率:</span>
@@ -479,6 +500,8 @@ const duration = ref(5)
 const durations = [5, 10]
 const resolution = ref<'720p' | '1080p'>('720p')
 const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
+const videoVersion = ref<'3.0' | '3.0_pro'>('3.0')
+const videoVersions: ('3.0' | '3.0_pro')[] = ['3.0', '3.0_pro']
 const firstFrame = ref<File | null>(null)
 const lastFrame = ref<File | null>(null)
 const firstFramePreview = ref<string | null>(null)
@@ -788,6 +811,7 @@ const generateVideo = async () => {
       firstFrame: firstFrameBase64,
       lastFrame: lastFrameBase64,
       resolution: resolution.value,
+      version: videoVersion.value,
       backendUrl: config.public.backendUrl
     })
 
@@ -815,7 +839,8 @@ const generateVideo = async () => {
         completed_at: undefined,
         is_ultra_hd: false,
         is_favorite: false,
-        is_liked: false
+        is_liked: false,
+        version: videoVersion.value // 保存版本信息
       }
       
       // 立即添加到列表顶部
