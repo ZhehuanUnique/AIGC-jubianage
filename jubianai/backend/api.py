@@ -491,10 +491,11 @@ async def get_video_status(task_id: str):
                 elapsed_time = datetime.utcnow() - created_at.replace(tzinfo=None) if created_at.tzinfo else datetime.utcnow() - created_at
                 elapsed_minutes = elapsed_time.total_seconds() / 60
                 
-                # 如果任务创建超过10分钟仍未完成，标记为失败
-                # 5秒视频通常1-3分钟完成，10分钟已经远超正常时间
-                if elapsed_minutes > 10 and generation.status in ["pending", "processing"]:
-                    print(f"⚠️ 任务 {task_id} 已等待 {elapsed_minutes:.1f} 分钟，超过10分钟，标记为失败")
+                # 如果任务创建超过5分钟仍未完成，标记为失败
+                # 5秒视频通常1-3分钟完成，5分钟已经远超正常时间
+                # 缩短超时时间，避免用户等待过久
+                if elapsed_minutes > 5 and generation.status in ["pending", "processing"]:
+                    print(f"⚠️ 任务 {task_id} 已等待 {elapsed_minutes:.1f} 分钟，超过5分钟，标记为失败")
                     VideoHistoryService.update_generation_status(
                         db=db,
                         task_id=task_id,

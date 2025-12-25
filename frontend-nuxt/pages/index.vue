@@ -804,22 +804,24 @@ const generateVideo = async () => {
         historyRefreshInterval = null
       }
       
-      // 定期刷新历史记录（每10秒），直到视频生成完成
+      // 定期刷新历史记录（每5秒），直到视频生成完成
+      // 缩短刷新间隔，更快检测到超时或完成状态
       historyRefreshInterval = setInterval(async () => {
         try {
           await loadHistory()
         } catch (err: any) {
           console.warn('定期刷新历史记录失败:', err)
         }
-      }, 10000) // 每10秒刷新一次（从30秒改为10秒，更快响应）
+      }, 5000) // 每5秒刷新一次，更快响应
       
-      // 10分钟后停止定期刷新（视频应该已经完成或超时）
+      // 6分钟后停止定期刷新（视频应该已经完成或超时）
+      // 后端超时设置为5分钟，这里6分钟确保能检测到超时
       setTimeout(() => {
         if (historyRefreshInterval) {
           clearInterval(historyRefreshInterval)
           historyRefreshInterval = null
         }
-      }, 600000) // 10分钟
+      }, 360000) // 6分钟
     } else {
       throw new Error('视频生成失败：未返回task_id')
     }
