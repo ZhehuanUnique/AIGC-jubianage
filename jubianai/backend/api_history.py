@@ -111,6 +111,15 @@ async def get_video_history(
                 offset=offset
             )
         
+        # 在获取历史记录前，先清理超时的任务
+        try:
+            cleaned_count = VideoHistoryService.cleanup_timeout_tasks(db, timeout_minutes=5)
+            if cleaned_count > 0:
+                print(f"✅ 已清理 {cleaned_count} 个超时任务")
+        except Exception as cleanup_error:
+            # 清理失败不影响历史记录查询
+            print(f"清理超时任务失败: {str(cleanup_error)}")
+        
         # 获取历史记录
         try:
             generations = VideoHistoryService.get_user_generations(
@@ -254,13 +263,13 @@ async def delete_video_history(
         # 执行删除
         try:
             success = VideoHistoryService.delete_generation(db, generation_id, user_id)
-            
-            if not success:
+        
+        if not success:
                 print(f"删除失败: generation_id={generation_id}, user_id={user_id}")
-                raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
-            
+            raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+        
             print(f"删除成功: generation_id={generation_id}, user_id={user_id}")
-            return {"success": True, "message": "删除成功"}
+        return {"success": True, "message": "删除成功"}
         except HTTPException:
             raise
         except Exception as delete_error:

@@ -155,4 +155,35 @@ class VideoHistoryService:
         db.delete(generation)
         db.commit()
         return True
+    
+    @staticmethod
+    def cleanup_timeout_tasks(
+        db: Session,
+        timeout_minutes: int = 5
+    ) -> int:
+        """清理超时的任务（pending 或 processing 状态超过指定时间）"""
+        from datetime import datetime, timedelta
+        
+        cutoff_time = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+        
+        # 查找所有超时的 pending 或 processing 任务
+        timeout_tasks = db.query(VideoGeneration).filter(
+            VideoGeneration.status.in_(["pending", "processing"]),
+            VideoGeneration.created_at < cutoff_time
+        ).all()
+        
+        count = len(timeout_tasks)
+        
+        if count > 0:
+            print(f"🧹 清理 {count} 个超时任务（超过 {timeout_minutes} 分钟）")
+            for task in timeout_tasks:
+                elapsed_minutes = (datetime.utcnow() - task.created_at.replace(tzinfo=None) if task.created_at.tzinfo else datetime.utcnow() - task.created_at).total_seconds() / 60
+                task.status = "failed"
+                task.error_message = f"任务超时：已等待 {elapsed_minutes:.1f} 分钟（正常应在1-3分钟内完成）"
+                task.completed_at = datetime.utcnow()
+                print(f"  - 任务 {task.task_id} 已标记为失败（等待 {elapsed_minutes:.1f} 分钟）")
+            
+            db.commit()
+        
+        return count
 
