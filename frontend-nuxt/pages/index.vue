@@ -1038,19 +1038,31 @@ const getStatusHint = (video: any) => {
         return '正在生成中，请稍候...'
       }
       
-      // 如果创建时间在未来（可能是时区问题），使用当前时间
+      // 如果创建时间在未来（可能是时区问题或数据错误），使用当前时间
       if (createdTime > now + 60000) { // 允许1分钟的误差
-        console.warn('创建时间在未来，可能是时区问题:', {
+        console.warn('创建时间在未来，可能是时区问题或数据错误:', {
           created_at: video.created_at,
           createdTime,
           now,
-          diff: createdTime - now
+          diff: createdTime - now,
+          diffMinutes: Math.floor((createdTime - now) / 60000)
         })
         return '正在生成中，请稍候...'
       }
       
       const elapsedSeconds = Math.floor((now - createdTime) / 1000)
       const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+      
+      // 如果计算出的时间是负数（未来时间），直接返回
+      if (elapsedMinutes < 0) {
+        console.warn('计算出的等待时间为负数，可能是未来时间:', {
+          created_at: video.created_at,
+          createdTime,
+          now,
+          elapsedMinutes
+        })
+        return '正在生成中，请稍候...'
+      }
       
       // 如果时间差异常大（超过30分钟），可能是数据错误，不显示具体时间
       // 正常视频生成应该在1-3分钟内完成，超过30分钟肯定是异常
@@ -1118,6 +1130,11 @@ const getEstimatedProgress = (video: any): number => {
     
     const elapsedSeconds = Math.floor((now - createdTime) / 1000)
     const elapsedMinutes = elapsedSeconds / 60
+    
+    // 如果计算出的时间是负数（未来时间），返回默认值
+    if (elapsedMinutes < 0) {
+      return 10
+    }
     
     // 如果时间差异常大（超过30分钟），返回固定值
     // 正常视频生成应该在1-3分钟内完成
