@@ -70,7 +70,7 @@
                   <!-- 分辨率提升按钮 -->
                   <div class="relative">
                     <button
-                      @click.stop="showResolutionOptions = video.id"
+                      @click.stop="showResolutionOptions = showResolutionOptions === video.id ? null : video.id"
                       :class="[
                         'w-8 h-8 rounded-full bg-blue-500 bg-opacity-90 flex items-center justify-center text-white hover:bg-opacity-100',
                         video.is_ultra_hd && 'bg-blue-600 bg-opacity-100'
@@ -101,18 +101,12 @@
                       >
                         Waifu2x
                       </button>
-                      <button
-                        @click="showResolutionOptions = null"
-                        class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded"
-                      >
-                        取消
-                      </button>
                     </div>
                   </div>
                   <!-- 帧率提升按钮 -->
                   <div class="relative">
                     <button
-                      @click.stop="showFPSOptions = video.id"
+                      @click.stop="showFPSOptions = showFPSOptions === video.id ? null : video.id"
                       class="w-8 h-8 rounded-full bg-green-500 bg-opacity-90 flex items-center justify-center text-white hover:bg-opacity-100"
                       title="提升帧率（24fps -> 60fps）"
                     >
@@ -139,12 +133,6 @@
                         class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
                       >
                         FILM（大运动，较慢）
-                      </button>
-                      <button
-                        @click="showFPSOptions = null"
-                        class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded"
-                      >
-                        取消
                       </button>
                     </div>
                   </div>
@@ -855,11 +843,41 @@ const fileToBase64 = (file: File): Promise<string> => {
 }
 
 const toggleFavorite = async (videoId: number) => {
-  await historyStore.toggleFavorite(videoId, config.public.backendUrl)
+  // 乐观更新：立即更新UI
+  const video = historyStore.videos.find(v => v.id === videoId)
+  if (video) {
+    const oldValue = video.is_favorite
+    video.is_favorite = !oldValue
+    
+    // 异步更新后端，如果失败则回滚
+    try {
+      await historyStore.toggleFavorite(videoId, config.public.backendUrl)
+    } catch (error) {
+      // 回滚UI状态
+      video.is_favorite = oldValue
+      console.error('切换收藏状态失败:', error)
+      alert('操作失败，请重试')
+    }
+  }
 }
 
 const toggleLike = async (videoId: number) => {
-  await historyStore.toggleLike(videoId, config.public.backendUrl)
+  // 乐观更新：立即更新UI
+  const video = historyStore.videos.find(v => v.id === videoId)
+  if (video) {
+    const oldValue = video.is_liked
+    video.is_liked = !oldValue
+    
+    // 异步更新后端，如果失败则回滚
+    try {
+      await historyStore.toggleLike(videoId, config.public.backendUrl)
+    } catch (error) {
+      // 回滚UI状态
+      video.is_liked = oldValue
+      console.error('切换点赞状态失败:', error)
+      alert('操作失败，请重试')
+    }
+  }
 }
 
 const handleDeleteVideo = (videoId: number) => {
@@ -870,16 +888,33 @@ const handleDeleteVideo = (videoId: number) => {
 const confirmDeleteVideo = async () => {
   if (!videoToDelete.value) return
   
+  // 乐观更新：立即从UI中移除
+  const videoId = videoToDelete.value
+  const video = historyStore.videos.find(v => v.id === videoId)
+  const videoIndex = historyStore.videos.findIndex(v => v.id === videoId)
+  
+  // 先关闭对话框
+  showDeleteDialog.value = false
+  const tempVideoId = videoToDelete.value
+  videoToDelete.value = null
+  
+  // 立即从列表中移除（乐观更新）
+  if (videoIndex !== -1) {
+    historyStore.videos.splice(videoIndex, 1)
+    historyStore.total = Math.max(0, historyStore.total - 1)
+  }
+  
+  // 异步删除后端数据，如果失败则恢复
   try {
-    await historyStore.deleteVideo(videoToDelete.value, config.public.backendUrl)
-    // 删除成功后，历史记录已经自动更新
-    showDeleteDialog.value = false
-    videoToDelete.value = null
+    await historyStore.deleteVideo(tempVideoId, config.public.backendUrl)
   } catch (err: any) {
+    // 恢复UI状态
+    if (video && videoIndex !== -1) {
+      historyStore.videos.splice(videoIndex, 0, video)
+      historyStore.total += 1
+    }
     console.error('删除视频失败:', err)
     alert('删除失败：' + (err.message || '未知错误'))
-    showDeleteDialog.value = false
-    videoToDelete.value = null
   }
 }
 

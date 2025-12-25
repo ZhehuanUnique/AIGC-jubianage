@@ -168,10 +168,9 @@ export const useHistoryStore = defineStore('history', {
           `${backendUrl}/api/v1/video/history/${videoId}/favorite`,
           { method: 'PATCH' }
         )
-        const video = this.videos.find(v => v.id === videoId)
-        if (video) {
-          video.is_favorite = response.is_favorite
-        }
+        // 不在这里更新UI，由组件进行乐观更新
+        // 只返回响应，让组件处理UI更新和错误回滚
+        return response
       } catch (error: any) {
         console.error('切换收藏状态失败:', error)
         throw error
@@ -184,10 +183,9 @@ export const useHistoryStore = defineStore('history', {
           `${backendUrl}/api/v1/video/history/${videoId}/like`,
           { method: 'PATCH' }
         )
-        const video = this.videos.find(v => v.id === videoId)
-        if (video) {
-          video.is_liked = response.is_liked
-        }
+        // 不在这里更新UI，由组件进行乐观更新
+        // 只返回响应，让组件处理UI更新和错误回滚
+        return response
       } catch (error: any) {
         console.error('切换点赞状态失败:', error)
         throw error
