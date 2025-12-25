@@ -378,7 +378,15 @@ async def generate_video(
                             user_id = default_user.id
                         
                         # 创建生成记录
-                        print(f"🔍 准备保存视频生成记录: task_id={task_id}, user_id={user_id}")
+                        # 根据分辨率设置16:9格式的宽高
+                        if resolution == "1080p":
+                            video_width = 1920
+                            video_height = 1080
+                        else:  # 720p
+                            video_width = 1280
+                            video_height = 720
+                        
+                        print(f"🔍 准备保存视频生成记录: task_id={task_id}, user_id={user_id}, resolution={resolution}, size={video_width}x{video_height}")
                         generation = VideoHistoryService.create_generation_record(
                             db=db,
                             task_id=task_id,
@@ -386,8 +394,8 @@ async def generate_video(
                             prompt=request.prompt,
                             duration=request.duration,
                             fps=request.fps or DEFAULT_VIDEO_SETTINGS["fps"],
-                            width=request.width or DEFAULT_VIDEO_SETTINGS["width"],
-                            height=request.height or DEFAULT_VIDEO_SETTINGS["height"],
+                            width=video_width,
+                            height=video_height,
                             seed=request.seed,
                             negative_prompt=request.negative_prompt,
                             first_frame_url=request.first_frame,

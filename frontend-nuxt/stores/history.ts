@@ -11,6 +11,8 @@ export interface VideoHistoryItem {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   video_url?: string
   video_name?: string
+  first_frame_url?: string
+  last_frame_url?: string
   created_at: string
   completed_at?: string
   is_ultra_hd?: boolean
@@ -41,6 +43,7 @@ export const useHistoryStore = defineStore('history', {
     total: 0,
     loading: false,
     error: null as string | null,
+    isInitialLoad: true, // 标记是否为首次加载
     filters: {
       timeRange: 'all' as const,
       videoType: 'all' as const,
@@ -54,8 +57,12 @@ export const useHistoryStore = defineStore('history', {
       limit?: number
       offset?: number
       filters?: HistoryFilters
+      silent?: boolean // 静默模式，不显示加载状态
     }) {
-      this.loading = true
+      // 只在首次加载或非静默模式时显示加载状态
+      if (this.isInitialLoad || !params.silent) {
+        this.loading = true
+      }
       this.error = null
 
       try {
@@ -106,6 +113,11 @@ export const useHistoryStore = defineStore('history', {
         // 应用前端筛选（时间范围、视频类型、操作类型）
         this.applyFilters(params.filters || {})
 
+        // 首次加载完成后，标记为非首次加载
+        if (this.isInitialLoad) {
+          this.isInitialLoad = false
+        }
+
         return response
       } catch (error: any) {
         console.error('获取历史记录失败:', error)
@@ -113,9 +125,16 @@ export const useHistoryStore = defineStore('history', {
         // 即使失败也设置空数组，避免显示错误
         this.videos = []
         this.total = 0
+        // 首次加载失败后，也标记为非首次加载，避免一直显示加载状态
+        if (this.isInitialLoad) {
+          this.isInitialLoad = false
+        }
         throw error
       } finally {
-        this.loading = false
+        // 只在首次加载或非静默模式时更新加载状态
+        if (this.isInitialLoad || !params.silent) {
+          this.loading = false
+        }
       }
     },
 

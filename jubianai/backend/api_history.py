@@ -28,6 +28,8 @@ class VideoGenerationHistoryItem(BaseModel):
     status: str
     video_url: Optional[str] = None
     video_name: Optional[str] = None
+    first_frame_url: Optional[str] = None
+    last_frame_url: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
     is_ultra_hd: Optional[bool] = False
@@ -151,6 +153,8 @@ async def get_video_history(
                 status=gen.status,
                 video_url=gen.video_url,
                 video_name=gen.video_name,
+                first_frame_url=getattr(gen, 'first_frame_url', None),
+                last_frame_url=getattr(gen, 'last_frame_url', None),
                 created_at=gen.created_at,
                 completed_at=gen.completed_at,
                 is_ultra_hd=getattr(gen, 'is_ultra_hd', False),
@@ -218,6 +222,8 @@ async def get_video_by_task_id(
             status=generation.status,
             video_url=generation.video_url,
             video_name=generation.video_name,
+            first_frame_url=getattr(generation, 'first_frame_url', None),
+            last_frame_url=getattr(generation, 'last_frame_url', None),
             created_at=generation.created_at,
             completed_at=generation.completed_at,
             is_ultra_hd=getattr(generation, 'is_ultra_hd', False),
@@ -239,8 +245,8 @@ async def delete_video_history(
     """删除视频生成记录"""
     try:
         # 获取用户ID
-        try:
-            user_id = get_current_user_id(x_api_key, db)
+    try:
+        user_id = get_current_user_id(x_api_key, db)
             print(f"删除视频请求: generation_id={generation_id}, user_id={user_id}")
         except Exception as user_error:
             print(f"获取用户ID失败: {str(user_error)}")
@@ -263,13 +269,13 @@ async def delete_video_history(
         # 执行删除
         try:
             success = VideoHistoryService.delete_generation(db, generation_id, user_id)
-            
-            if not success:
+        
+        if not success:
                 print(f"删除失败: generation_id={generation_id}, user_id={user_id}")
-                raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
-            
+            raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+        
             print(f"删除成功: generation_id={generation_id}, user_id={user_id}")
-            return {"success": True, "message": "删除成功"}
+        return {"success": True, "message": "删除成功"}
         except HTTPException:
             raise
         except Exception as delete_error:

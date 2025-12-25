@@ -7,7 +7,8 @@
         <h2 class="text-2xl font-bold text-gray-800 mb-6">今天</h2>
 
         <!-- 历史视频网格 -->
-        <div v-if="historyStore.loading" class="text-center py-12">
+        <!-- 只在首次加载且没有视频时显示加载状态，避免刷新时闪烁 -->
+        <div v-if="historyStore.loading && historyStore.videos.length === 0" class="text-center py-12">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
           <p class="text-gray-500 mt-4">加载中...</p>
         </div>
@@ -24,7 +25,14 @@
             @mouseleave="handleVideoHover(video.id, false)"
           >
             <!-- 视频容器 -->
-            <div class="relative aspect-video bg-gray-100">
+            <div 
+              class="relative aspect-video bg-gray-100"
+              :style="video.status !== 'completed' && video.first_frame_url ? {
+                backgroundImage: `url(${video.first_frame_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              } : {}"
+            >
               <video
                 :ref="el => setVideoRef(video.id, el)"
                 :src="video.video_url"
@@ -46,7 +54,7 @@
                         :style="{ width: `${getEstimatedProgress(video)}%` }"
                       ></div>
                     </div>
-                    <p class="text-xs text-gray-300 mt-1">{{ getEstimatedProgress(video) }}%</p>
+                    <p class="text-xs text-gray-300 mt-1">{{ Math.round(getEstimatedProgress(video)) }}%</p>
                   </div>
                   <p v-if="video.status === 'processing' || video.status === 'pending'" class="text-xs text-gray-300">
                     {{ getStatusHint(video) }}
@@ -645,7 +653,8 @@ const loadHistory = async (silent: boolean = false) => {
       backendUrl: config.public.backendUrl,
       limit: 20,
       offset: 0,
-      filters: filters.value
+      filters: filters.value,
+      silent: silent // 传递静默模式参数
     })
     // 只在非静默模式或首次加载时输出日志
     if (!silent) {
@@ -804,6 +813,8 @@ const generateVideo = async () => {
         status: 'pending',
         video_url: undefined,
         video_name: undefined,
+        first_frame_url: savedFirstFramePreview || undefined,
+        last_frame_url: savedLastFramePreview || undefined,
         created_at: new Date().toISOString(),
         completed_at: undefined,
         is_ultra_hd: false,

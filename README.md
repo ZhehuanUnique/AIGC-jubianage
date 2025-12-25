@@ -479,7 +479,7 @@ ALIYUN_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
    ALIYUN_OSS_BUCKET_NAME=your_bucket
    ALIYUN_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
    ALIYUN_OSS_BUCKET_DOMAIN=your-cdn-domain.com  # 可选
-   ```
+```
 
 #### AWS S3（备选）
 
@@ -542,16 +542,16 @@ python db_export.py ./rag_export
    访问 `http://localhost:3001`
 
 3. **测试 API**
-   ```bash
-   curl -X POST http://localhost:8000/api/v1/video/generate \
-     -H "Content-Type: application/json" \
-     -d '{
-       "prompt": "一只可爱的小猫在花园里玩耍",
-       "duration": 5,
+```bash
+curl -X POST http://localhost:8000/api/v1/video/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "一只可爱的小猫在花园里玩耍",
+    "duration": 5,
        "fps": 24,
        "resolution": "720p"
-     }'
-   ```
+  }'
+```
 
 ### 功能测试清单
 
