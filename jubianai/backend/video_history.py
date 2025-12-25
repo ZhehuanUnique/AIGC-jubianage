@@ -25,11 +25,21 @@ class VideoHistoryService:
         negative_prompt: Optional[str] = None,
         first_frame_url: Optional[str] = None,
         last_frame_url: Optional[str] = None,
-        status: str = "pending"
+        status: str = "pending",
+        req_key: Optional[str] = None,
+        version: Optional[str] = None
     ) -> VideoGeneration:
         """创建视频生成记录"""
         try:
-            print(f"🔍 创建 VideoGeneration 对象: task_id={task_id}, user_id={user_id}")
+            print(f"🔍 创建 VideoGeneration 对象: task_id={task_id}, user_id={user_id}, req_key={req_key}, version={version}")
+            
+            # 保存 req_key 和 version 到 extra_metadata
+            extra_metadata = {}
+            if req_key:
+                extra_metadata["req_key"] = req_key
+            if version:
+                extra_metadata["version"] = version
+            
             generation = VideoGeneration(
                 task_id=task_id,
                 user_id=user_id,
@@ -42,7 +52,8 @@ class VideoHistoryService:
                 negative_prompt=negative_prompt,
                 first_frame_url=first_frame_url,
                 last_frame_url=last_frame_url,
-                status=status
+                status=status,
+                extra_metadata=extra_metadata if extra_metadata else None
             )
             print(f"🔍 添加到数据库会话...")
             db.add(generation)

@@ -326,6 +326,16 @@ async def generate_video(
             image_urls_list = image_urls if image_urls else None
             binary_data_list = binary_data_base64 if binary_data_base64 else None
             
+            print(f"📤 准备提交视频生成任务:")
+            print(f"  - req_key: {req_key}")
+            print(f"  - version: {version}")
+            print(f"  - resolution: {resolution}")
+            print(f"  - prompt: {enhanced_prompt[:100]}...")
+            print(f"  - frames: {frames}")
+            print(f"  - 有首帧: {bool(binary_data_list or image_urls_list)}")
+            if binary_data_list and len(binary_data_list) > 0:
+                print(f"  - 首帧数据长度: {len(binary_data_list[0])}")
+            
             # 调用官方 SDK 提交任务
             api_result = submit_video_task(
                 service=visual_service,
@@ -336,6 +346,8 @@ async def generate_video(
                 image_urls=image_urls_list,
                 binary_data_base64=binary_data_list
             )
+            
+            print(f"📥 即梦 API 响应: {api_result}")
             
             # 解析响应
             # 官方 SDK 返回的格式可能是：
@@ -422,7 +434,7 @@ async def generate_video(
                             video_width = 1280
                             video_height = 720
                         
-                        print(f"🔍 准备保存视频生成记录: task_id={task_id}, user_id={user_id}, resolution={resolution}, size={video_width}x{video_height}")
+                        print(f"🔍 准备保存视频生成记录: task_id={task_id}, user_id={user_id}, resolution={resolution}, size={video_width}x{video_height}, req_key={req_key}, version={version}")
                         generation = VideoHistoryService.create_generation_record(
                             db=db,
                             task_id=task_id,
@@ -436,7 +448,9 @@ async def generate_video(
                             negative_prompt=request.negative_prompt,
                             first_frame_url=request.first_frame,
                             last_frame_url=request.last_frame,
-                            status="pending"
+                            status="pending",
+                            req_key=req_key,
+                            version=version
                         )
                         print(f"✅ 视频生成记录已保存: task_id={task_id}, user_id={user_id}, record_id={generation.id}")
                     except Exception as save_error:
@@ -576,33 +590,53 @@ async def get_video_status(task_id: str):
         visual_service = create_visual_service(volc_access_key, volc_secret_key)
         
         # 尝试不同的 req_key（可能是首帧或首尾帧，720P或1080P，3.0或3.0 Pro）
-        # 注意：这里需要根据实际使用的分辨率来尝试对应的req_key
-        # 由于查询时不知道原始分辨率，需要尝试所有可能的组合
+        # 优先使用数据库中保存的 req_key
         req_keys = []
+        
+        # 首先尝试从数据库获取保存的 req_key
+        try:
+            from backend.database import get_db
+            from backend.video_history import VideoHistoryService
+            db = next(get_db())
+            generation = VideoHistoryService.get_generation_by_task_id(db, task_id)
+            if generation and generation.extra_metadata:
+                saved_req_key = generation.extra_metadata.get("req_key")
+                if saved_req_key:
+                    req_keys.append(saved_req_key)
+                    print(f"✅ 从数据库获取保存的 req_key: {saved_req_key}")
+        except Exception as e:
+            print(f"⚠️ 获取保存的 req_key 失败: {str(e)}")
         
         # 3.0 Pro 的 req_key（只有 1080p 首帧）
         if JIMENG_VIDEO_VERSION == "3.0_pro":
-            req_keys.append(JIMENG_V30_PRO_REQ_KEYS["1080p"]["first_frame"])
+            pro_req_key = JIMENG_V30_PRO_REQ_KEYS["1080p"]["first_frame"]
+            if pro_req_key not in req_keys:
+                req_keys.append(pro_req_key)
         
         # 3.0 版本的所有 req_key（兼容旧任务和所有场景）
-        req_keys.extend([
+        all_v30_keys = [
             JIMENG_V30_REQ_KEYS["720p"]["first_frame"],
             JIMENG_V30_REQ_KEYS["720p"]["first_last_frame"],
             JIMENG_V30_REQ_KEYS["1080p"]["first_frame"],
             JIMENG_V30_REQ_KEYS["1080p"]["first_last_frame"]
-        ])
+        ]
+        for key in all_v30_keys:
+            if key not in req_keys:
+                req_keys.append(key)
         
-        # 去重
-        req_keys = list(dict.fromkeys(req_keys))
+        print(f"🔍 将尝试以下 req_key 查询任务状态: {req_keys}")
         
         for req_key in req_keys:
             try:
+                print(f"🔍 尝试使用 req_key={req_key} 查询任务 {task_id} 状态...")
                 # 查询任务状态
                 api_result = query_video_task(
                     service=visual_service,
                     req_key=req_key,
                     task_id=task_id
                 )
+                
+                print(f"📥 查询响应 (req_key={req_key}): {api_result}")
                 
                 # 解析响应
                 # 根据即梦 API 文档，响应格式为：
