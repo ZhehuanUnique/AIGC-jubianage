@@ -613,33 +613,66 @@ const handleInputBlur = () => {
 }
 
 // 加载历史记录
-const loadHistory = async () => {
+// 防抖：避免频繁刷新
+let loadHistoryTimeout: NodeJS.Timeout | null = null
+let isHistoryLoading = false
+const loadHistory = async (silent: boolean = false) => {
+  // 如果正在加载，跳过本次请求
+  if (isHistoryLoading) {
+    return
+  }
+  
+  // 防抖：如果 silent 为 false，延迟 300ms 执行
+  if (!silent) {
+    if (loadHistoryTimeout) {
+      clearTimeout(loadHistoryTimeout)
+    }
+    return new Promise<void>((resolve) => {
+      loadHistoryTimeout = setTimeout(async () => {
+        await loadHistory(true)
+        resolve()
+      }, 300)
+    })
+  }
+  
+  isHistoryLoading = true
   try {
-    console.log('开始加载历史记录，后端URL:', config.public.backendUrl)
+    // 只在非静默模式时输出日志
+    if (!silent) {
+      console.log('开始加载历史记录，后端URL:', config.public.backendUrl)
+    }
     const result = await historyStore.fetchHistory({
       backendUrl: config.public.backendUrl,
       limit: 20,
       offset: 0,
       filters: filters.value
     })
-    console.log('历史记录加载成功:', {
-      total: result.total,
-      itemsCount: result.items?.length || 0
-    })
-  } catch (err: any) {
-    console.error('加载历史记录失败:', {
-      error: err,
-      message: err.message,
-      status: err.status || err.statusCode,
-      statusText: err.statusText,
-      data: err.data
-    })
-    // 如果是404错误，可能是API路径不对或后端未部署，静默处理
-    if (err.status === 404 || err.statusCode === 404) {
-      console.warn('历史记录API未找到，可能是后端未部署或路径配置错误')
-    } else if (err.status === 0 || err.name === 'FetchError') {
-      console.warn('无法连接到后端服务，可能是后端未启动或网络问题')
+    // 只在非静默模式或首次加载时输出日志
+    if (!silent) {
+      console.log('历史记录加载成功:', {
+        total: result.total,
+        itemsCount: result.items?.length || 0
+      })
     }
+  } catch (err: any) {
+    // 只在非静默模式时输出错误日志
+    if (!silent) {
+      console.error('加载历史记录失败:', {
+        error: err,
+        message: err.message,
+        status: err.status || err.statusCode,
+        statusText: err.statusText,
+        data: err.data
+      })
+      // 如果是404错误，可能是API路径不对或后端未部署，静默处理
+      if (err.status === 404 || err.statusCode === 404) {
+        console.warn('历史记录API未找到，可能是后端未部署或路径配置错误')
+      } else if (err.status === 0 || err.name === 'FetchError') {
+        console.warn('无法连接到后端服务，可能是后端未启动或网络问题')
+      }
+    }
+  } finally {
+    isHistoryLoading = false
   }
 }
 
@@ -804,15 +837,16 @@ const generateVideo = async () => {
         historyRefreshInterval = null
       }
       
-      // 定期刷新历史记录（每5秒），直到视频生成完成
-      // 缩短刷新间隔，更快检测到超时或完成状态
+      // 定期刷新历史记录（每10秒），直到视频生成完成
+      // 使用静默模式，减少日志输出
       historyRefreshInterval = setInterval(async () => {
         try {
-          await loadHistory()
+          await loadHistory(true) // 静默模式，不输出日志
         } catch (err: any) {
+          // 只在出错时输出日志
           console.warn('定期刷新历史记录失败:', err)
         }
-      }, 5000) // 每5秒刷新一次，更快响应
+      }, 10000) // 每10秒刷新一次（从5秒改为10秒，减少请求频率）
       
       // 6分钟后停止定期刷新（视频应该已经完成或超时）
       // 后端超时设置为5分钟，这里6分钟确保能检测到超时

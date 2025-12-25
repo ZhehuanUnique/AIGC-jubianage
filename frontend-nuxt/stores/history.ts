@@ -74,11 +74,12 @@ export const useHistoryStore = defineStore('history', {
           `${params.backendUrl}/api/v1/video/history?${queryString}`
         )
 
-        console.log('历史记录API响应:', {
-          total: response.total,
-          itemsCount: response.items?.length || 0,
-          items: response.items
-        })
+        // 减少日志输出，只在开发环境或首次加载时输出
+        // console.log('历史记录API响应:', {
+        //   total: response.total,
+        //   itemsCount: response.items?.length || 0,
+        //   items: response.items
+        // })
 
         // 保留临时记录（id < 0），这些是新生成但还未从后端返回的记录
         const tempVideos = this.videos.filter(v => v.id < 0)
