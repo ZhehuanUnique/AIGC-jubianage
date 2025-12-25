@@ -176,7 +176,7 @@
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2">{{ video.prompt }}</p>
               <div class="flex items-center justify-between text-xs text-gray-500">
-                <span>视频 3.0 | {{ video.duration }}s</span>
+                <span>视频 3.0 | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
                 <span>{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
@@ -1237,6 +1237,27 @@ const getEstimatedProgress = (video: any): number => {
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
+// 根据视频宽高获取分辨率文本
+const getResolutionText = (video: any): string => {
+  if (!video.width || !video.height) {
+    return '720p' // 默认值
+  }
+  
+  // 判断分辨率：1080p = 1920x1080, 720p = 1280x720
+  if (video.width === 1920 && video.height === 1080) {
+    return '1080p'
+  } else if (video.width === 1280 && video.height === 720) {
+    return '720p'
+  } else {
+    // 如果宽高不匹配标准值，根据高度判断
+    if (video.height >= 1080) {
+      return '1080p'
+    } else {
+      return '720p'
+    }
+  }
 }
 
 // 视频状态更新事件处理函数
