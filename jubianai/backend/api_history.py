@@ -11,6 +11,7 @@ from datetime import datetime
 from .database import get_db, VideoGeneration
 from .video_history import VideoHistoryService
 from .auth import AuthService
+from .video_processing import VideoProcessingService
 
 router = APIRouter(prefix="/api/v1/video", tags=["video-history"])
 
@@ -324,4 +325,185 @@ async def toggle_ultra_hd(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
+
+
+# ========== 视频增强 API ==========
+
+class EnhanceResolutionRequest(BaseModel):
+    """提升分辨率请求"""
+    method: str = "real_esrgan"  # "real_esrgan" 或 "waifu2x"
+    scale: int = 2  # 放大倍数（2 = 2倍，1080P -> 4K）
+
+
+class EnhanceFPSRequest(BaseModel):
+    """提升帧率请求"""
+    target_fps: int = 60
+    method: str = "rife"  # "rife" 或 "film"
+    auto_switch: bool = True  # 是否自动检测大运动并切换
+
+
+@router.post("/history/{generation_id}/enhance-resolution")
+async def enhance_resolution(
+    generation_id: int,
+    request: EnhanceResolutionRequest,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """
+    提升视频分辨率（超分辨率）
+    
+    支持的方法：
+    - real_esrgan: Real-ESRGAN（默认）
+    - waifu2x: Waifu2x
+    """
+    try:
+        user_id = get_current_user_id(x_api_key, db)
+        
+        generation = db.query(VideoGeneration).filter(
+            VideoGeneration.id == generation_id,
+            VideoGeneration.user_id == user_id
+        ).first()
+        
+        if not generation:
+            raise HTTPException(status_code=404, detail="视频记录不存在")
+        
+        if not generation.video_url:
+            raise HTTPException(status_code=400, detail="视频URL不存在")
+        
+        if generation.status != "completed":
+            raise HTTPException(status_code=400, detail="视频尚未生成完成")
+        
+        # 调用视频处理服务
+        processing_service = VideoProcessingService()
+        result = await processing_service.enhance_resolution(
+            video_url=generation.video_url,
+            method=request.method,
+            scale=request.scale
+        )
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"分辨率提升失败: {result.get('error', '未知错误')}"
+            )
+        
+        # 更新视频URL和分辨率
+        generation.video_url = result["output_url"]
+        generation.width = result["enhanced_resolution"][0]
+        generation.height = result["enhanced_resolution"][1]
+        generation.is_ultra_hd = True
+        
+        # 更新元数据
+        if not generation.extra_metadata:
+            generation.extra_metadata = {}
+        generation.extra_metadata["enhanced_resolution"] = {
+            "method": result["method"],
+            "original": result["original_resolution"],
+            "enhanced": result["enhanced_resolution"],
+            "processing_time": result["processing_time"]
+        }
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "分辨率提升成功",
+            "output_url": result["output_url"],
+            "original_resolution": result["original_resolution"],
+            "enhanced_resolution": result["enhanced_resolution"],
+            "method": result["method"],
+            "processing_time": result["processing_time"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"分辨率提升失败: {str(e)}")
+
+
+@router.post("/history/{generation_id}/enhance-fps")
+async def enhance_fps(
+    generation_id: int,
+    request: EnhanceFPSRequest,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db)
+):
+    """
+    提升视频帧率（插帧）
+    
+    支持的方法：
+    - rife: RIFE（默认，快速）
+    - film: FILM（适合大运动/高遮挡，较慢）
+    
+    如果启用 auto_switch，系统会自动检测大运动并切换到 FILM
+    """
+    try:
+        user_id = get_current_user_id(x_api_key, db)
+        
+        generation = db.query(VideoGeneration).filter(
+            VideoGeneration.id == generation_id,
+            VideoGeneration.user_id == user_id
+        ).first()
+        
+        if not generation:
+            raise HTTPException(status_code=404, detail="视频记录不存在")
+        
+        if not generation.video_url:
+            raise HTTPException(status_code=400, detail="视频URL不存在")
+        
+        if generation.status != "completed":
+            raise HTTPException(status_code=400, detail="视频尚未生成完成")
+        
+        # 如果切换到 FILM，给出提示
+        if request.method == "film" or (request.auto_switch and request.method == "rife"):
+            # 提示会在前端显示
+        
+        # 调用视频处理服务
+        processing_service = VideoProcessingService()
+        result = await processing_service.enhance_fps(
+            video_url=generation.video_url,
+            target_fps=request.target_fps,
+            method=request.method,
+            auto_switch=request.auto_switch
+        )
+        
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"帧率提升失败: {result.get('error', '未知错误')}"
+            )
+        
+        # 更新视频URL和帧率
+        generation.video_url = result["output_url"]
+        generation.fps = result["enhanced_fps"]
+        
+        # 更新元数据
+        if not generation.extra_metadata:
+            generation.extra_metadata = {}
+        generation.extra_metadata["enhanced_fps"] = {
+            "method": result["method"],
+            "original_fps": result["original_fps"],
+            "enhanced_fps": result["enhanced_fps"],
+            "auto_switched": result.get("auto_switched", False),
+            "processing_time": result["processing_time"]
+        }
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "帧率提升成功",
+            "output_url": result["output_url"],
+            "original_fps": result["original_fps"],
+            "enhanced_fps": result["enhanced_fps"],
+            "method": result["method"],
+            "auto_switched": result.get("auto_switched", False),
+            "processing_time": result["processing_time"],
+            "warning": "使用 FILM 处理时间较长，请耐心等待" if result["method"] == "film" else None
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"帧率提升失败: {str(e)}")
 

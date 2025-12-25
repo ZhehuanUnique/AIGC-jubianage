@@ -42,34 +42,129 @@
                   </p>
                 </div>
               </div>
-              <!-- 操作按钮 -->
-              <div class="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <!-- 收藏按钮（五角星） -->
-                <button
-                  @click.stop="toggleFavorite(video.id)"
-                  :class="[
-                    'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
-                    video.is_favorite && 'bg-yellow-500 bg-opacity-100'
-                  ]"
-                  :title="video.is_favorite ? '取消收藏' : '收藏'"
-                >
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                  </svg>
-                </button>
-                <!-- 点赞按钮（爱心） -->
-                <button
-                  @click.stop="toggleLike(video.id)"
-                  :class="[
-                    'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
-                    video.is_liked && 'bg-red-500 bg-opacity-100'
-                  ]"
-                  :title="video.is_liked ? '取消点赞' : '点赞'"
-                >
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                </button>
+              <!-- 删除按钮（右上角） -->
+              <button
+                @click.stop="handleDeleteVideo(video.id)"
+                class="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 bg-opacity-90 flex items-center justify-center text-white hover:bg-opacity-100 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                title="删除视频"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </button>
+              <!-- 操作按钮（右下角） -->
+              <div class="absolute bottom-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <!-- 第一行：分辨率提升和帧率提升 -->
+                <div class="flex gap-2">
+                  <!-- 分辨率提升按钮 -->
+                  <div class="relative">
+                    <button
+                      @click.stop="showResolutionOptions = video.id"
+                      :class="[
+                        'w-8 h-8 rounded-full bg-blue-500 bg-opacity-90 flex items-center justify-center text-white hover:bg-opacity-100',
+                        video.is_ultra_hd && 'bg-blue-600 bg-opacity-100'
+                      ]"
+                      title="提升分辨率"
+                    >
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M21 3H3c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h18c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 16H3V5h18v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/>
+                      </svg>
+                    </button>
+                    <!-- 分辨率选项下拉菜单 -->
+                    <div
+                      v-if="showResolutionOptions === video.id"
+                      @click.stop
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg p-2 z-50"
+                    >
+                      <div class="text-xs font-semibold text-gray-700 mb-2">选择超分辨率方法</div>
+                      <button
+                        @click="handleEnhanceResolution(video.id, 'real_esrgan')"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                      >
+                        Real-ESRGAN
+                      </button>
+                      <button
+                        @click="handleEnhanceResolution(video.id, 'waifu2x')"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                      >
+                        Waifu2x
+                      </button>
+                      <button
+                        @click="showResolutionOptions = null"
+                        class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                  <!-- 帧率提升按钮 -->
+                  <div class="relative">
+                    <button
+                      @click.stop="showFPSOptions = video.id"
+                      class="w-8 h-8 rounded-full bg-green-500 bg-opacity-90 flex items-center justify-center text-white hover:bg-opacity-100"
+                      title="提升帧率（24fps -> 60fps）"
+                    >
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </button>
+                    <!-- 帧率选项下拉菜单 -->
+                    <div
+                      v-if="showFPSOptions === video.id"
+                      @click.stop
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg p-2 z-50"
+                    >
+                      <div class="text-xs font-semibold text-gray-700 mb-2">选择插帧方法</div>
+                      <button
+                        @click="handleEnhanceFPS(video.id, 'rife')"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                      >
+                        RIFE（快速，默认）
+                      </button>
+                      <button
+                        @click="handleEnhanceFPS(video.id, 'film')"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                      >
+                        FILM（大运动，较慢）
+                      </button>
+                      <button
+                        @click="showFPSOptions = null"
+                        class="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <!-- 第二行：收藏和点赞 -->
+                <div class="flex gap-2">
+                  <!-- 收藏按钮（五角星） -->
+                  <button
+                    @click.stop="toggleFavorite(video.id)"
+                    :class="[
+                      'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
+                      video.is_favorite && 'bg-yellow-500 bg-opacity-100'
+                    ]"
+                    :title="video.is_favorite ? '取消收藏' : '收藏'"
+                  >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                  </button>
+                  <!-- 点赞按钮（爱心） -->
+                  <button
+                    @click.stop="toggleLike(video.id)"
+                    :class="[
+                      'w-8 h-8 rounded-full bg-black bg-opacity-50 flex items-center justify-center text-white hover:bg-opacity-70',
+                      video.is_liked && 'bg-red-500 bg-opacity-100'
+                    ]"
+                    :title="video.is_liked ? '取消点赞' : '点赞'"
+                  >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
             <!-- 视频信息 -->
@@ -369,6 +464,8 @@ const isBottomBarCollapsed = ref(true)
 const isInputFocused = ref(false)
 const isBottomEdgeHovered = ref(false)
 const isBottomBarHovered = ref(false)
+const showResolutionOptions = ref<number | null>(null)
+const showFPSOptions = ref<number | null>(null)
 let scrollTimeout: NodeJS.Timeout | null = null
 let bottomBarHoverTimeout: NodeJS.Timeout | null = null
 let bottomEdgeHoverTimeout: NodeJS.Timeout | null = null
@@ -724,6 +821,69 @@ const toggleLike = async (videoId: number) => {
   await historyStore.toggleLike(videoId, config.public.backendUrl)
 }
 
+const handleDeleteVideo = async (videoId: number) => {
+  if (!confirm('确定要删除这个视频吗？此操作不可恢复。')) {
+    return
+  }
+  
+  try {
+    await historyStore.deleteVideo(videoId, config.public.backendUrl)
+    // 删除成功后，历史记录已经自动更新
+  } catch (err: any) {
+    console.error('删除视频失败:', err)
+    alert('删除失败：' + (err.message || '未知错误'))
+  }
+}
+
+const handleEnhanceResolution = async (videoId: number, method: 'real_esrgan' | 'waifu2x') => {
+  showResolutionOptions.value = null
+  
+  if (!confirm(`确定要使用 ${method === 'real_esrgan' ? 'Real-ESRGAN' : 'Waifu2x'} 提升分辨率吗？处理可能需要几分钟。`)) {
+    return
+  }
+  
+  try {
+    const result = await historyStore.enhanceResolution(videoId, config.public.backendUrl, method)
+    alert(`分辨率提升成功！\n原始分辨率: ${result.original_resolution[0]}x${result.original_resolution[1]}\n提升后: ${result.enhanced_resolution[0]}x${result.enhanced_resolution[1]}\n处理时间: ${result.processing_time.toFixed(1)}秒`)
+    // 刷新历史记录
+    await loadHistory()
+  } catch (err: any) {
+    console.error('分辨率提升失败:', err)
+    alert('分辨率提升失败：' + (err.message || '未知错误'))
+  }
+}
+
+const handleEnhanceFPS = async (videoId: number, method: 'rife' | 'film') => {
+  showFPSOptions.value = null
+  
+  if (method === 'film') {
+    if (!confirm('使用 FILM 处理时间较长，请耐心等待。确定继续吗？')) {
+      return
+    }
+  } else {
+    if (!confirm(`确定要使用 RIFE 提升帧率到 60fps 吗？处理可能需要几分钟。`)) {
+      return
+    }
+  }
+  
+  try {
+    const result = await historyStore.enhanceFPS(videoId, config.public.backendUrl, method)
+    let message = `帧率提升成功！\n原始帧率: ${result.original_fps}fps\n提升后: ${result.enhanced_fps}fps\n处理时间: ${result.processing_time.toFixed(1)}秒`
+    if (result.auto_switched) {
+      message += '\n\n已自动检测到大运动，切换到 FILM 处理'
+    }
+    if (result.warning) {
+      message += '\n\n' + result.warning
+    }
+    alert(message)
+    // 刷新历史记录
+    await loadHistory()
+  } catch (err: any) {
+    console.error('帧率提升失败:', err)
+    alert('帧率提升失败：' + (err.message || '未知错误'))
+  }
+}
+
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
     pending: '等待中',
@@ -770,12 +930,23 @@ const handleVideoStatusUpdated = () => {
   }
 }
 
+// 点击外部关闭下拉菜单
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.relative')) {
+    showResolutionOptions.value = null
+    showFPSOptions.value = null
+  }
+}
+
 onMounted(() => {
   loadHistory()
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('filters-updated', handleFiltersUpdated as EventListener)
   // 监听视频状态更新事件，自动刷新历史记录
   window.addEventListener('video-status-updated', handleVideoStatusUpdated)
+  // 点击外部关闭下拉菜单
+  document.addEventListener('click', handleClickOutside)
   
   // 初始状态：默认收缩
   // 延迟检查，确保DOM已渲染
@@ -796,7 +967,10 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('filters-updated', handleFiltersUpdated as EventListener)
-  window.removeEventListener('video-status-updated', handleVideoStatusUpdated)
+  if (handleVideoStatusUpdatedRef.value) {
+    window.removeEventListener('video-status-updated', handleVideoStatusUpdatedRef.value)
+  }
+  document.removeEventListener('click', handleClickOutside)
   if (scrollTimeout) clearTimeout(scrollTimeout)
   if (bottomBarHoverTimeout) clearTimeout(bottomBarHoverTimeout)
   if (bottomEdgeHoverTimeout) clearTimeout(bottomEdgeHoverTimeout)

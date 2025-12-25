@@ -191,6 +191,92 @@ export const useHistoryStore = defineStore('history', {
         console.error('切换点赞状态失败:', error)
         throw error
       }
+    },
+
+    async deleteVideo(videoId: number, backendUrl: string) {
+      try {
+        const response = await $fetch<{ success: boolean; message: string }>(
+          `${backendUrl}/api/v1/video/history/${videoId}`,
+          { method: 'DELETE' }
+        )
+        // 从列表中移除已删除的视频
+        this.videos = this.videos.filter(v => v.id !== videoId)
+        this.total = Math.max(0, this.total - 1)
+        return response
+      } catch (error: any) {
+        console.error('删除视频失败:', error)
+        throw error
+      }
+    },
+
+    async enhanceResolution(videoId: number, backendUrl: string, method: 'real_esrgan' | 'waifu2x') {
+      try {
+        const response = await $fetch<{
+          success: boolean
+          message: string
+          output_url: string
+          original_resolution: [number, number]
+          enhanced_resolution: [number, number]
+          method: string
+          processing_time: number
+        }>(
+          `${backendUrl}/api/v1/video/history/${videoId}/enhance-resolution`,
+          {
+            method: 'POST',
+            body: {
+              method: method,
+              scale: 2
+            }
+          }
+        )
+        // 更新视频信息
+        const video = this.videos.find(v => v.id === videoId)
+        if (video) {
+          video.video_url = response.output_url
+          video.width = response.enhanced_resolution[0]
+          video.height = response.enhanced_resolution[1]
+        }
+        return response
+      } catch (error: any) {
+        console.error('分辨率提升失败:', error)
+        throw error
+      }
+    },
+
+    async enhanceFPS(videoId: number, backendUrl: string, method: 'rife' | 'film') {
+      try {
+        const response = await $fetch<{
+          success: boolean
+          message: string
+          output_url: string
+          original_fps: number
+          enhanced_fps: number
+          method: string
+          auto_switched: boolean
+          processing_time: number
+          warning?: string
+        }>(
+          `${backendUrl}/api/v1/video/history/${videoId}/enhance-fps`,
+          {
+            method: 'POST',
+            body: {
+              target_fps: 60,
+              method: method,
+              auto_switch: true
+            }
+          }
+        )
+        // 更新视频信息
+        const video = this.videos.find(v => v.id === videoId)
+        if (video) {
+          video.video_url = response.output_url
+          video.fps = response.enhanced_fps
+        }
+        return response
+      } catch (error: any) {
+        console.error('帧率提升失败:', error)
+        throw error
+      }
     }
   }
 })
