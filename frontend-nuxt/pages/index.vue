@@ -959,10 +959,17 @@ const getStatusHint = (video: any) => {
       let createdTime: number
       if (typeof video.created_at === 'string') {
         // 处理 ISO 格式字符串
-        createdTime = new Date(video.created_at).getTime()
+        // 如果字符串没有时区信息，假设是 UTC 时间
+        let dateString = video.created_at
+        if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+          // 没有时区信息，添加 Z 表示 UTC
+          dateString = dateString.endsWith('Z') ? dateString : dateString + 'Z'
+        }
+        createdTime = new Date(dateString).getTime()
       } else if (typeof video.created_at === 'number') {
         createdTime = video.created_at
       } else {
+        console.warn('无法解析创建时间类型:', typeof video.created_at, video.created_at)
         return '正在生成中，请稍候...'
       }
       
@@ -970,22 +977,32 @@ const getStatusHint = (video: any) => {
       
       // 验证时间是否有效
       if (isNaN(createdTime) || createdTime <= 0) {
-        console.warn('无效的创建时间:', video.created_at)
+        console.warn('无效的创建时间:', video.created_at, 'parsed:', createdTime)
         return '正在生成中，请稍候...'
       }
       
       // 如果创建时间在未来（可能是时区问题），使用当前时间
       if (createdTime > now + 60000) { // 允许1分钟的误差
-        console.warn('创建时间在未来，可能是时区问题:', video.created_at, 'now:', now)
+        console.warn('创建时间在未来，可能是时区问题:', {
+          created_at: video.created_at,
+          createdTime,
+          now,
+          diff: createdTime - now
+        })
         return '正在生成中，请稍候...'
       }
       
       const elapsedSeconds = Math.floor((now - createdTime) / 1000)
       const elapsedMinutes = Math.floor(elapsedSeconds / 60)
       
-      // 如果时间差异常大（超过1天），可能是数据错误，不显示具体时间
-      if (elapsedMinutes > 1440) {
-        console.warn('时间差异常大，可能是数据错误:', elapsedMinutes, '分钟')
+      // 如果时间差异常大（超过30分钟），可能是数据错误，不显示具体时间
+      // 正常视频生成应该在1-3分钟内完成，超过30分钟肯定是异常
+      if (elapsedMinutes > 30) {
+        console.warn('时间差异常大，可能是数据错误或旧记录:', {
+          created_at: video.created_at,
+          elapsedMinutes,
+          task_id: video.task_id
+        })
         return '正在生成中，请稍候...'
       }
       
@@ -1002,7 +1019,7 @@ const getStatusHint = (video: any) => {
         return `已等待 ${elapsedMinutes} 分钟，请耐心等待...`
       }
     } catch (error) {
-      console.error('计算等待时间失败:', error, 'created_at:', video.created_at)
+      console.error('计算等待时间失败:', error, 'created_at:', video.created_at, 'type:', typeof video.created_at)
       return '正在生成中，请稍候...'
     }
   }
@@ -1024,7 +1041,12 @@ const getEstimatedProgress = (video: any): number => {
   try {
     let createdTime: number
     if (typeof video.created_at === 'string') {
-      createdTime = new Date(video.created_at).getTime()
+      // 处理时区问题：如果没有时区信息，假设是 UTC
+      let dateString = video.created_at
+      if (!dateString.includes('Z') && !dateString.includes('+') && !dateString.includes('-', 10)) {
+        dateString = dateString.endsWith('Z') ? dateString : dateString + 'Z'
+      }
+      createdTime = new Date(dateString).getTime()
     } else if (typeof video.created_at === 'number') {
       createdTime = video.created_at
     } else {
@@ -1040,9 +1062,10 @@ const getEstimatedProgress = (video: any): number => {
     const elapsedSeconds = Math.floor((now - createdTime) / 1000)
     const elapsedMinutes = elapsedSeconds / 60
     
-    // 如果时间差异常大，返回固定值
-    if (elapsedMinutes > 1440) {
-      return 95 // 可能是旧数据，显示95%
+    // 如果时间差异常大（超过30分钟），返回固定值
+    // 正常视频生成应该在1-3分钟内完成
+    if (elapsedMinutes > 30) {
+      return 95 // 可能是旧数据或异常数据，显示95%
     }
     
     // 假设正常生成时间为 1-3 分钟
@@ -1061,7 +1084,7 @@ const getEstimatedProgress = (video: any): number => {
       return 95 // 超过3分钟，显示95%，等待完成
     }
   } catch (error) {
-    console.error('计算进度失败:', error)
+    console.error('计算进度失败:', error, 'created_at:', video.created_at)
     return 10
   }
 }
