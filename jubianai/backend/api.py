@@ -473,6 +473,45 @@ async def get_video_status(task_id: str):
     参考：https://www.volcengine.com/docs/85621/1785204?lang=zh
     """
     try:
+        # 首先检查数据库中任务的创建时间，如果超过合理时间，直接返回失败
+        try:
+            from backend.database import get_db
+            from backend.video_history import VideoHistoryService
+            from datetime import datetime, timedelta
+            
+            db = next(get_db())
+            generation = VideoHistoryService.get_generation_by_task_id(db, task_id)
+            
+            if generation:
+                # 检查任务创建时间
+                created_at = generation.created_at
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                
+                elapsed_time = datetime.utcnow() - created_at.replace(tzinfo=None) if created_at.tzinfo else datetime.utcnow() - created_at
+                elapsed_minutes = elapsed_time.total_seconds() / 60
+                
+                # 如果任务创建超过10分钟仍未完成，标记为失败
+                # 5秒视频通常1-3分钟完成，10分钟已经远超正常时间
+                if elapsed_minutes > 10 and generation.status in ["pending", "processing"]:
+                    print(f"⚠️ 任务 {task_id} 已等待 {elapsed_minutes:.1f} 分钟，超过10分钟，标记为失败")
+                    VideoHistoryService.update_generation_status(
+                        db=db,
+                        task_id=task_id,
+                        status="failed",
+                        error_message=f"任务超时：已等待 {elapsed_minutes:.1f} 分钟（正常应在1-3分钟内完成）"
+                    )
+                    return {
+                        "task_id": task_id,
+                        "status": "failed",
+                        "progress": 0,
+                        "video_url": None,
+                        "error": f"任务超时：已等待 {elapsed_minutes:.1f} 分钟。视频生成通常在1-3分钟内完成，请重新生成。"
+                    }
+        except Exception as db_check_error:
+            # 数据库检查失败不影响后续查询，只记录错误
+            print(f"检查任务创建时间失败: {str(db_check_error)}")
+        
         # 使用火山引擎 AK/SK 认证
         volc_access_key = VOLCENGINE_ACCESS_KEY_ID or API_KEY
         volc_secret_key = VOLCENGINE_SECRET_ACCESS_KEY
@@ -684,12 +723,49 @@ async def get_video_status(task_id: str):
                     }
                 continue
         
-        # 所有 req_key 都失败，返回处理中状态（可能是任务不存在或查询失败）
+        # 所有 req_key 都失败，检查任务创建时间
+        # 如果任务创建时间超过5分钟，标记为失败（可能是任务不存在或已过期）
+        try:
+            from backend.database import get_db
+            from backend.video_history import VideoHistoryService
+            from datetime import datetime
+            
+            db = next(get_db())
+            generation = VideoHistoryService.get_generation_by_task_id(db, task_id)
+            
+            if generation:
+                created_at = generation.created_at
+                if isinstance(created_at, str):
+                    created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                
+                elapsed_time = datetime.utcnow() - created_at.replace(tzinfo=None) if created_at.tzinfo else datetime.utcnow() - created_at
+                elapsed_minutes = elapsed_time.total_seconds() / 60
+                
+                # 如果超过5分钟且无法查询到状态，标记为失败
+                if elapsed_minutes > 5:
+                    print(f"⚠️ 任务 {task_id} 无法查询到状态且已等待 {elapsed_minutes:.1f} 分钟，标记为失败")
+                    VideoHistoryService.update_generation_status(
+                        db=db,
+                        task_id=task_id,
+                        status="failed",
+                        error_message=f"无法查询到任务状态，可能任务不存在或已过期（已等待 {elapsed_minutes:.1f} 分钟）"
+                    )
+                    return {
+                        "task_id": task_id,
+                        "status": "failed",
+                        "progress": 0,
+                        "video_url": None,
+                        "error": f"无法查询到任务状态，可能任务不存在或已过期（已等待 {elapsed_minutes:.1f} 分钟）。请重新生成。"
+                    }
+        except Exception:
+            pass
+        
+        # 如果任务创建时间较短，返回处理中状态
         return {
             "task_id": task_id,
             "status": "processing",
             "progress": 30,
-        "video_url": None,
+            "video_url": None,
             "note": "无法查询到任务状态，可能任务不存在或仍在处理中"
         }
         
