@@ -27,11 +27,7 @@
             <!-- 视频容器 -->
             <div 
               class="relative aspect-video bg-gray-100"
-              :style="video.status !== 'completed' && video.first_frame_url ? {
-                backgroundImage: `url(${video.first_frame_url})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              } : {}"
+              :style="video.status !== 'completed' && video.first_frame_url ? getBackgroundStyle(video.first_frame_url) : {}"
             >
               <video
                 :ref="el => setVideoRef(video.id, el)"
@@ -1140,6 +1136,34 @@ const getStatusHint = (video: any) => {
     }
   }
   return ''
+}
+
+// 获取背景样式（处理base64图片格式）
+const getBackgroundStyle = (firstFrameUrl: string) => {
+  if (!firstFrameUrl) return {}
+  
+  // 如果已经是完整的 data URL，直接使用
+  if (firstFrameUrl.startsWith('data:')) {
+    return {
+      backgroundImage: `url(${firstFrameUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }
+  }
+  
+  // 如果是纯 base64 字符串，添加前缀
+  // 尝试检测图片类型（默认使用 jpeg）
+  let mimeType = 'image/jpeg'
+  if (firstFrameUrl.startsWith('/9j/') || firstFrameUrl.startsWith('iVBORw0KGgo')) {
+    // JPEG 或 PNG
+    mimeType = firstFrameUrl.startsWith('/9j/') ? 'image/jpeg' : 'image/png'
+  }
+  
+  return {
+    backgroundImage: `url(data:${mimeType};base64,${firstFrameUrl})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center'
+  }
 }
 
 // 估算进度百分比（基于等待时间）
