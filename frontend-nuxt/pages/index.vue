@@ -34,10 +34,20 @@
               />
               <!-- 状态覆盖层 -->
               <div v-if="video.status !== 'completed'" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div class="text-center text-white px-4">
-                  <div v-if="video.status === 'processing'" class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
-                  <p class="text-sm font-medium">{{ getStatusText(video.status) }}</p>
-                  <p v-if="video.status === 'processing'" class="text-xs text-gray-300 mt-1">
+                <div class="text-center text-white px-4 w-full">
+                  <div v-if="video.status === 'processing' || video.status === 'pending'" class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+                  <p class="text-sm font-medium mb-2">{{ getStatusText(video.status) }}</p>
+                  <!-- 进度条 -->
+                  <div v-if="video.status === 'processing' || video.status === 'pending'" class="w-full max-w-xs mx-auto mb-2">
+                    <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                      <div 
+                        class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        :style="{ width: `${getEstimatedProgress(video)}%` }"
+                      ></div>
+                    </div>
+                    <p class="text-xs text-gray-300 mt-1">{{ getEstimatedProgress(video) }}%</p>
+                  </div>
+                  <p v-if="video.status === 'processing' || video.status === 'pending'" class="text-xs text-gray-300">
                     {{ getStatusHint(video) }}
                   </p>
                 </div>
@@ -74,7 +84,8 @@
                     <div
                       v-if="showResolutionOptions === video.id"
                       @click.stop
-                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg p-2 z-50"
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100] min-w-max"
+                      style="max-height: 200px; overflow-y: auto;"
                     >
                       <div class="text-xs font-semibold text-gray-700 mb-2">选择超分辨率方法</div>
                       <button
@@ -112,7 +123,8 @@
                     <div
                       v-if="showFPSOptions === video.id"
                       @click.stop
-                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-lg p-2 z-50"
+                      class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100] min-w-max"
+                      style="max-height: 200px; overflow-y: auto;"
                     >
                       <div class="text-xs font-semibold text-gray-700 mb-2">选择插帧方法</div>
                       <button
@@ -895,22 +907,91 @@ const getStatusText = (status: string) => {
 }
 
 const getStatusHint = (video: any) => {
-  if (video.status === 'processing') {
-    // 计算已等待时间
-    const createdTime = new Date(video.created_at).getTime()
-    const now = Date.now()
-    const elapsedSeconds = Math.floor((now - createdTime) / 1000)
-    const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+  if (video.status === 'processing' || video.status === 'pending') {
+    // 计算已等待时间，添加验证
+    if (!video.created_at) {
+      return '正在生成中，请稍候...'
+    }
     
-    if (elapsedMinutes < 1) {
-      return '通常需要 1-3 分钟，请稍候...'
-    } else if (elapsedMinutes < 3) {
-      return `已等待 ${elapsedMinutes} 分钟，即将完成...`
-    } else {
-      return `已等待 ${elapsedMinutes} 分钟，请耐心等待...`
+    try {
+      const createdTime = new Date(video.created_at).getTime()
+      const now = Date.now()
+      
+      // 验证时间是否有效
+      if (isNaN(createdTime) || createdTime <= 0) {
+        return '正在生成中，请稍候...'
+      }
+      
+      // 如果创建时间在未来（可能是时区问题），使用当前时间
+      if (createdTime > now) {
+        return '正在生成中，请稍候...'
+      }
+      
+      const elapsedSeconds = Math.floor((now - createdTime) / 1000)
+      const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+      
+      // 如果超过10分钟，提示可能有问题
+      if (elapsedMinutes > 10) {
+        return `已等待 ${elapsedMinutes} 分钟，如果超过15分钟仍未完成，请刷新页面或重新生成`
+      }
+      
+      if (elapsedMinutes < 1) {
+        return '通常需要 1-3 分钟，请稍候...'
+      } else if (elapsedMinutes < 3) {
+        return `已等待 ${elapsedMinutes} 分钟，即将完成...`
+      } else {
+        return `已等待 ${elapsedMinutes} 分钟，请耐心等待...`
+      }
+    } catch (error) {
+      console.error('计算等待时间失败:', error)
+      return '正在生成中，请稍候...'
     }
   }
   return ''
+}
+
+// 估算进度百分比（基于等待时间）
+const getEstimatedProgress = (video: any): number => {
+  // 如果有后端返回的进度，优先使用
+  if (video.progress !== undefined && video.progress !== null) {
+    return Math.min(100, Math.max(0, video.progress))
+  }
+  
+  // 否则基于等待时间估算
+  if (!video.created_at) {
+    return 10
+  }
+  
+  try {
+    const createdTime = new Date(video.created_at).getTime()
+    const now = Date.now()
+    
+    if (isNaN(createdTime) || createdTime <= 0 || createdTime > now) {
+      return 10
+    }
+    
+    const elapsedSeconds = Math.floor((now - createdTime) / 1000)
+    const elapsedMinutes = elapsedSeconds / 60
+    
+    // 假设正常生成时间为 1-3 分钟
+    // 1分钟内：10-40%
+    // 1-2分钟：40-70%
+    // 2-3分钟：70-95%
+    // 超过3分钟：95%（等待完成）
+    
+    if (elapsedMinutes < 1) {
+      return Math.min(40, 10 + (elapsedMinutes / 1) * 30)
+    } else if (elapsedMinutes < 2) {
+      return Math.min(70, 40 + ((elapsedMinutes - 1) / 1) * 30)
+    } else if (elapsedMinutes < 3) {
+      return Math.min(95, 70 + ((elapsedMinutes - 2) / 1) * 25)
+    } else {
+      return 95 // 超过3分钟，显示95%，等待完成
+    }
+  } catch (error) {
+    console.error('计算进度失败:', error)
+    return 10
+  }
 }
 
 const formatDate = (dateString: string) => {

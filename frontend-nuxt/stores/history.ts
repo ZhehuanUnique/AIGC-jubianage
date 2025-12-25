@@ -16,6 +16,7 @@ export interface VideoHistoryItem {
   is_ultra_hd?: boolean
   is_favorite?: boolean
   is_liked?: boolean
+  progress?: number // 进度百分比 (0-100)
 }
 
 export interface VideoHistoryResponse {
