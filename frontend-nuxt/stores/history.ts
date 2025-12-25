@@ -80,7 +80,26 @@ export const useHistoryStore = defineStore('history', {
           items: response.items
         })
 
-        this.videos = response.items || []
+        // 保留临时记录（id < 0），这些是新生成但还未从后端返回的记录
+        const tempVideos = this.videos.filter(v => v.id < 0)
+        
+        // 合并临时记录和真实记录，临时记录在前
+        const allVideos = [...tempVideos, ...(response.items || [])]
+        
+        // 去重：如果有相同 task_id 的记录，保留真实记录（id >= 0）
+        const uniqueVideos = allVideos.reduce((acc, video) => {
+          const existing = acc.find(v => v.task_id === video.task_id)
+          if (!existing) {
+            acc.push(video)
+          } else if (video.id >= 0 && existing.id < 0) {
+            // 用真实记录替换临时记录
+            const index = acc.indexOf(existing)
+            acc[index] = video
+          }
+          return acc
+        }, [] as VideoHistoryItem[])
+
+        this.videos = uniqueVideos
         this.total = response.total || 0
 
         // 应用前端筛选（时间范围、视频类型、操作类型）

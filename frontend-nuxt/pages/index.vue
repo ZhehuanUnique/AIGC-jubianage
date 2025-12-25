@@ -448,7 +448,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '~/stores/video'
-import { useHistoryStore } from '~/stores/history'
+import { useHistoryStore, type VideoHistoryItem } from '~/stores/history'
 
 const config = useRuntimeConfig()
 const videoStore = useVideoStore()
@@ -755,9 +755,32 @@ const generateVideo = async () => {
 
     console.log('视频生成API响应:', result)
 
-    // 如果成功提交任务，刷新历史记录（延迟一下，确保后端已保存）
+    // 如果成功提交任务，立即添加到历史记录（乐观更新）
     if (result && result.task_id) {
       console.log('视频生成任务已提交，task_id:', result.task_id)
+      
+      // 立即创建一个临时视频记录，添加到列表顶部
+      const tempVideo: VideoHistoryItem = {
+        id: -1, // 临时ID，等待后端返回真实ID
+        task_id: result.task_id,
+        prompt: savedPrompt,
+        duration: duration.value,
+        fps: 24,
+        width: resolution.value === '1080p' ? 1920 : 1280,
+        height: resolution.value === '1080p' ? 1080 : 720,
+        status: 'pending',
+        video_url: undefined,
+        video_name: undefined,
+        created_at: new Date().toISOString(),
+        completed_at: undefined,
+        is_ultra_hd: false,
+        is_favorite: false,
+        is_liked: false
+      }
+      
+      // 立即添加到列表顶部
+      historyStore.videos.unshift(tempVideo)
+      historyStore.total += 1
       
       // 成功后才清空输入
       prompt.value = ''
@@ -766,15 +789,14 @@ const generateVideo = async () => {
       firstFramePreview.value = null
       lastFramePreview.value = null
       
-      // 延迟刷新，确保后端已保存记录
-      setTimeout(async () => {
-        try {
-          await loadHistory()
-        } catch (err: any) {
+      // 立即刷新历史记录（不延迟），用真实数据替换临时记录
+      // 使用 setTimeout 0 确保在下一个事件循环中执行，让UI先更新
+      setTimeout(() => {
+        loadHistory().catch(err => {
           console.warn('刷新历史记录失败:', err)
-          // 不阻止用户继续使用，静默处理
-        }
-      }, 1000)
+          // 即使失败，临时记录也会显示，用户可以继续使用
+        })
+      }, 0)
       
       // 清除之前的定时器（如果有）
       if (historyRefreshInterval) {
@@ -782,14 +804,14 @@ const generateVideo = async () => {
         historyRefreshInterval = null
       }
       
-      // 定期刷新历史记录（每30秒），直到视频生成完成
+      // 定期刷新历史记录（每10秒），直到视频生成完成
       historyRefreshInterval = setInterval(async () => {
         try {
           await loadHistory()
         } catch (err: any) {
           console.warn('定期刷新历史记录失败:', err)
         }
-      }, 30000) // 每30秒刷新一次
+      }, 10000) // 每10秒刷新一次（从30秒改为10秒，更快响应）
       
       // 10分钟后停止定期刷新（视频应该已经完成或超时）
       setTimeout(() => {
