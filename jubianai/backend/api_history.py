@@ -457,6 +457,7 @@ async def enhance_fps(
         # 如果切换到 FILM，给出提示
         if request.method == "film" or (request.auto_switch and request.method == "rife"):
             # 提示会在前端显示
+            pass
         
         # 调用视频处理服务
         processing_service = VideoProcessingService()
