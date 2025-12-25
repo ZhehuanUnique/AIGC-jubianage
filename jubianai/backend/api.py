@@ -752,8 +752,17 @@ async def get_video_status(task_id: str):
                             "progress": 50,
                             "video_url": None
                         }
-                    elif status in ["not_found", "expired"]:
+                    elif status in ["not_found", "expired", "failed"]:
                         # 更新数据库状态为 failed
+                        error_msg = f"任务状态: {status}"
+                        if status == "not_found":
+                            error_msg = "任务不存在，可能任务ID错误或任务已被删除"
+                        elif status == "expired":
+                            error_msg = "任务已过期，请重新生成"
+                        elif status == "failed":
+                            error_msg = "任务生成失败，请检查参数或重新生成"
+                        
+                        print(f"❌ 任务 {task_id} 状态为 {status}，标记为失败 (req_key={req_key})")
                         try:
                             from backend.database import get_db
                             from backend.video_history import VideoHistoryService
@@ -762,17 +771,17 @@ async def get_video_status(task_id: str):
                                 db=db,
                                 task_id=task_id,
                                 status="failed",
-                                error_message=f"任务状态: {status}"
+                                error_message=error_msg
                             )
-                        except Exception:
-                            pass
+                        except Exception as db_error:
+                            print(f"更新任务状态失败: {str(db_error)}")
                         
                         return {
                             "task_id": task_id,
                             "status": "failed",
                             "progress": 0,
                             "video_url": None,
-                            "error": f"任务状态: {status}"
+                            "error": error_msg
                         }
                     else:
                         return {
@@ -785,9 +794,17 @@ async def get_video_status(task_id: str):
                 else:
                     # 如果 code != 10000，记录错误但继续尝试下一个 req_key
                     error_msg = api_result.get("message", "未知错误")
-                    print(f"查询任务失败 (req_key={req_key}): code={response_code}, message={error_msg}")
+                    request_id = api_result.get("request_id", "")
+                    print(f"❌ 查询任务失败 (req_key={req_key}): code={response_code}, message={error_msg}, request_id={request_id}")
+                    
+                    # 检查是否是任务不存在错误（可能是 req_key 不匹配）
+                    if response_code == 50404 or "not found" in error_msg.lower() or "不存在" in error_msg:
+                        print(f"⚠️ 任务不存在 (req_key={req_key})，继续尝试其他 req_key")
+                        continue
+                    
                     # 检查是否是并发限制错误
                     if response_code == 50430 or "Concurrent Limit" in error_msg or "concurrent" in error_msg.lower():
+                        print(f"⚠️ 检测到并发限制错误，停止尝试其他 req_key")
                         return {
                             "task_id": task_id,
                             "status": "failed",
@@ -795,6 +812,7 @@ async def get_video_status(task_id: str):
                             "video_url": None,
                             "error": "API 并发限制，请稍后重试。即梦 API 有并发请求限制，请等待其他任务完成后再试。"
                         }
+                    # 其他错误，继续尝试下一个 req_key
                     continue
                     
             except Exception as e:
