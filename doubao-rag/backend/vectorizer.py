@@ -92,3 +92,5 @@ class ImageVectorizer:
         return test_embedding.shape[0]
 
 
+
+

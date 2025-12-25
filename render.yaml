@@ -12,3 +12,5 @@ services:
         value: 10000
     healthCheckPath: /health
     plan: free
+
+
