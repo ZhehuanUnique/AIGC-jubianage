@@ -1673,7 +1673,13 @@ const handleModelButtonClick = (e?: Event) => {
 }
 
 // 模型选择处理
-const handleModelSelect = (ver: string) => {
+const handleModelSelect = (ver: string, e?: Event) => {
+  // 阻止事件冒泡
+  if (e) {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+  
   const versionMap: Record<string, '3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2'> = {
     '3.0': '3.0',
     '3.0_pro': '3.0_pro',
@@ -1683,7 +1689,11 @@ const handleModelSelect = (ver: string) => {
   }
   const mappedVersion = versionMap[ver] || '3.0'
   handleVersionChange(mappedVersion)
-  showModelOptions.value = false
+  
+  // 延迟关闭弹窗，确保点击事件完成
+  setTimeout(() => {
+    showModelOptions.value = false
+  }, 100)
   
   // 清除可能存在的收缩定时器
   if (bottomEdgeHoverTimeout) {
