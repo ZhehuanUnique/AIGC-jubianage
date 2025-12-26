@@ -499,7 +499,14 @@ const filters = ref({
 // 监听筛选更新事件
 const handleFiltersUpdated = (event: CustomEvent) => {
   filters.value = { ...event.detail }
-  loadHistory()
+  // 只在前端筛选，不重新请求后端（除非是首次加载）
+  if (historyStore.isInitialLoad) {
+    // 首次加载时，需要从后端获取数据
+    loadHistory()
+  } else {
+    // 非首次加载，直接在前端筛选，速度更快
+    historyStore.applyFilters(filters.value)
+  }
 }
 
 // 视频生成相关

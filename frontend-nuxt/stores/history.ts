@@ -40,7 +40,8 @@ export interface HistoryFilters {
 
 export const useHistoryStore = defineStore('history', {
   state: () => ({
-    videos: [] as VideoHistoryItem[],
+    videos: [] as VideoHistoryItem[], // 筛选后的视频列表
+    allVideos: [] as VideoHistoryItem[], // 所有原始视频（未筛选）
     total: 0,
     loading: false,
     error: null as string | null,
@@ -108,7 +109,8 @@ export const useHistoryStore = defineStore('history', {
           return acc
         }, [] as VideoHistoryItem[])
 
-        this.videos = uniqueVideos
+        // 保存所有原始视频（未筛选）
+        this.allVideos = uniqueVideos
         this.total = response.total || 0
 
         // 应用前端筛选（时间范围、视频类型、操作类型）
@@ -140,7 +142,8 @@ export const useHistoryStore = defineStore('history', {
     },
 
     applyFilters(filters: HistoryFilters) {
-      let filtered = [...this.videos]
+      // 从所有原始视频开始筛选，而不是从已筛选的视频
+      let filtered = [...this.allVideos]
 
       // 时间范围筛选
       if (filters.timeRange && filters.timeRange !== 'all') {
