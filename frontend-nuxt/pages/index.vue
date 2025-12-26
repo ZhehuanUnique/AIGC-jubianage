@@ -623,6 +623,20 @@ const isInputFocused = ref(false)
 const showModelOptions = ref(false)
 const isBottomEdgeHovered = ref(false)
 const isBottomBarHovered = ref(false)
+
+// 监听模型选择弹窗状态，确保打开时底部栏不收缩
+watch(showModelOptions, (isOpen) => {
+  if (isOpen) {
+    // 清除所有收缩定时器
+    if (bottomEdgeHoverTimeout) {
+      clearTimeout(bottomEdgeHoverTimeout)
+      bottomEdgeHoverTimeout = null
+    }
+    // 强制保持展开状态
+    isBottomBarCollapsed.value = false
+    isBottomBarHovered.value = true
+  }
+})
 const showResolutionOptions = ref<number | null>(null)
 const showFPSOptions = ref<number | null>(null)
 const showDeleteDialog = ref(false)
