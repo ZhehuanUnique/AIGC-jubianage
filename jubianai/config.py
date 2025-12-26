@@ -46,10 +46,11 @@ SORA2_API_HOST = os.getenv("SORA2_API_HOST", "https://grsai.dakka.com.cn")  # So
 SORA2_API_KEY = os.getenv("SORA2_API_KEY", "")  # Sora 2 API Key
 
 # Seedance API 配置
-# 正式环境：https://api.302.ai
-# 国内中转：https://api.302ai.cn
-SEEDANCE_API_HOST = os.getenv("SEEDANCE_API_HOST", "https://api.302ai.cn")  # Seedance API Host（默认国内中转）
-SEEDANCE_API_KEY = os.getenv("SEEDANCE_API_KEY", "")  # Seedance API Key
+# 创建任务 API：https://api.302.ai/doubao/doubao-seedance
+# 查询任务 API：https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{id}
+SEEDANCE_API_HOST = os.getenv("SEEDANCE_API_HOST", "https://api.302ai.cn")  # Seedance API Host（创建任务，默认国内中转）
+SEEDANCE_API_KEY = os.getenv("SEEDANCE_API_KEY", "")  # Seedance API Key (ARK_API_KEY)
+SEEDANCE_QUERY_HOST = os.getenv("SEEDANCE_QUERY_HOST", "https://ark.cn-beijing.volces.com")  # Seedance 查询任务 API Host
 SEEDANCE_MODEL = os.getenv("SEEDANCE_MODEL", "doubao-seedance-1-0-lite-i2v-250428")  # Seedance 模型名称
 
 # 阿里云百炼平台 API 配置

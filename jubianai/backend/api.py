@@ -20,7 +20,7 @@ from config import (
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
     JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS,
     SORA2_API_HOST, SORA2_API_KEY,
-    SEEDANCE_API_HOST, SEEDANCE_API_KEY, SEEDANCE_MODEL,
+    SEEDANCE_API_HOST, SEEDANCE_API_KEY, SEEDANCE_QUERY_HOST, SEEDANCE_MODEL,
     DASHSCOPE_API_KEY, DASHSCOPE_API_BASE
 )
 from backend.assets_api import (
@@ -1383,10 +1383,10 @@ async def get_wan22_video_status(task_id: str, generation) -> dict:
 async def get_seedance_video_status(task_id: str, generation) -> dict:
     """
     Seedance 视频状态查询函数
-    参考文档：https://302ai.apifox.cn/344076585e0
-    API 端点：GET /doubao/doubao-seedance/{task_id}
+    参考文档：https://www.volcengine.com/docs/82379/1520757?lang=zh
+    API 端点：GET https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{id}
     """
-    if not SEEDANCE_API_HOST or not SEEDANCE_API_KEY:
+    if not SEEDANCE_QUERY_HOST or not SEEDANCE_API_KEY:
         return {
             "task_id": task_id,
             "status": "error",
@@ -1402,8 +1402,8 @@ async def get_seedance_video_status(task_id: str, generation) -> dict:
         from backend.video_history import VideoHistoryService
         from backend.storage import get_storage_service
         
-        # 根据文档：GET /doubao/doubao-seedance/{task_id}
-        api_url = f"{SEEDANCE_API_HOST}/doubao/doubao-seedance/{task_id}"
+        # 根据新文档：GET https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/{id}
+        api_url = f"{SEEDANCE_QUERY_HOST}/api/v3/contents/generations/tasks/{task_id}"
         
         headers = {
             "Authorization": f"Bearer {SEEDANCE_API_KEY}",
