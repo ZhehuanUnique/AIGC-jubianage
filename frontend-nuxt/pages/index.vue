@@ -387,8 +387,9 @@
                 <div
                   v-if="showModelOptions"
                   @click.stop
+                  @mousedown.stop
                   @mouseenter="isBottomBarHovered = true"
-                  @mouseleave="isBottomBarHovered = false"
+                  @mouseleave="isBottomBarHovered = true"
                   class="absolute bottom-full left-0 mb-1 min-w-[120px] bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                   style="max-height: 300px; overflow-y: auto;"
                 >
