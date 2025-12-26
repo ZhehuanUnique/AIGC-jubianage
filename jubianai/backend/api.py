@@ -193,12 +193,16 @@ async def generate_video(
         
         # 确定版本（从前端传入，默认3.0）
         version = request.version or "3.0"
-        if version not in ["3.0", "3.0_pro", "sora2"]:
+        if version not in ["3.0", "3.0_pro", "sora2", "seedance"]:
             version = "3.0"
         
         # 如果是 Sora 2，使用不同的处理逻辑
         if version == "sora2":
             return await generate_sora2_video(request, enhanced_prompt)
+        
+        # 如果是 Seedance，使用不同的处理逻辑
+        if version == "seedance":
+            return await generate_seedance_video(request, enhanced_prompt)
         
         # 验证 3.0 Pro 的限制：只支持 1080p 首帧（不支持尾帧）
         if version == "3.0_pro":

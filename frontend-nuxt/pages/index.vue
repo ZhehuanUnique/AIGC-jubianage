@@ -551,7 +551,13 @@ const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
 const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2' | 'seedance'>('3.0')
 const videoVersions = ['3.0', '3.0_pro', 'Sora 2', 'Seedance'] as const
 const availableDurations = computed(() => {
-  return videoVersion.value === 'sora2' ? sora2Durations : durations
+  if (videoVersion.value === 'sora2') {
+    return sora2Durations  // Sora 2: 4, 8, 12秒
+  } else if (videoVersion.value === 'seedance') {
+    return [5, 10]  // Seedance: 5, 10秒
+  } else {
+    return durations  # 3.0/3.0 Pro: 5, 10秒
+  }
 })
 const firstFrame = ref<File | null>(null)
 const lastFrame = ref<File | null>(null)
