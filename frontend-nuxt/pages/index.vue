@@ -691,8 +691,8 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
   } else {
     // 延迟检查是否需要收缩
     bottomEdgeHoverTimeout = setTimeout(() => {
-      // 如果输入框没有焦点且鼠标不在悬浮窗口上，则收缩
-      if (!isInputFocused.value && !isBottomBarHovered.value) {
+      // 如果输入框没有焦点且鼠标不在悬浮窗口上，且模型选择弹窗未打开，则收缩
+      if (!isInputFocused.value && !isBottomBarHovered.value && !showModelOptions.value) {
         isBottomBarCollapsed.value = true
       }
     }, 300)
@@ -1632,6 +1632,12 @@ const getModelDisplayName = (version: string | undefined): string => {
 
 // 模型按钮点击处理
 const handleModelButtonClick = () => {
+  // 清除可能存在的收缩定时器
+  if (bottomEdgeHoverTimeout) {
+    clearTimeout(bottomEdgeHoverTimeout)
+    bottomEdgeHoverTimeout = null
+  }
+  
   // 打开模型选择时，确保底部栏保持展开状态
   isBottomBarCollapsed.value = false
   isBottomBarHovered.value = true
