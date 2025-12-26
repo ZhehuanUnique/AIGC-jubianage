@@ -52,6 +52,11 @@ SEEDANCE_API_HOST = os.getenv("SEEDANCE_API_HOST", "https://api.302ai.cn")  # Se
 SEEDANCE_API_KEY = os.getenv("SEEDANCE_API_KEY", "")  # Seedance API Key
 SEEDANCE_MODEL = os.getenv("SEEDANCE_MODEL", "doubao-seedance-1-0-lite-i2v-250428")  # Seedance 模型名称
 
+# 阿里云百炼平台 API 配置
+# 用于 wan2.2-i2v-flash 等模型
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")  # 阿里云百炼平台 API Key
+DASHSCOPE_API_BASE = os.getenv("DASHSCOPE_API_BASE", "https://dashscope.aliyuncs.com/api/v1")  # 阿里云百炼平台 API 基础地址
+
 # 即梦AI视频生成 req_key 映射
 # 3.0 版本的 req_key（根据文档更新）
 JIMENG_V30_REQ_KEYS = {

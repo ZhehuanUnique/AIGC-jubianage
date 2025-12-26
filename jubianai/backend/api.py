@@ -20,7 +20,8 @@ from config import (
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
     JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS,
     SORA2_API_HOST, SORA2_API_KEY,
-    SEEDANCE_API_HOST, SEEDANCE_API_KEY, SEEDANCE_MODEL
+    SEEDANCE_API_HOST, SEEDANCE_API_KEY, SEEDANCE_MODEL,
+    DASHSCOPE_API_KEY, DASHSCOPE_API_BASE
 )
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
@@ -76,7 +77,7 @@ class VideoGenerationRequest(BaseModel):
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
     resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p（Sora 2 不需要）
-    version: Optional[str] = "3.0"  # 版本：3.0、3.0_pro、sora2 或 seedance
+    version: Optional[str] = "3.0"  # 版本：3.0、3.0_pro、sora2、seedance 或 wan2.2
 
 
 class VideoGenerationResponse(BaseModel):
@@ -193,7 +194,7 @@ async def generate_video(
         
         # 确定版本（从前端传入，默认3.0）
         version = request.version or "3.0"
-        if version not in ["3.0", "3.0_pro", "sora2", "seedance"]:
+        if version not in ["3.0", "3.0_pro", "sora2", "seedance", "wan2.2"]:
             version = "3.0"
         
         # 如果是 Sora 2，使用不同的处理逻辑
@@ -203,6 +204,10 @@ async def generate_video(
         # 如果是 Seedance，使用不同的处理逻辑
         if version == "seedance":
             return await generate_seedance_video(request, enhanced_prompt)
+        
+        # 如果是 wan2.2，使用不同的处理逻辑
+        if version == "wan2.2":
+            return await generate_wan22_video(request, enhanced_prompt)
         
         # 验证 3.0 Pro 的限制：只支持 1080p 首帧（不支持尾帧）
         if version == "3.0_pro":
@@ -1000,6 +1005,381 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
         )
 
 
+async def generate_wan22_video(request: VideoGenerationRequest, enhanced_prompt: str) -> VideoGenerationResponse:
+    """
+    阿里云百炼平台 wan2.2-i2v-flash 视频生成函数
+    参考文档：https://help.aliyun.com/zh/model-studio/image-to-video-api-reference
+    模型：wan2.2-i2v-flash（支持首帧，不支持首尾帧，支持720p）
+    """
+    # 验证 DASHSCOPE API 配置
+    if not DASHSCOPE_API_KEY:
+        return VideoGenerationResponse(
+            success=False,
+            message="阿里云百炼 API Key 未设置",
+            error="请设置环境变量 DASHSCOPE_API_KEY"
+        )
+    
+    # 验证分辨率：wan2.2-i2v-flash 支持 720p
+    if request.resolution and request.resolution != "720p":
+        return VideoGenerationResponse(
+            success=False,
+            message="wan2.2-i2v-flash 只支持 720p 分辨率",
+            error="wan2.2-i2v-flash 只支持 720p 分辨率，请切换到 720p"
+        )
+    
+    # 验证首帧：wan2.2-i2v-flash 需要首帧
+    if not request.first_frame:
+        return VideoGenerationResponse(
+            success=False,
+            message="wan2.2-i2v-flash 需要首帧图片",
+            error="wan2.2-i2v-flash 是基于图片生成视频的模型，请上传首帧图片"
+        )
+    
+    # 注意：wan2.2-i2v-flash 不支持尾帧，如果有尾帧会忽略
+    if request.last_frame:
+        print("⚠️ wan2.2-i2v-flash 不支持尾帧，将忽略尾帧参数")
+    
+    try:
+        import httpx
+        import base64
+        import uuid
+        from datetime import datetime
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        
+        # 构建阿里云百炼 API 请求
+        # 根据文档：POST /api/v1/services/aigc/video-generation/generation
+        api_url = f"{DASHSCOPE_API_BASE}/services/aigc/video-generation/generation"
+        
+        # 处理首帧图片
+        image_url = None
+        if request.first_frame:
+            if request.first_frame.startswith("http"):
+                # URL 格式
+                image_url = request.first_frame
+            else:
+                # base64 格式，需要转换为 data URL
+                base64_data = request.first_frame
+                if not base64_data.startswith("data:image"):
+                    # 纯 base64，添加前缀（假设是 PNG）
+                    base64_data = f"data:image/png;base64,{base64_data}"
+                image_url = base64_data
+        
+        # 构建请求体
+        # 根据阿里云百炼 API 文档格式
+        payload = {
+            "model": "wan2.2-i2v-flash",  # 模型名称
+            "input": {
+                "image_url": image_url,  # 首帧图片（必填）
+                "text": enhanced_prompt  # 提示词（必填）
+            },
+            "parameters": {
+                "resolution": "720p",  # 分辨率：720p（默认）
+                "duration": request.duration  # 视频时长（秒）
+            }
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"📤 准备调用阿里云百炼 wan2.2-i2v-flash API: {api_url}")
+        print(f"  - model: wan2.2-i2v-flash")
+        print(f"  - prompt: {enhanced_prompt[:100]}...")
+        print(f"  - duration: {request.duration}秒")
+        print(f"  - resolution: 720p")
+        print(f"  - 有首帧: {bool(request.first_frame)}")
+        print(f"  - 有尾帧: {bool(request.last_frame)} (将被忽略)")
+        
+        # 添加重试机制（最多重试2次）
+        max_retries = 2
+        retry_count = 0
+        api_result = None
+        last_error = None
+        
+        while retry_count <= max_retries:
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(api_url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    api_result = response.json()
+                break  # 成功，跳出重试循环
+            except httpx.TimeoutException as e:
+                last_error = f"请求超时（60秒）"
+                print(f"⚠️ 阿里云百炼 API 请求超时（第 {retry_count + 1} 次尝试）")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+            except httpx.HTTPStatusError as e:
+                # HTTP 错误，不重试（可能是参数错误）
+                last_error = f"HTTP {e.response.status_code}"
+                print(f"❌ 阿里云百炼 API HTTP 错误: {e.response.status_code}")
+                if e.response.text:
+                    try:
+                        error_data = e.response.json()
+                        last_error = error_data.get("message") or error_data.get("error") or last_error
+                    except:
+                        last_error = f"{last_error}: {e.response.text[:200]}"
+                raise
+            except Exception as e:
+                last_error = str(e)
+                print(f"⚠️ 阿里云百炼 API 请求失败（第 {retry_count + 1} 次尝试）: {str(e)}")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+        
+        if not api_result:
+            return VideoGenerationResponse(
+                success=False,
+                message="wan2.2-i2v-flash 视频生成失败",
+                error=f"API 请求失败: {last_error or '未知错误'}"
+            )
+        
+        print(f"📥 阿里云百炼 API 响应: {api_result}")
+        
+        # 解析响应
+        # 根据阿里云百炼 API 文档，响应格式可能为：
+        # {
+        #   "request_id": "...",
+        #   "output": {
+        #     "task_id": "...",
+        #     "task_status": "PENDING"
+        #   }
+        # }
+        task_id = None
+        if "output" in api_result:
+            task_id = api_result["output"].get("task_id")
+        if not task_id:
+            # 尝试其他可能的字段
+            task_id = api_result.get("task_id") or api_result.get("id") or str(uuid.uuid4())
+        
+        # 保存到数据库
+        try:
+            db = next(get_db())
+            user_id = 1  # 默认用户ID，实际应该从认证中获取
+            
+            VideoHistoryService.create_generation_record(
+                db=db,
+                task_id=task_id,
+                user_id=user_id,
+                prompt=enhanced_prompt,
+                duration=request.duration,
+                fps=24,  # wan2.2-i2v-flash 默认帧率
+                width=1280,  # 720p 宽度
+                height=720,  # 720p 高度
+                first_frame_url=image_url if image_url and image_url.startswith("http") else None,
+                last_frame_url=None,  # wan2.2-i2v-flash 不支持尾帧
+                status="pending",
+                req_key="wan2.2-i2v-flash",
+                version="wan2.2"
+            )
+            print(f"✅ wan2.2-i2v-flash 任务已保存到数据库: {task_id}")
+        except Exception as db_error:
+            print(f"⚠️ 保存 wan2.2-i2v-flash 任务到数据库失败: {str(db_error)}")
+        
+        return VideoGenerationResponse(
+            success=True,
+            task_id=task_id,
+            message="wan2.2-i2v-flash 视频生成任务已提交"
+        )
+        
+    except httpx.HTTPStatusError as e:
+        error_msg = f"阿里云百炼 API 调用失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("message") or error_data.get("error") or error_msg
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return VideoGenerationResponse(
+            success=False,
+            message="wan2.2-i2v-flash 视频生成失败",
+            error=error_msg
+        )
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ wan2.2-i2v-flash 视频生成错误: {error_detail}\n{error_traceback}")
+        return VideoGenerationResponse(
+            success=False,
+            message="wan2.2-i2v-flash 视频生成失败",
+            error=f"{error_detail}。请检查后端日志获取详细信息。"
+        )
+
+
+async def get_wan22_video_status(task_id: str, generation) -> dict:
+    """
+    阿里云百炼平台 wan2.2-i2v-flash 视频状态查询函数
+    参考文档：https://help.aliyun.com/zh/model-studio/image-to-video-api-reference
+    """
+    if not DASHSCOPE_API_KEY:
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": "阿里云百炼 API 配置未设置"
+        }
+    
+    try:
+        import httpx
+        from datetime import datetime
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        from backend.storage import get_storage_service
+        
+        # 根据文档：GET /api/v1/tasks/{task_id}
+        api_url = f"{DASHSCOPE_API_BASE}/tasks/{task_id}"
+        
+        headers = {
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"🔍 查询阿里云百炼 wan2.2-i2v-flash 任务状态: {task_id}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(api_url, headers=headers)
+            response.raise_for_status()
+            api_result = response.json()
+        
+        print(f"📥 阿里云百炼状态查询响应: {api_result}")
+        
+        # 解析响应
+        # 根据文档，响应格式可能为：
+        # {
+        #   "request_id": "...",
+        #   "output": {
+        #     "task_id": "...",
+        #     "task_status": "SUCCEEDED|PENDING|RUNNING|FAILED",
+        #     "video_url": "https://..."
+        #   }
+        # }
+        output = api_result.get("output", {})
+        status = output.get("task_status", "PENDING")
+        
+        # 转换状态
+        if status == "SUCCEEDED":
+            # 视频生成完成
+            video_url = output.get("video_url")
+            
+            if not video_url:
+                return {
+                    "task_id": task_id,
+                    "status": "processing",
+                    "progress": 90,
+                    "video_url": None
+                }
+            
+            final_video_url = video_url
+            
+            # 尝试上传到对象存储
+            try:
+                db = next(get_db())
+                storage_service = get_storage_service()
+                if storage_service:
+                    video_name = f"{task_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4"
+                    storage_url = await storage_service.upload_video(video_url, video_name)
+                    if storage_url:
+                        final_video_url = storage_url
+                        print(f"✅ wan2.2-i2v-flash 视频已上传到对象存储: {storage_url}")
+            except Exception as storage_error:
+                print(f"⚠️ wan2.2-i2v-flash 视频上传到对象存储失败: {str(storage_error)}")
+            
+            # 更新数据库
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="completed",
+                    video_url=final_video_url
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 wan2.2-i2v-flash 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "progress": 100,
+                "video_url": final_video_url
+            }
+        elif status == "FAILED":
+            # 任务失败
+            error_message = output.get("message") or "wan2.2-i2v-flash 视频生成失败"
+            
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="failed",
+                    error_message=error_message
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 wan2.2-i2v-flash 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "progress": 0,
+                "video_url": None,
+                "error": error_message
+            }
+        else:
+            # 处理中（status == "PENDING" 或 "RUNNING"）
+            progress = 50  # 默认显示 50%
+            if status == "RUNNING":
+                progress = 70  # 运行中显示 70%
+            
+            return {
+                "task_id": task_id,
+                "status": "processing",
+                "progress": progress,
+                "video_url": None
+            }
+    
+    except httpx.HTTPStatusError as e:
+        error_msg = f"阿里云百炼 API 查询失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("message") or error_data.get("error") or error_msg
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": error_msg
+        }
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ wan2.2-i2v-flash 状态查询错误: {error_detail}\n{error_traceback}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": f"{error_detail}。请检查后端日志获取详细信息。"
+        }
+
+
 async def get_seedance_video_status(task_id: str, generation) -> dict:
     """
     Seedance 视频状态查询函数
@@ -1431,6 +1811,10 @@ async def get_video_status(task_id: str):
             # 检查是否是 Seedance 任务
             if generation and generation.version == "seedance":
                 return await get_seedance_video_status(task_id, generation)
+            
+            # 检查是否是 wan2.2 任务
+            if generation and generation.version == "wan2.2":
+                return await get_wan22_video_status(task_id, generation)
             
             if generation and generation.extra_metadata:
                 saved_req_key = generation.extra_metadata.get("req_key")

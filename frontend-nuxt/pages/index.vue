@@ -548,13 +548,15 @@ const durations = [5, 10]
 const sora2Durations = [4, 8, 12] // Sora 2 只支持 4秒、8秒、12秒
 const resolution = ref<'720p' | '1080p'>('720p')
 const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
-const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2' | 'seedance'>('3.0')
-const videoVersions = ['3.0', '3.0_pro', 'Sora 2', 'Seedance'] as const
+const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2'>('3.0')
+const videoVersions = ['3.0', '3.0_pro', 'Sora 2', 'Seedance', 'wan2.2'] as const
 const availableDurations = computed(() => {
   if (videoVersion.value === 'sora2') {
     return sora2Durations  // Sora 2: 4, 8, 12秒
   } else if (videoVersion.value === 'seedance') {
     return [5, 10]  // Seedance: 5, 10秒
+  } else if (videoVersion.value === 'wan2.2') {
+    return [5, 10]  // wan2.2: 5, 10秒（根据实际API支持调整）
   } else {
     return durations  // 3.0/3.0 Pro: 5, 10秒
   }
@@ -652,7 +654,7 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
 }
 
 // 版本切换处理
-const handleVersionChange = (newVersion: '3.0' | '3.0_pro' | 'sora2') => {
+const handleVersionChange = (newVersion: '3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2') => {
   const oldVersion = videoVersion.value
   videoVersion.value = newVersion
   
