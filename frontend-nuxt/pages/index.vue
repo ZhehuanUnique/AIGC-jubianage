@@ -208,7 +208,7 @@
       :class="isBottomBarCollapsed ? 'h-16' : 'h-4'"
       @mouseenter="handleBottomEdgeHover(true)"
       @mouseleave="handleBottomEdgeHover(false)"
-      @click="isBottomBarCollapsed = false"
+      @click.stop="isBottomBarCollapsed = false"
     >
       <!-- 收缩时显示提示条（只有小箭头，贴近底部边缘） -->
       <div v-if="isBottomBarCollapsed" class="h-full flex items-end justify-center pb-1">
