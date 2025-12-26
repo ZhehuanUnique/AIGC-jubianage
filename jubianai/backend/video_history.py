@@ -130,7 +130,9 @@ class VideoHistoryService:
         if status:
             query = query.filter(VideoGeneration.status == status)
         
-        return query.order_by(desc(VideoGeneration.created_at)).limit(limit).offset(offset).all()
+        # 按创建时间正序排序（最早的在前，最新的在后）
+        # 这样早期生成的视频会显示在上面，今天生成的视频在下面
+        return query.order_by(VideoGeneration.created_at.asc()).limit(limit).offset(offset).all()
     
     @staticmethod
     def get_user_generation_count(

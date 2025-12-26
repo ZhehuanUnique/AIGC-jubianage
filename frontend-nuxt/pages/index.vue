@@ -1493,9 +1493,10 @@ const groupedVideos = computed(() => {
     groups[dateKey].push(video)
   })
   
-  // 按日期倒序排列（最新的在前）
+  // 按日期正序排列（最早的在前，最新的在后）
+  // 这样早期生成的视频会显示在上面，今天生成的视频在下面
   return Object.keys(groups)
-    .sort((a, b) => b.localeCompare(a))
+    .sort((a, b) => a.localeCompare(b))  // 正序：日期小的（早的）在前
     .reduce((acc, key) => {
       acc[key] = groups[key]
       return acc

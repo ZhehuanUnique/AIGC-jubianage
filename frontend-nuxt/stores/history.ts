@@ -93,8 +93,9 @@ export const useHistoryStore = defineStore('history', {
         // 保留临时记录（id < 0），这些是新生成但还未从后端返回的记录
         const tempVideos = this.videos.filter(v => v.id < 0)
         
-        // 合并临时记录和真实记录，临时记录在前
-        const allVideos = [...tempVideos, ...(response.items || [])]
+        // 合并临时记录和真实记录
+        // 真实记录按时间正序（最早的在前），临时记录放在最后
+        const allVideos = [...(response.items || []), ...tempVideos]
         
         // 去重：如果有相同 task_id 的记录，保留真实记录（id >= 0）
         const uniqueVideos = allVideos.reduce((acc, video) => {
@@ -109,12 +110,17 @@ export const useHistoryStore = defineStore('history', {
           return acc
         }, [] as VideoHistoryItem[])
 
-        // 按创建时间倒序排序（最新的在最上面，早期的在下面）
+        // 按创建时间正序排序（最早的在前，最新的在后）
+        // 临时视频（id < 0）放在最后
         uniqueVideos.sort((a, b) => {
+          // 临时视频（正在生成的）始终放在最后
+          if (a.id < 0 && b.id >= 0) return 1
+          if (a.id >= 0 && b.id < 0) return -1
+          
           const timeA = new Date(a.created_at).getTime()
           const timeB = new Date(b.created_at).getTime()
-          // 倒序：时间大的（新的）在前
-          return timeB - timeA
+          // 正序：时间小的（早的）在前
+          return timeA - timeB
         })
 
         // 保存所有原始视频（未筛选）
