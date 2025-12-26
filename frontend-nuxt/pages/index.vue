@@ -361,10 +361,10 @@
                 <button
                   v-for="ver in videoVersions"
                   :key="ver"
-                  @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : ver)"
+                  @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
-                    (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2'))
+                    (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
                     // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
@@ -661,10 +661,19 @@ const handleVersionChange = (newVersion: '3.0' | '3.0_pro' | 'sora2' | 'seedance
   // 如果切换到 Sora 2，且当前时长不在 [4, 8, 12] 中，自动调整为 4 秒
   if (newVersion === 'sora2' && !sora2Durations.includes(duration.value)) {
     duration.value = 4
+  } else if (newVersion === 'seedance' && ![5, 10].includes(duration.value)) {
+    duration.value = 5
+  } else if (newVersion === 'wan2.2' && ![5, 10].includes(duration.value)) {
+    duration.value = 5
   }
   // 如果从 Sora 2 切换到其他版本，且当前时长不在 [5, 10] 中，自动调整为 5 秒
   else if (oldVersion === 'sora2' && newVersion !== 'sora2' && !durations.includes(duration.value)) {
     duration.value = 5
+  }
+  
+  // wan2.2 只支持 720p，自动切换分辨率
+  if (newVersion === 'wan2.2' && resolution.value !== '720p') {
+    resolution.value = '720p'
   }
 }
 
