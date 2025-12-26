@@ -849,20 +849,22 @@ const generateVideo = async () => {
       console.log('视频生成任务已提交，task_id:', result.task_id)
       
       // 立即创建一个临时视频记录，添加到列表顶部
+      // Sora 2 不需要宽高，但为了显示需要设置默认值
+      const isSora2 = videoVersion.value === 'sora2'
       const tempVideo: VideoHistoryItem = {
         id: -1, // 临时ID，等待后端返回真实ID
         task_id: result.task_id,
         prompt: savedPrompt,
         duration: duration.value,
-        fps: 24,
-        width: resolution.value === '1080p' ? 1920 : 1280,
-        height: resolution.value === '1080p' ? 1080 : 720,
+        fps: isSora2 ? undefined : 24,
+        width: isSora2 ? 1920 : (resolution.value === '1080p' ? 1920 : 1280), // Sora 2 默认 16:9 宽屏
+        height: isSora2 ? 1080 : (resolution.value === '1080p' ? 1080 : 720), // Sora 2 默认 16:9 宽屏
         status: 'pending',
         video_url: undefined,
         video_name: undefined,
         first_frame_url: savedFirstFramePreview || undefined,
         last_frame_url: savedLastFramePreview || undefined,
-        created_at: new Date().toISOString(),
+        created_at: new Date().toISOString(), // 使用当前时间，确保显示在"今天"
         completed_at: undefined,
         is_ultra_hd: false,
         is_favorite: false,
