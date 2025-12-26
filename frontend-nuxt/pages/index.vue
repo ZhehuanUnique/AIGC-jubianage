@@ -1628,7 +1628,15 @@ const getModelDisplayName = (version: string | undefined): string => {
 
 // 模型选择处理
 const handleModelSelect = (ver: string) => {
-  handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))
+  const versionMap: Record<string, '3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2'> = {
+    '3.0': '3.0',
+    '3.0_pro': '3.0_pro',
+    'Sora 2': 'sora2',
+    'Seedance': 'seedance',
+    'wan2.2': 'wan2.2'
+  }
+  const mappedVersion = versionMap[ver] || '3.0'
+  handleVersionChange(mappedVersion)
   showModelOptions.value = false
 }
 
