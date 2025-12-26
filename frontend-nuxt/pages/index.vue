@@ -195,6 +195,13 @@
     </div>
 
     <!-- 底部边缘触发区域（用于检测鼠标靠近）- 始终存在，收缩时显示提示条 -->
+    <!-- 点击外部关闭模型选择弹窗 -->
+    <div
+      v-if="showModelOptions"
+      class="fixed inset-0 z-[90]"
+      @click="showModelOptions = false"
+    ></div>
+    
     <div
       class="fixed bottom-0 left-0 right-0 z-50 transition-all duration-300"
       :class="isBottomBarCollapsed ? 'h-16' : 'h-4'"
@@ -357,19 +364,37 @@
           <!-- 控制栏 -->
           <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
-              <!-- 模型选择（竖向列表） -->
+              <!-- 模型选择（弹窗式） -->
               <div class="relative">
                 <span class="text-sm text-gray-600 font-medium mb-2 block">模型:</span>
-                <div class="flex flex-col gap-1.5">
+                <button
+                  @click.stop="showModelOptions = !showModelOptions"
+                  :class="[
+                    'w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left flex items-center justify-between',
+                    'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ]"
+                >
+                  <span>{{ getModelDisplayName(videoVersion) }}</span>
+                  <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showModelOptions }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <!-- 模型选择弹窗 -->
+                <div
+                  v-if="showModelOptions"
+                  @click.stop
+                  class="absolute top-full left-0 mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
+                  style="max-height: 300px; overflow-y: auto;"
+                >
                   <button
                     v-for="ver in videoVersions"
                     :key="ver"
-                    @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))"
+                    @click="handleModelSelect(ver)"
                     :class="[
-                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left',
+                      'w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
                       (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
                         ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100',
                       // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
                       ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                     ]"
