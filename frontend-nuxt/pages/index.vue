@@ -969,11 +969,16 @@ const fileToBase64 = (file: File): Promise<string> => {
 }
 
 const toggleFavorite = async (videoId: number) => {
-  // 乐观更新：立即更新UI
+  // 乐观更新：立即更新UI（同时更新筛选列表和原始列表）
   const video = historyStore.videos.find(v => v.id === videoId)
+  const allVideo = historyStore.allVideos.find(v => v.id === videoId)
   if (video) {
     const oldValue = video.is_favorite
     video.is_favorite = !oldValue
+    // 同时更新原始列表
+    if (allVideo) {
+      allVideo.is_favorite = !oldValue
+    }
     
     // 异步更新后端，如果失败则回滚
     try {
@@ -981,6 +986,9 @@ const toggleFavorite = async (videoId: number) => {
     } catch (error) {
       // 回滚UI状态
       video.is_favorite = oldValue
+      if (allVideo) {
+        allVideo.is_favorite = oldValue
+      }
       console.error('切换收藏状态失败:', error)
       alert('操作失败，请重试')
     }
@@ -988,11 +996,16 @@ const toggleFavorite = async (videoId: number) => {
 }
 
 const toggleLike = async (videoId: number) => {
-  // 乐观更新：立即更新UI
+  // 乐观更新：立即更新UI（同时更新筛选列表和原始列表）
   const video = historyStore.videos.find(v => v.id === videoId)
+  const allVideo = historyStore.allVideos.find(v => v.id === videoId)
   if (video) {
     const oldValue = video.is_liked
     video.is_liked = !oldValue
+    // 同时更新原始列表
+    if (allVideo) {
+      allVideo.is_liked = !oldValue
+    }
     
     // 异步更新后端，如果失败则回滚
     try {
@@ -1000,6 +1013,9 @@ const toggleLike = async (videoId: number) => {
     } catch (error) {
       // 回滚UI状态
       video.is_liked = oldValue
+      if (allVideo) {
+        allVideo.is_liked = oldValue
+      }
       console.error('切换点赞状态失败:', error)
       alert('操作失败，请重试')
     }
