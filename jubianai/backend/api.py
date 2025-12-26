@@ -749,6 +749,313 @@ async def generate_sora2_video(request: VideoGenerationRequest, enhanced_prompt:
         )
 
 
+async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prompt: str) -> VideoGenerationResponse:
+    """
+    Seedance 视频生成函数
+    参考文档：https://302ai.apifox.cn/344076585e0
+    官方文档：https://www.volcengine.com/docs/82379/1520757?lang=zh
+    模型：doubao-seedance-1-0-lite-i2v-250428（支持首尾帧）
+    """
+    # 验证 Seedance API 配置
+    if not SEEDANCE_API_HOST:
+        return VideoGenerationResponse(
+            success=False,
+            message="Seedance API 配置未设置",
+            error="请设置环境变量 SEEDANCE_API_HOST"
+        )
+    
+    if not SEEDANCE_API_KEY:
+        return VideoGenerationResponse(
+            success=False,
+            message="Seedance API Key 未设置",
+            error="请设置环境变量 SEEDANCE_API_KEY"
+        )
+    
+    # 验证时长：根据文档，Seedance 支持 5秒、10秒
+    if request.duration not in [5, 10]:
+        return VideoGenerationResponse(
+            success=False,
+            message="Seedance 时长不支持",
+            error=f"当前时长 {request.duration} 秒，Seedance 支持 5秒、10秒"
+        )
+    
+    try:
+        import httpx
+        import uuid
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        
+        # 构建 Seedance API 请求
+        # 根据文档：POST /doubao/doubao-seedance
+        api_url = f"{SEEDANCE_API_HOST}/doubao/doubao-seedance"
+        
+        # 构建 content 数组
+        content = []
+        
+        # 添加文本提示词
+        # 根据文档，提示词格式：文本 --resolution 720p --ratio 16:9 --dur 5 --fps 24 --wm true --seed 11 --cf false
+        resolution_text = request.resolution or "720p"
+        ratio_text = "16:9"  # 默认 16:9，如果有首尾帧则使用 adaptive
+        duration_text = str(request.duration)
+        fps_text = "24"  # Seedance 只支持 24fps
+        wm_text = "true"  # 默认包含水印
+        seed_text = str(request.seed) if request.seed is not None else "-1"
+        cf_text = "false"  # 不固定摄像头
+        
+        # 如果有首帧或尾帧，ratio 使用 adaptive
+        if request.first_frame or request.last_frame:
+            ratio_text = "adaptive"
+        
+        prompt_text = f"{enhanced_prompt} --resolution {resolution_text} --ratio {ratio_text} --dur {duration_text} --fps {fps_text} --wm {wm_text} --seed {seed_text} --cf {cf_text}"
+        
+        content.append({
+            "type": "text",
+            "text": prompt_text
+        })
+        
+        # 处理首帧图片
+        if request.first_frame:
+            image_url_obj = None
+            if request.first_frame.startswith("http"):
+                # URL 格式
+                image_url_obj = {"url": request.first_frame}
+            else:
+                # base64 格式，需要转换为 data URL
+                base64_data = request.first_frame
+                if not base64_data.startswith("data:image"):
+                    # 纯 base64，添加前缀
+                    base64_data = f"data:image/png;base64,{base64_data}"
+                image_url_obj = {"url": base64_data}
+            
+            if image_url_obj:
+                content.append({
+                    "type": "image_url",
+                    "image_url": image_url_obj,
+                    "role": "first_frame"
+                })
+        
+        # 处理尾帧图片
+        if request.last_frame:
+            image_url_obj = None
+            if request.last_frame.startswith("http"):
+                # URL 格式
+                image_url_obj = {"url": request.last_frame}
+            else:
+                # base64 格式，需要转换为 data URL
+                base64_data = request.last_frame
+                if not base64_data.startswith("data:image"):
+                    # 纯 base64，添加前缀
+                    base64_data = f"data:image/png;base64,{base64_data}"
+                image_url_obj = {"url": base64_data}
+            
+            if image_url_obj:
+                content.append({
+                    "type": "image_url",
+                    "image_url": image_url_obj,
+                    "role": "last_frame"
+                })
+        
+        # 构建请求体
+        payload = {
+            "model": SEEDANCE_MODEL,  # doubao-seedance-1-0-lite-i2v-250428
+            "content": content,
+            "service_tier": "default",  # 在线推理模式
+            "generate_audio": False  # 不生成音频（lite 模型不支持）
+        }
+        
+        # 发送请求
+        headers = {
+            "Authorization": f"Bearer {SEEDANCE_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"📤 准备调用 Seedance API: {api_url}")
+        print(f"  - model: {SEEDANCE_MODEL}")
+        print(f"  - prompt: {enhanced_prompt[:100]}...")
+        print(f"  - duration: {request.duration}秒")
+        print(f"  - resolution: {resolution_text}")
+        print(f"  - ratio: {ratio_text}")
+        print(f"  - 有首帧: {bool(request.first_frame)}")
+        print(f"  - 有尾帧: {bool(request.last_frame)}")
+        
+        # 添加重试机制（最多重试2次）
+        max_retries = 2
+        retry_count = 0
+        api_result = None
+        last_error = None
+        
+        while retry_count <= max_retries:
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(api_url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    api_result = response.json()
+                break  # 成功，跳出重试循环
+            except httpx.TimeoutException as e:
+                last_error = f"请求超时（60秒）"
+                print(f"⚠️ Seedance API 请求超时（第 {retry_count + 1} 次尝试）")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+            except httpx.HTTPStatusError as e:
+                # HTTP 错误，不重试（可能是参数错误）
+                last_error = f"HTTP {e.response.status_code}"
+                print(f"❌ Seedance API HTTP 错误: {e.response.status_code}")
+                if e.response.text:
+                    try:
+                        error_data = e.response.json()
+                        last_error = error_data.get("msg") or error_data.get("message") or error_data.get("error") or last_error
+                    except:
+                        last_error = f"{last_error}: {e.response.text[:200]}"
+                raise
+            except Exception as e:
+                last_error = str(e)
+                print(f"⚠️ Seedance API 请求失败（第 {retry_count + 1} 次尝试）: {str(e)}")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+        
+        if not api_result:
+            return VideoGenerationResponse(
+                success=False,
+                message="Seedance 视频生成失败",
+                error=f"API 请求失败: {last_error or '未知错误'}"
+            )
+        
+        print(f"📥 Seedance API 响应: {api_result}")
+        
+        # 解析响应
+        # 根据文档，响应格式为：
+        # {
+        #   "id": "task_id"
+        # }
+        task_id = api_result.get("id")
+        if not task_id:
+            # 如果没有 id，尝试其他可能的字段
+            task_id = api_result.get("task_id") or api_result.get("data", {}).get("id") or str(uuid.uuid4())
+        
+        # 保存到数据库
+        try:
+            db = next(get_db())
+            VideoHistoryService.create_generation_record(
+                db=db,
+                task_id=task_id,
+                user_id=1,  # 默认用户ID
+                prompt=enhanced_prompt,
+                duration=request.duration,
+                fps=24,  # Seedance 只支持 24fps
+                width=request.width or (1280 if resolution_text == "720p" else 1920),
+                height=request.height or (720 if resolution_text == "720p" else 1080),
+                status="pending",
+                req_key="seedance",  # 标记为 Seedance
+                version="seedance",
+                first_frame_url=request.first_frame if request.first_frame else None,
+                last_frame_url=request.last_frame if request.last_frame else None
+            )
+            print(f"✅ Seedance 任务已保存到数据库: {task_id}")
+        except Exception as db_error:
+            print(f"❌ 保存 Seedance 任务到数据库失败: {str(db_error)}")
+            # 数据库保存失败不影响任务提交
+        
+        return VideoGenerationResponse(
+            success=True,
+            task_id=task_id,
+            message="Seedance 视频生成任务已提交",
+            video_url=None
+        )
+        
+    except httpx.HTTPStatusError as e:
+        error_msg = f"Seedance API 调用失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("msg") or error_data.get("message") or error_data.get("error") or error_msg
+                # 添加更详细的错误信息
+                if error_data.get("data"):
+                    error_msg = f"{error_msg} (详情: {error_data.get('data')})"
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return VideoGenerationResponse(
+            success=False,
+            message="Seedance 视频生成失败",
+            error=error_msg
+        )
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ Seedance 视频生成错误: {error_detail}\n{error_traceback}")
+        return VideoGenerationResponse(
+            success=False,
+            message="Seedance 视频生成失败",
+            error=f"{error_detail}。请检查后端日志获取详细信息。"
+        )
+
+
+async def get_seedance_video_status(task_id: str, generation) -> dict:
+    """
+    Seedance 视频状态查询函数
+    参考文档：https://www.volcengine.com/docs/82379/1520757?lang=zh
+    注意：需要根据实际 API 文档实现查询接口
+    """
+    if not SEEDANCE_API_HOST or not SEEDANCE_API_KEY:
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": "Seedance API 配置未设置"
+        }
+    
+    try:
+        import httpx
+        from datetime import datetime
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        from backend.storage import get_storage_service
+        
+        # 根据文档：查询视频生成任务 API
+        # 需要查询任务状态，可能需要使用不同的端点
+        # 这里先使用通用的查询方式
+        # 根据文档，可能需要使用查询视频生成任务列表 API
+        # 暂时返回 processing 状态，等待后续实现完整的查询接口
+        print(f"🔍 查询 Seedance 任务状态: {task_id}")
+        print(f"⚠️ Seedance 状态查询 API 需要根据实际文档实现，暂时返回 processing")
+        
+        # TODO: 实现完整的 Seedance 状态查询
+        # 根据文档，可能需要使用查询视频生成任务列表 API
+        # 或者使用查询视频生成任务 API
+        
+        return {
+            "task_id": task_id,
+            "status": "processing",
+            "progress": 50,
+            "video_url": None,
+            "error": None
+        }
+        
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ Seedance 状态查询错误: {error_detail}\n{error_traceback}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": f"查询失败: {error_detail}"
+        }
+
+
 async def get_sora2_video_status(task_id: str, generation) -> dict:
     """
     Sora 2 视频状态查询函数
