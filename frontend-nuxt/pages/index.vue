@@ -616,6 +616,7 @@ let historyRefreshInterval: NodeJS.Timeout | null = null
 // 悬浮窗口状态 - 默认收缩
 const isBottomBarCollapsed = ref(true)
 const isInputFocused = ref(false)
+const showModelOptions = ref(false)
 const isBottomEdgeHovered = ref(false)
 const isBottomBarHovered = ref(false)
 const showResolutionOptions = ref<number | null>(null)
@@ -1595,7 +1596,7 @@ const getDateLabel = (dateKey: string) => {
 }
 
 // 根据视频宽高获取分辨率文本
-// 获取模型显示名称
+// 获取模型显示名称（用于视频卡片）
 const getModelName = (version: string | undefined): string => {
   if (!version) return '即梦 3.0'
   
@@ -1608,6 +1609,27 @@ const getModelName = (version: string | undefined): string => {
   }
   
   return modelMap[version] || version
+}
+
+// 获取模型显示名称（用于下拉按钮）
+const getModelDisplayName = (version: string | undefined): string => {
+  if (!version) return '3.0'
+  
+  const modelMap: Record<string, string> = {
+    '3.0': '3.0',
+    '3.0_pro': '3.0 Pro',
+    'sora2': 'Sora 2',
+    'seedance': 'Seedance',
+    'wan2.2': 'wan2.2'
+  }
+  
+  return modelMap[version] || version
+}
+
+// 模型选择处理
+const handleModelSelect = (ver: string) => {
+  handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))
+  showModelOptions.value = false
 }
 
 const getResolutionText = (video: any): string => {
