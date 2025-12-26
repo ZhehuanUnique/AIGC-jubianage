@@ -382,7 +382,7 @@
                 <button
                   v-for="res in resolutions"
                   :key="res"
-                  @click.stop="if (!(videoVersion === 'wan2.2' && res === '1080p')) resolution = res"
+                  @click.stop="handleResolutionChange(res)"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
                     resolution === res
