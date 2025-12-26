@@ -1003,8 +1003,8 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
 async def get_seedance_video_status(task_id: str, generation) -> dict:
     """
     Seedance 视频状态查询函数
-    参考文档：https://www.volcengine.com/docs/82379/1520757?lang=zh
-    注意：需要根据实际 API 文档实现查询接口
+    参考文档：https://302ai.apifox.cn/344076585e0
+    API 端点：GET /doubao/doubao-seedance/{task_id}
     """
     if not SEEDANCE_API_HOST or not SEEDANCE_API_KEY:
         return {
@@ -1022,26 +1022,134 @@ async def get_seedance_video_status(task_id: str, generation) -> dict:
         from backend.video_history import VideoHistoryService
         from backend.storage import get_storage_service
         
-        # 根据文档：查询视频生成任务 API
-        # 需要查询任务状态，可能需要使用不同的端点
-        # 这里先使用通用的查询方式
-        # 根据文档，可能需要使用查询视频生成任务列表 API
-        # 暂时返回 processing 状态，等待后续实现完整的查询接口
-        print(f"🔍 查询 Seedance 任务状态: {task_id}")
-        print(f"⚠️ Seedance 状态查询 API 需要根据实际文档实现，暂时返回 processing")
+        # 根据文档：GET /doubao/doubao-seedance/{task_id}
+        api_url = f"{SEEDANCE_API_HOST}/doubao/doubao-seedance/{task_id}"
         
-        # TODO: 实现完整的 Seedance 状态查询
-        # 根据文档，可能需要使用查询视频生成任务列表 API
-        # 或者使用查询视频生成任务 API
-        
-        return {
-            "task_id": task_id,
-            "status": "processing",
-            "progress": 50,
-            "video_url": None,
-            "error": None
+        headers = {
+            "Authorization": f"Bearer {SEEDANCE_API_KEY}",
+            "Content-Type": "application/json"
         }
         
+        print(f"🔍 查询 Seedance 任务状态: {task_id}")
+        print(f"  - API URL: {api_url}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(api_url, headers=headers)
+            response.raise_for_status()
+            api_result = response.json()
+        
+        print(f"📥 Seedance 状态查询响应: {api_result}")
+        
+        # 解析响应
+        # 根据文档，响应格式为：
+        # {
+        #   "id": "task_id",
+        #   "model": "doubao-seedance-1-0-lite-i2v-250428",
+        #   "status": "succeeded|running|failed",
+        #   "content": {
+        #     "video_url": "https://..."
+        #   },
+        #   "usage": {...},
+        #   "created_at": 1234567890,
+        #   "updated_at": 1234567890
+        # }
+        status = api_result.get("status", "running")
+        
+        # 转换状态
+        if status == "succeeded":
+            # 视频生成完成
+            content = api_result.get("content", {})
+            video_url = content.get("video_url")
+            
+            if not video_url:
+                return {
+                    "task_id": task_id,
+                    "status": "processing",
+                    "progress": 90,
+                    "video_url": None
+                }
+            
+            final_video_url = video_url
+            
+            # 尝试上传到对象存储
+            try:
+                db = next(get_db())
+                storage_service = get_storage_service()
+                if storage_service:
+                    video_name = f"{task_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4"
+                    storage_url = await storage_service.upload_video(video_url, video_name)
+                    if storage_url:
+                        final_video_url = storage_url
+                        print(f"✅ Seedance 视频已上传到对象存储: {storage_url}")
+            except Exception as storage_error:
+                print(f"⚠️ Seedance 视频上传到对象存储失败: {str(storage_error)}")
+            
+            # 更新数据库
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="completed",
+                    video_url=final_video_url
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 Seedance 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "progress": 100,
+                "video_url": final_video_url
+            }
+        elif status == "failed":
+            # 任务失败
+            error_message = "Seedance 视频生成失败"
+            
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="failed",
+                    error_message=error_message
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 Seedance 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "progress": 0,
+                "video_url": None,
+                "error": error_message
+            }
+        else:
+            # 处理中（status == "running"）
+            return {
+                "task_id": task_id,
+                "status": "processing",
+                "progress": 50,  # 默认显示 50%
+                "video_url": None
+            }
+    
+    except httpx.HTTPStatusError as e:
+        error_msg = f"Seedance API 查询失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("msg") or error_data.get("message") or error_data.get("error") or error_msg
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": error_msg
+        }
     except Exception as e:
         import traceback
         error_detail = str(e)
@@ -1052,7 +1160,7 @@ async def get_seedance_video_status(task_id: str, generation) -> dict:
             "status": "error",
             "progress": 0,
             "video_url": None,
-            "error": f"查询失败: {error_detail}"
+            "error": f"{error_detail}。请检查后端日志获取详细信息。"
         }
 
 
