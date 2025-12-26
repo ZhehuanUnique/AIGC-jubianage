@@ -990,7 +990,7 @@ const toggleFavorite = async (videoId: number) => {
         allVideo.is_favorite = oldValue
       }
       console.error('切换收藏状态失败:', error)
-      alert('操作失败，请重试')
+      showErrorDialog('操作失败，请重试')
     }
   }
 }
@@ -1017,7 +1017,7 @@ const toggleLike = async (videoId: number) => {
         allVideo.is_liked = oldValue
       }
       console.error('切换点赞状态失败:', error)
-      alert('操作失败，请重试')
+      showErrorDialog('操作失败，请重试')
     }
   }
 }
@@ -1056,7 +1056,7 @@ const confirmDeleteVideo = async () => {
       historyStore.total += 1
     }
     console.error('删除视频失败:', err)
-    alert('删除失败：' + (err.message || '未知错误'))
+    showErrorDialog('删除失败：' + (err.message || '未知错误'))
   }
 }
 
@@ -1068,18 +1068,23 @@ const cancelDeleteVideo = () => {
 const handleEnhanceResolution = async (videoId: number, method: 'real_esrgan' | 'waifu2x') => {
   showResolutionOptions.value = null
   
-  if (!confirm(`确定要使用 ${method === 'real_esrgan' ? 'Real-ESRGAN' : 'Waifu2x'} 提升分辨率吗？处理可能需要几分钟。`)) {
+  // 使用自定义确认对话框
+  const confirmed = await showConfirmDialog(
+    '确认提升分辨率',
+    `确定要使用 ${method === 'real_esrgan' ? 'Real-ESRGAN' : 'Waifu2x'} 提升分辨率吗？处理可能需要几分钟。`
+  )
+  if (!confirmed) {
     return
   }
   
   try {
     const result = await historyStore.enhanceResolution(videoId, config.public.backendUrl, method)
-    alert(`分辨率提升成功！\n原始分辨率: ${result.original_resolution[0]}x${result.original_resolution[1]}\n提升后: ${result.enhanced_resolution[0]}x${result.enhanced_resolution[1]}\n处理时间: ${result.processing_time.toFixed(1)}秒`)
+    showSuccessDialog(`分辨率提升成功！\n原始分辨率: ${result.original_resolution[0]}x${result.original_resolution[1]}\n提升后: ${result.enhanced_resolution[0]}x${result.enhanced_resolution[1]}\n处理时间: ${result.processing_time.toFixed(1)}秒`)
     // 刷新历史记录
     await loadHistory()
   } catch (err: any) {
     console.error('分辨率提升失败:', err)
-    alert('分辨率提升失败：' + (err.message || '未知错误'))
+    showErrorDialog('分辨率提升失败：' + (err.message || '未知错误'))
   }
 }
 

@@ -143,62 +143,66 @@ export const useHistoryStore = defineStore('history', {
 
     applyFilters(filters: HistoryFilters) {
       // 从所有原始视频开始筛选，而不是从已筛选的视频
-      let filtered = [...this.allVideos]
+      // 使用 requestAnimationFrame 确保筛选操作不阻塞UI
+      requestAnimationFrame(() => {
+        let filtered = [...this.allVideos]
 
-      // 时间范围筛选
-      if (filters.timeRange && filters.timeRange !== 'all') {
-        const now = new Date()
-        let cutoffDate: Date
+        // 时间范围筛选
+        if (filters.timeRange && filters.timeRange !== 'all') {
+          const now = new Date()
+          let cutoffDate: Date
 
-        switch (filters.timeRange) {
-          case 'week':
-            cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            break
-          case 'month':
-            cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            break
-          case 'quarter':
-            cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-            break
-          default:
-            cutoffDate = new Date(0)
+          switch (filters.timeRange) {
+            case 'week':
+              cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+              break
+            case 'month':
+              cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+              break
+            case 'quarter':
+              cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+              break
+            default:
+              cutoffDate = new Date(0)
+          }
+
+          filtered = filtered.filter(video => {
+            const videoDate = new Date(video.created_at)
+            return videoDate >= cutoffDate
+          })
         }
 
-        filtered = filtered.filter(video => {
-          const videoDate = new Date(video.created_at)
-          return videoDate >= cutoffDate
-        })
-      }
-
-      // 自定义日期范围
-      if (filters.startDate && filters.endDate) {
-        const start = new Date(filters.startDate)
-        const end = new Date(filters.endDate)
-        filtered = filtered.filter(video => {
-          const videoDate = new Date(video.created_at)
-          return videoDate >= start && videoDate <= end
-        })
-      }
-
-      // 操作类型筛选
-      if (filters.operationType && filters.operationType !== 'all') {
-        switch (filters.operationType) {
-          case 'ultra_hd':
-            filtered = filtered.filter(v => v.is_ultra_hd === true)
-            break
-          case 'favorite':
-            filtered = filtered.filter(v => v.is_favorite === true)
-            break
-          case 'liked':
-            filtered = filtered.filter(v => v.is_liked === true)
-            break
+        // 自定义日期范围
+        if (filters.startDate && filters.endDate) {
+          const start = new Date(filters.startDate)
+          const end = new Date(filters.endDate)
+          filtered = filtered.filter(video => {
+            const videoDate = new Date(video.created_at)
+            return videoDate >= start && videoDate <= end
+          })
         }
-      }
 
-      // 视频类型筛选（全部/个人）- 目前所有视频都是个人的
-      // 未来可以扩展为区分个人和共享视频
+        // 操作类型筛选
+        if (filters.operationType && filters.operationType !== 'all') {
+          switch (filters.operationType) {
+            case 'ultra_hd':
+              filtered = filtered.filter(v => v.is_ultra_hd === true)
+              break
+            case 'favorite':
+              filtered = filtered.filter(v => v.is_favorite === true)
+              break
+            case 'liked':
+              filtered = filtered.filter(v => v.is_liked === true)
+              break
+          }
+        }
 
-      this.videos = filtered
+        // 视频类型筛选（全部/个人）- 目前所有视频都是个人的
+        // 未来可以扩展为区分个人和共享视频
+
+        // 立即更新，即使结果为空也立即显示
+        this.videos = filtered
+      })
     },
 
     setFilters(filters: Partial<HistoryFilters>) {
