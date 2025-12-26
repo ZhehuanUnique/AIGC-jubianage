@@ -759,7 +759,7 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
     Seedance 视频生成函数
     参考文档：https://302ai.apifox.cn/344076585e0
     官方文档：https://www.volcengine.com/docs/82379/1520757?lang=zh
-    模型：doubao-seedance-1-0-lite-i2v-250428（支持首尾帧）
+    模型：doubao-seedance-1-5-pro-251215（支持首尾帧和音频）
     """
     # 验证 Seedance API 配置
     if not SEEDANCE_API_HOST:
@@ -797,26 +797,25 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
         # 构建 content 数组
         content = []
         
-        # 添加文本提示词
-        # 根据文档，提示词格式：文本 --resolution 720p --ratio 16:9 --dur 5 --fps 24 --wm true --seed 11 --cf false
+        # 根据用户提供的示例，text 类型的 content 应该包含独立的字段
         resolution_text = request.resolution or "720p"
         ratio_text = "16:9"  # 默认 16:9，如果有首尾帧则使用 adaptive
-        duration_text = str(request.duration)
-        fps_text = "24"  # Seedance 只支持 24fps
-        wm_text = "true"  # 默认包含水印
-        seed_text = str(request.seed) if request.seed is not None else "-1"
-        cf_text = "false"  # 不固定摄像头
+        duration_value = request.duration
         
         # 如果有首帧或尾帧，ratio 使用 adaptive
         if request.first_frame or request.last_frame:
             ratio_text = "adaptive"
         
-        prompt_text = f"{enhanced_prompt} --resolution {resolution_text} --ratio {ratio_text} --dur {duration_text} --fps {fps_text} --wm {wm_text} --seed {seed_text} --cf {cf_text}"
-        
-        content.append({
+        # 构建 text content（根据示例格式）
+        # 提示词可以包含参数，也可以作为独立字段
+        text_content = {
             "type": "text",
-            "text": prompt_text
-        })
+            "text": f"{enhanced_prompt} --ratio {ratio_text} --dur {duration_value}",
+            "resolution": resolution_text,
+            "ratio": ratio_text,
+            "duration": duration_value
+        }
+        content.append(text_content)
         
         # 处理首帧图片
         if request.first_frame:
@@ -833,10 +832,10 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
                 image_url_obj = {"url": base64_data}
             
             if image_url_obj:
+                # 根据示例，image_url 不需要 role 字段
                 content.append({
                     "type": "image_url",
-                    "image_url": image_url_obj,
-                    "role": "first_frame"
+                    "image_url": image_url_obj
                 })
         
         # 处理尾帧图片
@@ -854,18 +853,21 @@ async def generate_seedance_video(request: VideoGenerationRequest, enhanced_prom
                 image_url_obj = {"url": base64_data}
             
             if image_url_obj:
+                # 根据示例，image_url 不需要 role 字段
                 content.append({
                     "type": "image_url",
-                    "image_url": image_url_obj,
-                    "role": "last_frame"
+                    "image_url": image_url_obj
                 })
         
         # 构建请求体
+        # 根据用户示例，如果使用 pro 模型，可以生成音频
+        # 判断模型类型：如果包含 "pro" 则支持音频，否则不支持
+        can_generate_audio = "pro" in SEEDANCE_MODEL.lower()
+        
         payload = {
-            "model": SEEDANCE_MODEL,  # doubao-seedance-1-0-lite-i2v-250428
+            "model": SEEDANCE_MODEL,  # 默认：doubao-seedance-1-0-lite-i2v-250428，可配置为 doubao-seedance-1-5-pro-251215
             "content": content,
-            "service_tier": "default",  # 在线推理模式
-            "generate_audio": False  # 不生成音频（lite 模型不支持）
+            "generate_audio": can_generate_audio  # pro 模型支持音频，lite 模型不支持
         }
         
         # 发送请求
