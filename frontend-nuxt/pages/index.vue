@@ -199,7 +199,8 @@
     <div
       v-if="showModelOptions"
       class="fixed inset-0 z-[90]"
-      @click="showModelOptions = false"
+      @click="() => { showModelOptions = false; isBottomBarHovered = true; }"
+      @mouseenter="isBottomBarHovered = true"
     ></div>
     
     <div
