@@ -196,10 +196,12 @@
 
     <!-- 底部边缘触发区域（用于检测鼠标靠近）- 始终存在，收缩时显示提示条 -->
     <!-- 点击外部关闭模型选择弹窗 -->
+    <!-- 注意：z-index 必须低于弹窗 (z-[100]) 但高于其他内容 -->
     <div
       v-if="showModelOptions"
       class="fixed inset-0 z-[90]"
-      @click="() => { showModelOptions = false; isBottomBarHovered = true; }"
+      @click.stop="showModelOptions = false"
+      @mousedown.stop
       @mouseenter="isBottomBarHovered = true"
     ></div>
     
@@ -393,7 +395,8 @@
                   <button
                     v-for="ver in videoVersions"
                     :key="ver"
-                    @click.stop="handleModelSelect(ver)"
+                    @click.stop="handleModelSelect(ver, $event)"
+                    @mousedown.stop
                     :class="[
                       'w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
                       (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
@@ -1646,9 +1649,10 @@ const getModelDisplayName = (version: string | undefined): string => {
 
 // 模型按钮点击处理
 const handleModelButtonClick = (e?: Event) => {
-  // 阻止事件冒泡，防止触发底部栏的点击事件
+  // 阻止事件冒泡和默认行为
   if (e) {
     e.stopPropagation()
+    e.preventDefault()
   }
   
   // 清除可能存在的收缩定时器
@@ -1661,8 +1665,10 @@ const handleModelButtonClick = (e?: Event) => {
   isBottomBarHovered.value = true
   isBottomBarCollapsed.value = false
   
-  // 切换弹窗显示状态（watch 会自动处理展开逻辑）
-  showModelOptions.value = !showModelOptions.value
+  // 使用 nextTick 确保状态更新后再切换弹窗
+  setTimeout(() => {
+    showModelOptions.value = !showModelOptions.value
+  }, 0)
 }
 
 // 模型选择处理
