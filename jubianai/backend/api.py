@@ -1105,10 +1105,10 @@ async def get_video_status(task_id: str):
                         except Exception:
                             pass
                         
-    return {
-        "task_id": task_id,
+                        return {
+                            "task_id": task_id,
                             "status": "processing",
-        "progress": 50,
+                            "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired", "failed"]:
