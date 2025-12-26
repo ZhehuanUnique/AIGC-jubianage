@@ -382,13 +382,16 @@
                 <button
                   v-for="res in resolutions"
                   :key="res"
-                  @click.stop="resolution = res"
+                  @click.stop="if (!(videoVersion === 'wan2.2' && res === '1080p')) resolution = res"
                   :class="[
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
                     resolution === res
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                    videoVersion === 'wan2.2' && res === '1080p' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                   ]"
+                  :disabled="videoVersion === 'wan2.2' && res === '1080p'"
+                  :title="videoVersion === 'wan2.2' && res === '1080p' ? 'wan2.2 只支持 720p 分辨率' : ''"
                 >
                   {{ res.toUpperCase() }}
                 </button>
@@ -447,6 +450,15 @@
           <p class="text-red-800 font-medium">请求失败</p>
           <p class="text-red-700 text-sm mt-1">{{ error || videoStore.error }}</p>
         </div>
+        <button
+          @click="error = ''; videoStore.error = null"
+          class="text-red-600 hover:text-red-800 flex-shrink-0 p-1 rounded hover:bg-red-100 transition-colors"
+          title="关闭"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
     </div>
 
