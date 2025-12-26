@@ -245,8 +245,8 @@ async def delete_video_history(
     """删除视频生成记录"""
     try:
         # 获取用户ID
-    try:
-        user_id = get_current_user_id(x_api_key, db)
+        try:
+            user_id = get_current_user_id(x_api_key, db)
             print(f"删除视频请求: generation_id={generation_id}, user_id={user_id}")
         except Exception as user_error:
             print(f"获取用户ID失败: {str(user_error)}")
@@ -269,13 +269,13 @@ async def delete_video_history(
         # 执行删除
         try:
             success = VideoHistoryService.delete_generation(db, generation_id, user_id)
-        
-        if not success:
+            
+            if not success:
                 print(f"删除失败: generation_id={generation_id}, user_id={user_id}")
-            raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
-        
+                raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+            
             print(f"删除成功: generation_id={generation_id}, user_id={user_id}")
-        return {"success": True, "message": "删除成功"}
+            return {"success": True, "message": "删除成功"}
         except HTTPException:
             raise
         except Exception as delete_error:
