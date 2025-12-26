@@ -611,10 +611,55 @@ async def generate_sora2_video(request: VideoGenerationRequest, enhanced_prompt:
         print(f"  - aspectRatio: 16:9")
         print(f"  - 有首帧: {bool(request.first_frame)}")
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(api_url, json=payload, headers=headers)
-            response.raise_for_status()
-            api_result = response.json()
+        # 添加重试机制（最多重试2次）
+        max_retries = 2
+        retry_count = 0
+        api_result = None
+        last_error = None
+        
+        while retry_count <= max_retries:
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(api_url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    api_result = response.json()
+                break  # 成功，跳出重试循环
+            except httpx.TimeoutException as e:
+                last_error = f"请求超时（60秒）"
+                print(f"⚠️ Sora 2 API 请求超时（第 {retry_count + 1} 次尝试）")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+            except httpx.HTTPStatusError as e:
+                # HTTP 错误，不重试（可能是参数错误）
+                last_error = f"HTTP {e.response.status_code}"
+                print(f"❌ Sora 2 API HTTP 错误: {e.response.status_code}")
+                if e.response.text:
+                    try:
+                        error_data = e.response.json()
+                        last_error = error_data.get("msg") or error_data.get("message") or error_data.get("error") or last_error
+                    except:
+                        last_error = f"{last_error}: {e.response.text[:200]}"
+                raise
+            except Exception as e:
+                last_error = str(e)
+                print(f"⚠️ Sora 2 API 请求失败（第 {retry_count + 1} 次尝试）: {str(e)}")
+                if retry_count < max_retries:
+                    retry_count += 1
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+                else:
+                    raise
+        
+        if not api_result:
+            return VideoGenerationResponse(
+                success=False,
+                message="Sora 2 视频生成失败",
+                error=f"API 请求失败: {last_error or '未知错误'}"
+            )
         
         print(f"📥 Sora 2 API 响应: {api_result}")
         
@@ -635,6 +680,10 @@ async def generate_sora2_video(request: VideoGenerationRequest, enhanced_prompt:
         else:
             # 如果 code != 0，说明请求失败
             error_msg = api_result.get("msg") or api_result.get("message") or "Sora 2 API 调用失败"
+            # 添加更详细的错误信息
+            error_details = api_result.get("data") or {}
+            if error_details:
+                error_msg = f"{error_msg} (详情: {error_details})"
             return VideoGenerationResponse(
                 success=False,
                 message="Sora 2 视频生成失败",

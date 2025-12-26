@@ -109,6 +109,14 @@ export const useHistoryStore = defineStore('history', {
           return acc
         }, [] as VideoHistoryItem[])
 
+        // 按创建时间倒序排序（最新的在最上面，早期的在下面）
+        uniqueVideos.sort((a, b) => {
+          const timeA = new Date(a.created_at).getTime()
+          const timeB = new Date(b.created_at).getTime()
+          // 倒序：时间大的（新的）在前
+          return timeB - timeA
+        })
+
         // 保存所有原始视频（未筛选）
         this.allVideos = uniqueVideos
         this.total = response.total || 0
