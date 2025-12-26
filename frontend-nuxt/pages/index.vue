@@ -1630,6 +1630,14 @@ const getModelDisplayName = (version: string | undefined): string => {
   return modelMap[version] || version
 }
 
+// 模型按钮点击处理
+const handleModelButtonClick = () => {
+  // 打开模型选择时，确保底部栏保持展开状态
+  isBottomBarCollapsed.value = false
+  isBottomBarHovered.value = true
+  showModelOptions.value = !showModelOptions.value
+}
+
 // 模型选择处理
 const handleModelSelect = (ver: string) => {
   const versionMap: Record<string, '3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2'> = {
@@ -1642,6 +1650,12 @@ const handleModelSelect = (ver: string) => {
   const mappedVersion = versionMap[ver] || '3.0'
   handleVersionChange(mappedVersion)
   showModelOptions.value = false
+  // 选择后延迟一下再允许收缩，给用户时间看到变化
+  setTimeout(() => {
+    if (!isInputFocused.value && !isBottomBarHovered.value) {
+      isBottomBarCollapsed.value = true
+    }
+  }, 500)
 }
 
 const getResolutionText = (video: any): string => {
