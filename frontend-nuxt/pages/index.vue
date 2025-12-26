@@ -556,7 +556,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useVideoStore } from '~/stores/video'
 import { useHistoryStore, type VideoHistoryItem } from '~/stores/history'
 
