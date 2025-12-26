@@ -371,7 +371,6 @@
                 <button
                   @click.stop.prevent="handleModelButtonClick"
                   @mouseenter="isBottomBarHovered = true"
-                  @mouseleave="isBottomBarHovered = false"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left flex items-center justify-between min-w-[80px]',
                     'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -1657,9 +1656,16 @@ const handleModelSelect = (ver: string) => {
   const mappedVersion = versionMap[ver] || '3.0'
   handleVersionChange(mappedVersion)
   showModelOptions.value = false
+  
+  // 清除可能存在的收缩定时器
+  if (bottomEdgeHoverTimeout) {
+    clearTimeout(bottomEdgeHoverTimeout)
+    bottomEdgeHoverTimeout = null
+  }
+  
   // 选择后延迟一下再允许收缩，给用户时间看到变化
   setTimeout(() => {
-    if (!isInputFocused.value && !isBottomBarHovered.value) {
+    if (!isInputFocused.value && !isBottomBarHovered.value && !showModelOptions.value) {
       isBottomBarCollapsed.value = true
     }
   }, 500)
