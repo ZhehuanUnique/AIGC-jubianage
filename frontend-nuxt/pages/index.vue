@@ -1645,16 +1645,23 @@ const getModelDisplayName = (version: string | undefined): string => {
 }
 
 // 模型按钮点击处理
-const handleModelButtonClick = () => {
+const handleModelButtonClick = (e?: Event) => {
+  // 阻止事件冒泡，防止触发底部栏的点击事件
+  if (e) {
+    e.stopPropagation()
+  }
+  
   // 清除可能存在的收缩定时器
   if (bottomEdgeHoverTimeout) {
     clearTimeout(bottomEdgeHoverTimeout)
     bottomEdgeHoverTimeout = null
   }
   
-  // 打开模型选择时，确保底部栏保持展开状态
-  isBottomBarCollapsed.value = false
+  // 先设置状态，防止收缩
   isBottomBarHovered.value = true
+  isBottomBarCollapsed.value = false
+  
+  // 切换弹窗显示状态（watch 会自动处理展开逻辑）
   showModelOptions.value = !showModelOptions.value
 }
 
