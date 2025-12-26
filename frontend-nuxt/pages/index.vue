@@ -1298,11 +1298,44 @@ const groupedVideos = computed(() => {
   const groups: Record<string, any[]> = {}
   
   historyStore.videos.forEach(video => {
-    if (!video.created_at) return
+    let dateKey: string
     
-    const videoDate = new Date(video.created_at)
-    // 获取日期键（YYYY-MM-DD格式）
-    const dateKey = videoDate.toISOString().split('T')[0]
+    if (!video.created_at) {
+      // 如果没有创建时间，使用当前时间（临时视频）
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      dateKey = `${year}-${month}-${day}`
+    } else {
+      try {
+        const videoDate = new Date(video.created_at)
+        // 验证日期是否有效
+        if (isNaN(videoDate.getTime())) {
+          console.warn('无效的创建时间:', video.created_at, '使用当前时间')
+          const now = new Date()
+          const year = now.getFullYear()
+          const month = String(now.getMonth() + 1).padStart(2, '0')
+          const day = String(now.getDate()).padStart(2, '0')
+          dateKey = `${year}-${month}-${day}`
+        } else {
+          // 获取日期键（YYYY-MM-DD格式），使用本地时区
+          // 确保使用本地日期，而不是 UTC 日期
+          const year = videoDate.getFullYear()
+          const month = String(videoDate.getMonth() + 1).padStart(2, '0')
+          const day = String(videoDate.getDate()).padStart(2, '0')
+          dateKey = `${year}-${month}-${day}`
+        }
+      } catch (error) {
+        console.warn('解析创建时间失败:', video.created_at, error)
+        // 解析失败时，使用当前时间
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        dateKey = `${year}-${month}-${day}`
+      }
+    }
     
     if (!groups[dateKey]) {
       groups[dateKey] = []
