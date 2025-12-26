@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List
 import httpx
 import os
 import sys
+import asyncio
 from pathlib import Path
 
 # 添加项目根目录到路径
