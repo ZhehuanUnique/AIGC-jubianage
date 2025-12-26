@@ -304,38 +304,35 @@ async def toggle_favorite(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """切换收藏状态（优化：直接更新数据库，减少查询）"""
+    """切换收藏状态（优化：使用SQL CASE直接切换，只需一次数据库操作）"""
     try:
         user_id = get_current_user_id(x_api_key, db)
         
-        # 使用更高效的更新方式：直接更新，然后查询新值
-        from sqlalchemy import update
-        from sqlalchemy.sql import select
+        # 使用SQL CASE语句直接切换，无需先查询
+        from sqlalchemy import update, case, text
         
-        # 先查询当前状态
-        result = db.execute(
-            select(VideoGeneration.is_favorite).where(
-                VideoGeneration.id == generation_id,
-                VideoGeneration.user_id == user_id
-            )
-        ).scalar_one_or_none()
-        
-        if result is None:
-            raise HTTPException(status_code=404, detail="视频记录不存在")
-        
-        # 直接更新数据库
-        new_value = not result
-        db.execute(
+        # 直接更新并返回新值（使用SQL的NOT操作）
+        stmt = (
             update(VideoGeneration)
             .where(
                 VideoGeneration.id == generation_id,
                 VideoGeneration.user_id == user_id
             )
-            .values(is_favorite=new_value)
+            .values(is_favorite=case(
+                (VideoGeneration.is_favorite == True, False),
+                else_=True
+            ))
+            .returning(VideoGeneration.is_favorite)
         )
+        
+        result = db.execute(stmt).scalar_one_or_none()
+        
+        if result is None:
+            raise HTTPException(status_code=404, detail="视频记录不存在")
+        
         db.commit()
         
-        return {"success": True, "is_favorite": new_value}
+        return {"success": True, "is_favorite": result}
     except HTTPException:
         raise
     except Exception as e:
@@ -349,38 +346,35 @@ async def toggle_like(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """切换点赞状态（优化：直接更新数据库，减少查询）"""
+    """切换点赞状态（优化：使用SQL CASE直接切换，只需一次数据库操作）"""
     try:
         user_id = get_current_user_id(x_api_key, db)
         
-        # 使用更高效的更新方式：直接更新，然后查询新值
-        from sqlalchemy import update
-        from sqlalchemy.sql import select
+        # 使用SQL CASE语句直接切换，无需先查询
+        from sqlalchemy import update, case
         
-        # 先查询当前状态
-        result = db.execute(
-            select(VideoGeneration.is_liked).where(
-                VideoGeneration.id == generation_id,
-                VideoGeneration.user_id == user_id
-            )
-        ).scalar_one_or_none()
-        
-        if result is None:
-            raise HTTPException(status_code=404, detail="视频记录不存在")
-        
-        # 直接更新数据库
-        new_value = not result
-        db.execute(
+        # 直接更新并返回新值（使用SQL的NOT操作）
+        stmt = (
             update(VideoGeneration)
             .where(
                 VideoGeneration.id == generation_id,
                 VideoGeneration.user_id == user_id
             )
-            .values(is_liked=new_value)
+            .values(is_liked=case(
+                (VideoGeneration.is_liked == True, False),
+                else_=True
+            ))
+            .returning(VideoGeneration.is_liked)
         )
+        
+        result = db.execute(stmt).scalar_one_or_none()
+        
+        if result is None:
+            raise HTTPException(status_code=404, detail="视频记录不存在")
+        
         db.commit()
         
-        return {"success": True, "is_liked": new_value}
+        return {"success": True, "is_liked": result}
     except HTTPException:
         raise
     except Exception as e:
