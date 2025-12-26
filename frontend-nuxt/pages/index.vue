@@ -181,7 +181,9 @@
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2">{{ video.prompt }}</p>
               <div class="flex items-center justify-between text-xs text-gray-500">
-                <span>视频 {{ video.version || '3.0' }} | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
+                <div class="flex items-center gap-2">
+                  <span>{{ getModelName(video.version) }} | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
+                </div>
                 <span>{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
@@ -355,26 +357,28 @@
           <!-- 控制栏 -->
           <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
-              <!-- 版本选择 -->
-              <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-600 font-medium">版本:</span>
-                <button
-                  v-for="ver in videoVersions"
-                  :key="ver"
-                  @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
-                    (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
-                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                    // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
-                    ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) && 'opacity-50 cursor-not-allowed'
-                  ]"
-                  :disabled="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame)"
-                  :title="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? '3.0 Pro 只支持 1080p 首帧（不支持尾帧）' : ''"
-                >
-                  {{ ver }}
-                </button>
+              <!-- 模型选择（竖向列表） -->
+              <div class="relative">
+                <span class="text-sm text-gray-600 font-medium mb-2 block">模型:</span>
+                <div class="flex flex-col gap-1.5">
+                  <button
+                    v-for="ver in videoVersions"
+                    :key="ver"
+                    @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : (ver === 'wan2.2' ? 'wan2.2' : ver))"
+                    :class="[
+                      'px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left',
+                      (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
+                        ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                      // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
+                      ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    ]"
+                    :disabled="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame)"
+                    :title="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? '3.0 Pro 只支持 1080p 首帧（不支持尾帧）' : ''"
+                  >
+                    {{ ver }}
+                  </button>
+                </div>
               </div>
               <!-- 分辨率选择（放在最前面，更显眼） -->
               <div class="flex items-center gap-2">
@@ -1566,6 +1570,21 @@ const getDateLabel = (dateKey: string) => {
 }
 
 // 根据视频宽高获取分辨率文本
+// 获取模型显示名称
+const getModelName = (version: string | undefined): string => {
+  if (!version) return '即梦 3.0'
+  
+  const modelMap: Record<string, string> = {
+    '3.0': '即梦 3.0',
+    '3.0_pro': '即梦 3.0 Pro',
+    'sora2': 'Sora 2',
+    'seedance': 'Seedance',
+    'wan2.2': 'wan2.2'
+  }
+  
+  return modelMap[version] || version
+}
+
 const getResolutionText = (video: any): string => {
   if (!video.width || !video.height) {
     return '720p' // 默认值
