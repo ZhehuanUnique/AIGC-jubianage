@@ -665,6 +665,15 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
   }
 }
 
+// 分辨率切换处理
+const handleResolutionChange = (res: '720p' | '1080p') => {
+  // wan2.2 只支持 720p，不允许切换到 1080p
+  if (videoVersion.value === 'wan2.2' && res === '1080p') {
+    return
+  }
+  resolution.value = res
+}
+
 // 版本切换处理
 const handleVersionChange = (newVersion: '3.0' | '3.0_pro' | 'sora2' | 'seedance' | 'wan2.2') => {
   const oldVersion = videoVersion.value
