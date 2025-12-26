@@ -245,8 +245,8 @@ async def delete_video_history(
     """删除视频生成记录"""
     try:
         # 获取用户ID
-        try:
-            user_id = get_current_user_id(x_api_key, db)
+    try:
+        user_id = get_current_user_id(x_api_key, db)
             print(f"删除视频请求: generation_id={generation_id}, user_id={user_id}")
         except Exception as user_error:
             print(f"获取用户ID失败: {str(user_error)}")
@@ -269,13 +269,13 @@ async def delete_video_history(
         # 执行删除
         try:
             success = VideoHistoryService.delete_generation(db, generation_id, user_id)
-            
-            if not success:
+        
+        if not success:
                 print(f"删除失败: generation_id={generation_id}, user_id={user_id}")
-                raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
-            
+            raise HTTPException(status_code=404, detail="视频记录不存在或无权删除")
+        
             print(f"删除成功: generation_id={generation_id}, user_id={user_id}")
-            return {"success": True, "message": "删除成功"}
+        return {"success": True, "message": "删除成功"}
         except HTTPException:
             raise
         except Exception as delete_error:
@@ -304,25 +304,42 @@ async def toggle_favorite(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """切换收藏状态"""
+    """切换收藏状态（优化：直接更新数据库，减少查询）"""
     try:
         user_id = get_current_user_id(x_api_key, db)
         
-        generation = db.query(VideoGeneration).filter(
-            VideoGeneration.id == generation_id,
-            VideoGeneration.user_id == user_id
-        ).first()
+        # 使用更高效的更新方式：直接更新，然后查询新值
+        from sqlalchemy import update
+        from sqlalchemy.sql import select
         
-        if not generation:
+        # 先查询当前状态
+        result = db.execute(
+            select(VideoGeneration.is_favorite).where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+        ).scalar_one_or_none()
+        
+        if result is None:
             raise HTTPException(status_code=404, detail="视频记录不存在")
         
-        generation.is_favorite = not generation.is_favorite
+        # 直接更新数据库
+        new_value = not result
+        db.execute(
+            update(VideoGeneration)
+            .where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+            .values(is_favorite=new_value)
+        )
         db.commit()
         
-        return {"success": True, "is_favorite": generation.is_favorite}
+        return {"success": True, "is_favorite": new_value}
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
 
 
@@ -332,25 +349,42 @@ async def toggle_like(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """切换点赞状态"""
+    """切换点赞状态（优化：直接更新数据库，减少查询）"""
     try:
         user_id = get_current_user_id(x_api_key, db)
         
-        generation = db.query(VideoGeneration).filter(
-            VideoGeneration.id == generation_id,
-            VideoGeneration.user_id == user_id
-        ).first()
+        # 使用更高效的更新方式：直接更新，然后查询新值
+        from sqlalchemy import update
+        from sqlalchemy.sql import select
         
-        if not generation:
+        # 先查询当前状态
+        result = db.execute(
+            select(VideoGeneration.is_liked).where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+        ).scalar_one_or_none()
+        
+        if result is None:
             raise HTTPException(status_code=404, detail="视频记录不存在")
         
-        generation.is_liked = not generation.is_liked
+        # 直接更新数据库
+        new_value = not result
+        db.execute(
+            update(VideoGeneration)
+            .where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+            .values(is_liked=new_value)
+        )
         db.commit()
         
-        return {"success": True, "is_liked": generation.is_liked}
+        return {"success": True, "is_liked": new_value}
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
 
 
@@ -360,25 +394,42 @@ async def toggle_ultra_hd(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: Session = Depends(get_db)
 ):
-    """切换超清标记"""
+    """切换超清标记（优化：直接更新数据库，减少查询）"""
     try:
         user_id = get_current_user_id(x_api_key, db)
         
-        generation = db.query(VideoGeneration).filter(
-            VideoGeneration.id == generation_id,
-            VideoGeneration.user_id == user_id
-        ).first()
+        # 使用更高效的更新方式：直接更新，然后查询新值
+        from sqlalchemy import update
+        from sqlalchemy.sql import select
         
-        if not generation:
+        # 先查询当前状态
+        result = db.execute(
+            select(VideoGeneration.is_ultra_hd).where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+        ).scalar_one_or_none()
+        
+        if result is None:
             raise HTTPException(status_code=404, detail="视频记录不存在")
         
-        generation.is_ultra_hd = not generation.is_ultra_hd
+        # 直接更新数据库
+        new_value = not result
+        db.execute(
+            update(VideoGeneration)
+            .where(
+                VideoGeneration.id == generation_id,
+                VideoGeneration.user_id == user_id
+            )
+            .values(is_ultra_hd=new_value)
+        )
         db.commit()
         
-        return {"success": True, "is_ultra_hd": generation.is_ultra_hd}
+        return {"success": True, "is_ultra_hd": new_value}
     except HTTPException:
         raise
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
 
 

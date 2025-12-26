@@ -1,6 +1,6 @@
 """
 对象存储服务
-支持阿里云 OSS 和亚马逊 S3
+支持阿里云 OSS、亚马逊 S3 和腾讯云 COS
 """
 import os
 from typing import Optional
@@ -132,21 +132,89 @@ class S3Storage(StorageService):
             return None
 
 
+class TencentCOSStorage(StorageService):
+    """腾讯云 COS 存储服务"""
+    
+    def __init__(self):
+        from qcloud_cos import CosConfig
+        from qcloud_cos import CosS3Client
+        
+        self.secret_id = os.getenv("TENCENT_COS_SECRET_ID")
+        self.secret_key = os.getenv("TENCENT_COS_SECRET_KEY")
+        self.region = os.getenv("TENCENT_COS_REGION")  # 如: ap-beijing
+        self.bucket_name = os.getenv("TENCENT_COS_BUCKET_NAME")
+        self.bucket_domain = os.getenv("TENCENT_COS_BUCKET_DOMAIN")  # CDN域名（可选）
+        
+        if not all([self.secret_id, self.secret_key, self.region, self.bucket_name]):
+            raise ValueError("请配置腾讯云 COS 环境变量：TENCENT_COS_SECRET_ID, TENCENT_COS_SECRET_KEY, TENCENT_COS_REGION, TENCENT_COS_BUCKET_NAME")
+        
+        # 初始化 COS 配置
+        config = CosConfig(
+            Region=self.region,
+            SecretId=self.secret_id,
+            SecretKey=self.secret_key,
+            Scheme='https'  # 使用 HTTPS
+        )
+        
+        # 初始化 COS 客户端
+        self.cos_client = CosS3Client(config)
+    
+    async def upload_video(self, video_url: str, video_name: str) -> Optional[str]:
+        """上传视频到腾讯云 COS"""
+        try:
+            # 下载视频
+            import requests
+            response = requests.get(video_url, timeout=300)  # 5分钟超时
+            response.raise_for_status()
+            video_data = response.content
+            
+            # 上传到 COS
+            object_key = f"videos/{video_name}"
+            self.cos_client.put_object(
+                Bucket=self.bucket_name,
+                Body=video_data,
+                Key=object_key,
+                ContentType='video/mp4'
+            )
+            
+            # 返回 COS URL
+            if self.bucket_domain:
+                # 使用 CDN 域名
+                return f"https://{self.bucket_domain}/{object_key}"
+            else:
+                # 使用 COS 域名
+                return f"https://{self.bucket_name}.cos.{self.region}.myqcloud.com/{object_key}"
+            
+        except Exception as e:
+            logger.error(f"上传视频到腾讯云 COS 失败: {str(e)}")
+            return None
+
+
 def get_storage_service() -> Optional[StorageService]:
     """
     根据环境变量获取存储服务实例
     
-    优先使用阿里云 OSS，如果未配置则使用 S3
+    优先级：腾讯云 COS > 阿里云 OSS > AWS S3
     """
-    storage_type = os.getenv("STORAGE_TYPE", "aliyun_oss").lower()
+    storage_type = os.getenv("STORAGE_TYPE", "tencent_cos").lower()
     
-    if storage_type == "aliyun_oss":
+    # 优先使用腾讯云 COS
+    if storage_type == "tencent_cos" or storage_type == "cos":
+        try:
+            return TencentCOSStorage()
+        except ValueError:
+            logger.warning("腾讯云 COS 未配置，尝试使用其他存储服务")
+            storage_type = "aliyun_oss"
+    
+    # 其次使用阿里云 OSS
+    if storage_type == "aliyun_oss" or storage_type == "oss":
         try:
             return AliyunOSSStorage()
         except ValueError:
             logger.warning("阿里云 OSS 未配置，尝试使用 S3")
             storage_type = "s3"
     
+    # 最后使用 AWS S3
     if storage_type == "s3":
         try:
             return S3Storage()
