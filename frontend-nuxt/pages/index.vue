@@ -368,7 +368,9 @@
               <div class="relative flex items-center gap-2">
                 <span class="text-sm text-gray-600 font-medium whitespace-nowrap">模型:</span>
                 <button
-                  @click.stop.prevent="showModelOptions = !showModelOptions"
+                  @click.stop.prevent="handleModelButtonClick"
+                  @mouseenter="isBottomBarHovered = true"
+                  @mouseleave="isBottomBarHovered = false"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left flex items-center justify-between min-w-[80px]',
                     'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -383,6 +385,8 @@
                 <div
                   v-if="showModelOptions"
                   @click.stop
+                  @mouseenter="isBottomBarHovered = true"
+                  @mouseleave="isBottomBarHovered = false"
                   class="absolute bottom-full left-0 mb-1 min-w-[120px] bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                   style="max-height: 300px; overflow-y: auto;"
                 >
