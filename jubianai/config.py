@@ -45,6 +45,13 @@ JIMENG_VIDEO_VERSION = os.getenv("JIMENG_VIDEO_VERSION", "3.0_pro")
 SORA2_API_HOST = os.getenv("SORA2_API_HOST", "https://grsai.dakka.com.cn")  # Sora 2 API Host（默认国内直连）
 SORA2_API_KEY = os.getenv("SORA2_API_KEY", "")  # Sora 2 API Key
 
+# Seedance API 配置
+# 正式环境：https://api.302.ai
+# 国内中转：https://api.302ai.cn
+SEEDANCE_API_HOST = os.getenv("SEEDANCE_API_HOST", "https://api.302ai.cn")  # Seedance API Host（默认国内中转）
+SEEDANCE_API_KEY = os.getenv("SEEDANCE_API_KEY", "")  # Seedance API Key
+SEEDANCE_MODEL = os.getenv("SEEDANCE_MODEL", "doubao-seedance-1-0-lite-i2v-250428")  # Seedance 模型名称
+
 # 即梦AI视频生成 req_key 映射
 # 3.0 版本的 req_key（根据文档更新）
 JIMENG_V30_REQ_KEYS = {

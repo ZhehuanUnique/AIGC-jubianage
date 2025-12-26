@@ -19,7 +19,8 @@ from config import (
     API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS,
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
     JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS,
-    SORA2_API_HOST, SORA2_API_KEY
+    SORA2_API_HOST, SORA2_API_KEY,
+    SEEDANCE_API_HOST, SEEDANCE_API_KEY, SEEDANCE_MODEL
 )
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
@@ -75,7 +76,7 @@ class VideoGenerationRequest(BaseModel):
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
     resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p（Sora 2 不需要）
-    version: Optional[str] = "3.0"  # 版本：3.0、3.0_pro 或 sora2
+    version: Optional[str] = "3.0"  # 版本：3.0、3.0_pro、sora2 或 seedance
 
 
 class VideoGenerationResponse(BaseModel):
@@ -1007,6 +1008,10 @@ async def get_video_status(task_id: str):
             # 检查是否是 Sora 2 任务
             if generation and generation.version == "sora2":
                 return await get_sora2_video_status(task_id, generation)
+            
+            # 检查是否是 Seedance 任务
+            if generation and generation.version == "seedance":
+                return await get_seedance_video_status(task_id, generation)
             
             if generation and generation.extra_metadata:
                 saved_req_key = generation.extra_metadata.get("req_key")

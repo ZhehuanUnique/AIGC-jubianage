@@ -548,8 +548,8 @@ const durations = [5, 10]
 const sora2Durations = [4, 8, 12] // Sora 2 只支持 4秒、8秒、12秒
 const resolution = ref<'720p' | '1080p'>('720p')
 const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
-const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2'>('3.0')
-const videoVersions = ['3.0', '3.0_pro', 'Sora 2'] as const
+const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2' | 'seedance'>('3.0')
+const videoVersions = ['3.0', '3.0_pro', 'Sora 2', 'Seedance'] as const
 const availableDurations = computed(() => {
   return videoVersion.value === 'sora2' ? sora2Durations : durations
 })

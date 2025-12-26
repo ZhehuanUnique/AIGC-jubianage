@@ -44,7 +44,7 @@ export const useVideoStore = defineStore('video', {
       firstFrame?: string | null
       lastFrame?: string | null
       resolution?: '720p' | '1080p'
-      version?: '3.0' | '3.0_pro' | 'sora2'
+      version?: '3.0' | '3.0_pro' | 'sora2' | 'seedance'
       backendUrl: string
     }) {
       this.isGenerating = true
