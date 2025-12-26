@@ -556,7 +556,7 @@ const availableDurations = computed(() => {
   } else if (videoVersion.value === 'seedance') {
     return [5, 10]  // Seedance: 5, 10秒
   } else {
-    return durations  # 3.0/3.0 Pro: 5, 10秒
+    return durations  // 3.0/3.0 Pro: 5, 10秒
   }
 })
 const firstFrame = ref<File | null>(null)
