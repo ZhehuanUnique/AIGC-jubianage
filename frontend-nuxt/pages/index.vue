@@ -365,17 +365,17 @@
           <div class="flex items-center justify-between pt-4 border-t border-gray-200">
             <div class="flex items-center gap-4">
               <!-- 模型选择（弹窗式） -->
-              <div class="relative">
-                <span class="text-sm text-gray-600 font-medium mb-2 block">模型:</span>
+              <div class="relative flex items-center gap-2">
+                <span class="text-sm text-gray-600 font-medium whitespace-nowrap">模型:</span>
                 <button
-                  @click.stop="showModelOptions = !showModelOptions"
+                  @click.stop.prevent="showModelOptions = !showModelOptions"
                   :class="[
-                    'w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left flex items-center justify-between',
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-left flex items-center justify-between min-w-[80px]',
                     'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   ]"
                 >
                   <span>{{ getModelDisplayName(videoVersion) }}</span>
-                  <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showModelOptions }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 transition-transform ml-2" :class="{ 'rotate-180': showModelOptions }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -383,13 +383,13 @@
                 <div
                   v-if="showModelOptions"
                   @click.stop
-                  class="absolute top-full left-0 mt-1 w-full bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
+                  class="absolute top-full left-0 mt-1 min-w-[120px] bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                   style="max-height: 300px; overflow-y: auto;"
                 >
                   <button
                     v-for="ver in videoVersions"
                     :key="ver"
-                    @click="handleModelSelect(ver)"
+                    @click.stop="handleModelSelect(ver)"
                     :class="[
                       'w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
                       (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2') || (ver === 'wan2.2' && videoVersion === 'wan2.2'))
@@ -407,7 +407,7 @@
               </div>
               <!-- 分辨率选择（放在最前面，更显眼） -->
               <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-600 font-medium">分辨率:</span>
+                <span class="text-sm text-gray-600 font-medium whitespace-nowrap">分辨率:</span>
                 <button
                   v-for="res in resolutions"
                   :key="res"
