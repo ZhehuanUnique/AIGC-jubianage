@@ -17,7 +17,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS,
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
-    JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS
+    JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS,
+    SORA2_API_HOST, SORA2_API_KEY
 )
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
@@ -72,8 +73,8 @@ class VideoGenerationRequest(BaseModel):
     api_key: Optional[str] = None  # 前端传入的 API Key
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
-    resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p
-    version: Optional[str] = "3.0"  # 版本：3.0 或 3.0_pro
+    resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p（Sora 2 不需要）
+    version: Optional[str] = "3.0"  # 版本：3.0、3.0_pro 或 sora2
 
 
 class VideoGenerationResponse(BaseModel):
@@ -190,8 +191,12 @@ async def generate_video(
         
         # 确定版本（从前端传入，默认3.0）
         version = request.version or "3.0"
-        if version not in ["3.0", "3.0_pro"]:
+        if version not in ["3.0", "3.0_pro", "sora2"]:
             version = "3.0"
+        
+        # 如果是 Sora 2，使用不同的处理逻辑
+        if version == "sora2":
+            return await generate_sora2_video(request, enhanced_prompt)
         
         # 验证 3.0 Pro 的限制：只支持 1080p 首帧（不支持尾帧）
         if version == "3.0_pro":
@@ -522,6 +527,355 @@ async def generate_video(
         )
 
 
+async def generate_sora2_video(request: VideoGenerationRequest, enhanced_prompt: str) -> VideoGenerationResponse:
+    """
+    Sora 2 视频生成函数
+    参考文档：https://grsai.com/zh/dashboard/documents/sora-2
+    """
+    # 验证 Sora 2 API 配置
+    if not SORA2_API_HOST:
+        return VideoGenerationResponse(
+            success=False,
+            message="Sora 2 API 配置未设置",
+            error="请设置环境变量 SORA2_API_HOST"
+        )
+    
+    if not SORA2_API_KEY:
+        return VideoGenerationResponse(
+            success=False,
+            message="Sora 2 API Key 未设置",
+            error="请设置环境变量 SORA2_API_KEY"
+        )
+    
+    # 验证时长：根据文档，Sora 2 支持 10秒、15秒（默认10秒）
+    # 但用户说只支持 4秒、8秒、12秒，这里先按用户要求验证
+    # 如果实际 API 支持 10/15 秒，可以调整
+    if request.duration not in [4, 8, 12, 10, 15]:
+        return VideoGenerationResponse(
+            success=False,
+            message="Sora 2 时长不支持",
+            error=f"当前时长 {request.duration} 秒，Sora 2 支持 4秒、8秒、12秒（或根据实际API支持 10秒、15秒）"
+        )
+    
+    try:
+        import httpx
+        import base64
+        import uuid
+        from datetime import datetime
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        
+        # 构建 Sora 2 API 请求
+        # 根据文档：POST /v1/video/sora-video
+        api_url = f"{SORA2_API_HOST}/v1/video/sora-video"
+        
+        # 准备请求体（根据文档格式）
+        payload = {
+            "model": "sora-2",  # 必填
+            "prompt": enhanced_prompt,  # 必填
+            "webHook": "-1",  # 使用 "-1" 立即返回 task_id，不使用回调
+            "shutProgress": False,  # 关闭进度回复，直接回复最终结果
+            "aspectRatio": "16:9",  # 默认 16:9（用户要求 16:9 格式）
+            "size": "large"  # 默认 large（更高质量）
+        }
+        
+        # 添加时长（如果支持）
+        if request.duration in [4, 8, 12, 10, 15]:
+            payload["duration"] = request.duration
+        
+        # 处理首帧图片（如果有）
+        # 根据文档，url 参数支持 URL 或 Base64
+        if request.first_frame:
+            if request.first_frame.startswith("http"):
+                payload["url"] = request.first_frame
+            else:
+                # base64 数据，直接使用（文档说支持 Base64）
+                if request.first_frame.startswith("data:image"):
+                    # 提取 base64 数据
+                    base64_data = request.first_frame.split(",")[1] if "," in request.first_frame else request.first_frame
+                    payload["url"] = base64_data
+                else:
+                    # 纯 base64 字符串
+                    payload["url"] = request.first_frame
+        
+        # 发送请求
+        headers = {
+            "Authorization": f"Bearer {SORA2_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"📤 准备调用 Sora 2 API: {api_url}")
+        print(f"  - model: sora-2")
+        print(f"  - prompt: {enhanced_prompt[:100]}...")
+        print(f"  - duration: {request.duration}秒")
+        print(f"  - aspectRatio: 16:9")
+        print(f"  - 有首帧: {bool(request.first_frame)}")
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(api_url, json=payload, headers=headers)
+            response.raise_for_status()
+            api_result = response.json()
+        
+        print(f"📥 Sora 2 API 响应: {api_result}")
+        
+        # 解析响应
+        # 根据文档，使用 webHook="-1" 时，响应格式为：
+        # {
+        #   "code": 0,
+        #   "msg": "success",
+        #   "data": {
+        #     "id": "task_id"
+        #   }
+        # }
+        if api_result.get("code") == 0:
+            task_id = api_result.get("data", {}).get("id")
+            if not task_id:
+                # 如果没有 id，尝试其他可能的字段
+                task_id = api_result.get("id") or api_result.get("task_id") or str(uuid.uuid4())
+        else:
+            # 如果 code != 0，说明请求失败
+            error_msg = api_result.get("msg") or api_result.get("message") or "Sora 2 API 调用失败"
+            return VideoGenerationResponse(
+                success=False,
+                message="Sora 2 视频生成失败",
+                error=error_msg
+            )
+        
+        # 保存到数据库
+        try:
+            db = next(get_db())
+            VideoHistoryService.create_generation_record(
+                db=db,
+                task_id=task_id,
+                prompt=enhanced_prompt,
+                duration=request.duration,
+                status="pending",
+                req_key="sora2",  # 标记为 Sora 2
+                version="sora2",
+                first_frame_url=request.first_frame if request.first_frame else None,
+                last_frame_url=None  # Sora 2 不支持尾帧
+            )
+            print(f"✅ Sora 2 任务已保存到数据库: {task_id}")
+        except Exception as db_error:
+            print(f"❌ 保存 Sora 2 任务到数据库失败: {str(db_error)}")
+            # 数据库保存失败不影响任务提交
+        
+        return VideoGenerationResponse(
+            success=True,
+            task_id=task_id,
+            message="Sora 2 视频生成任务已提交",
+            video_url=None
+        )
+        
+    except httpx.HTTPStatusError as e:
+        error_msg = f"Sora 2 API 调用失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("msg") or error_data.get("message") or error_data.get("error") or error_msg
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return VideoGenerationResponse(
+            success=False,
+            message="Sora 2 视频生成失败",
+            error=error_msg
+        )
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ Sora 2 视频生成错误: {error_detail}\n{error_traceback}")
+        return VideoGenerationResponse(
+            success=False,
+            message="Sora 2 视频生成失败",
+            error=f"{error_detail}。请检查后端日志获取详细信息。"
+        )
+
+
+async def get_sora2_video_status(task_id: str, generation) -> dict:
+    """
+    Sora 2 视频状态查询函数
+    参考文档：https://grsai.com/zh/dashboard/documents/sora-2
+    """
+    if not SORA2_API_HOST or not SORA2_API_KEY:
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": "Sora 2 API 配置未设置"
+        }
+    
+    try:
+        import httpx
+        from datetime import datetime
+        from backend.database import get_db
+        from backend.video_history import VideoHistoryService
+        from backend.storage import get_storage_service
+        
+        # 根据文档：POST /v1/draw/result
+        api_url = f"{SORA2_API_HOST}/v1/draw/result"
+        
+        # 构建请求体（根据文档格式）
+        payload = {
+            "id": task_id  # 使用 id 字段查询
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {SORA2_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        print(f"🔍 查询 Sora 2 任务状态: {task_id}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(api_url, json=payload, headers=headers)
+            response.raise_for_status()
+            api_result = response.json()
+        
+        print(f"📥 Sora 2 状态查询响应: {api_result}")
+        
+        # 解析响应
+        # 根据文档，响应格式为：
+        # {
+        #   "id": "task_id",
+        #   "results": [{
+        #     "url": "https://...",
+        #     "removeWatermark": true,
+        #     "pid": "s_xxx"
+        #   }],
+        #   "progress": 100,
+        #   "status": "running|succeeded|failed",
+        #   "failure_reason": "",
+        #   "error": ""
+        # }
+        status = api_result.get("status", "running")
+        progress = api_result.get("progress", 0)
+        
+        # 转换状态
+        if status == "succeeded":
+            # 视频生成完成
+            results = api_result.get("results", [])
+            video_url = None
+            if results and len(results) > 0:
+                video_url = results[0].get("url")
+            
+            if not video_url:
+                return {
+                    "task_id": task_id,
+                    "status": "processing",
+                    "progress": progress,
+                    "video_url": None
+                }
+            
+            final_video_url = video_url
+            
+            # 尝试上传到对象存储
+            try:
+                db = next(get_db())
+                storage_service = get_storage_service()
+                if storage_service:
+                    video_name = f"{task_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.mp4"
+                    storage_url = await storage_service.upload_video(video_url, video_name)
+                    if storage_url:
+                        final_video_url = storage_url
+                        print(f"✅ Sora 2 视频已上传到对象存储: {storage_url}")
+            except Exception as storage_error:
+                print(f"⚠️ Sora 2 视频上传到对象存储失败: {str(storage_error)}")
+            
+            # 更新数据库
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="completed",
+                    video_url=final_video_url
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 Sora 2 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "progress": 100,
+                "video_url": final_video_url
+            }
+        elif status == "failed":
+            # 任务失败
+            failure_reason = api_result.get("failure_reason", "")
+            error_msg = api_result.get("error", "")
+            
+            # 构建错误信息
+            if failure_reason == "output_moderation":
+                error_message = "输出内容违规"
+            elif failure_reason == "input_moderation":
+                error_message = "输入内容违规"
+            elif error_msg:
+                error_message = error_msg
+            else:
+                error_message = "Sora 2 视频生成失败"
+            
+            try:
+                db = next(get_db())
+                VideoHistoryService.update_generation_status(
+                    db=db,
+                    task_id=task_id,
+                    status="failed",
+                    error_message=error_message
+                )
+            except Exception as db_error:
+                print(f"⚠️ 更新 Sora 2 任务状态失败: {str(db_error)}")
+            
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "progress": 0,
+                "video_url": None,
+                "error": error_message
+            }
+        else:
+            # 处理中（status == "running"）
+            return {
+                "task_id": task_id,
+                "status": "processing",
+                "progress": max(progress, 10),  # 至少显示 10%
+                "video_url": None
+            }
+    
+    except httpx.HTTPStatusError as e:
+        error_msg = f"Sora 2 API 查询失败: HTTP {e.response.status_code}"
+        if e.response.text:
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("msg") or error_data.get("message") or error_data.get("error") or error_msg
+            except:
+                error_msg = f"{error_msg}: {e.response.text[:200]}"
+        
+        print(f"❌ {error_msg}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": error_msg
+        }
+    except Exception as e:
+        import traceback
+        error_detail = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"❌ Sora 2 状态查询错误: {error_detail}\n{error_traceback}")
+        return {
+            "task_id": task_id,
+            "status": "error",
+            "progress": 0,
+            "video_url": None,
+            "error": f"{error_detail}。请检查后端日志获取详细信息。"
+        }
+
+
 @app.get("/api/v1/video/status/{task_id}")
 async def get_video_status(task_id: str):
     """
@@ -593,12 +947,17 @@ async def get_video_status(task_id: str):
         # 优先使用数据库中保存的 req_key
         req_keys = []
         
-        # 首先尝试从数据库获取保存的 req_key
+        # 首先尝试从数据库获取保存的 req_key 和版本信息
         try:
             from backend.database import get_db
             from backend.video_history import VideoHistoryService
             db = next(get_db())
             generation = VideoHistoryService.get_generation_by_task_id(db, task_id)
+            
+            # 检查是否是 Sora 2 任务
+            if generation and generation.version == "sora2":
+                return await get_sora2_video_status(task_id, generation)
+            
             if generation and generation.extra_metadata:
                 saved_req_key = generation.extra_metadata.get("req_key")
                 if saved_req_key:
@@ -746,10 +1105,10 @@ async def get_video_status(task_id: str):
                         except Exception:
                             pass
                         
-                        return {
-                            "task_id": task_id,
+    return {
+        "task_id": task_id,
                             "status": "processing",
-                            "progress": 50,
+        "progress": 50,
                             "video_url": None
                         }
                     elif status in ["not_found", "expired", "failed"]:

@@ -39,6 +39,12 @@ DEFAULT_VIDEO_SETTINGS = {
 # 注意：3.0 Pro 只支持 1080p 首帧，其他情况自动使用 3.0
 JIMENG_VIDEO_VERSION = os.getenv("JIMENG_VIDEO_VERSION", "3.0_pro")
 
+# Sora 2 API 配置
+# 国内直连：https://grsai.dakka.com.cn
+# 海外：根据文档填写
+SORA2_API_HOST = os.getenv("SORA2_API_HOST", "https://grsai.dakka.com.cn")  # Sora 2 API Host（默认国内直连）
+SORA2_API_KEY = os.getenv("SORA2_API_KEY", "")  # Sora 2 API Key
+
 # 即梦AI视频生成 req_key 映射
 # 3.0 版本的 req_key（根据文档更新）
 JIMENG_V30_REQ_KEYS = {

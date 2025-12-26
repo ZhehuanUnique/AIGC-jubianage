@@ -10,7 +10,7 @@ interface VideoGenerationRequest {
   last_frame?: string | null
   seed?: number | null
   resolution?: '720p' | '1080p'
-  version?: '3.0' | '3.0_pro' // 版本选择
+  version?: '3.0' | '3.0_pro' | 'sora2' // 版本选择
 }
 
 interface VideoGenerationResponse {
@@ -44,7 +44,7 @@ export const useVideoStore = defineStore('video', {
       firstFrame?: string | null
       lastFrame?: string | null
       resolution?: '720p' | '1080p'
-      version?: '3.0' | '3.0_pro'
+      version?: '3.0' | '3.0_pro' | 'sora2'
       backendUrl: string
     }) {
       this.isGenerating = true
@@ -58,10 +58,11 @@ export const useVideoStore = defineStore('video', {
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
-            // 根据分辨率设置宽高
+            // Sora 2 不需要设置宽高和分辨率
+            const isSora2 = params.version === 'sora2'
             const resolution = params.resolution || '720p'
-            const width = resolution === '1080p' ? 1920 : 1280
-            const height = resolution === '1080p' ? 1080 : 720
+            const width = isSora2 ? undefined : (resolution === '1080p' ? 1920 : 1280)
+            const height = isSora2 ? undefined : (resolution === '1080p' ? 1080 : 720)
 
             const response = await $fetch<VideoGenerationResponse>(
               `${params.backendUrl}/api/v1/video/generate`,
@@ -70,14 +71,14 @@ export const useVideoStore = defineStore('video', {
                 body: {
                   prompt: params.prompt,
                   duration: params.duration,
-                  fps: 24,
+                  fps: isSora2 ? undefined : 24,
                   width: width,
                   height: height,
                   first_frame: params.firstFrame,
                   last_frame: params.lastFrame,
                   seed: null,
                   negative_prompt: null,
-                  resolution: resolution,
+                  resolution: isSora2 ? undefined : resolution,
                   version: params.version || '3.0'
                 } as VideoGenerationRequest,
                 timeout: 60000 // 60秒超时

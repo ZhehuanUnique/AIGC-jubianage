@@ -354,10 +354,10 @@
                 <button
                   v-for="ver in videoVersions"
                   :key="ver"
-                  @click.stop="videoVersion = ver"
+                  @click.stop="handleVersionChange(ver === 'Sora 2' ? 'sora2' : ver)"
                   :class="[
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer',
-                    videoVersion === ver
+                    (videoVersion === ver || (ver === 'Sora 2' && videoVersion === 'sora2'))
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
                     // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
@@ -388,8 +388,9 @@
               </div>
               <!-- 时长选择 -->
               <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600 font-medium">时长:</span>
                 <button
-                  v-for="dur in durations"
+                  v-for="dur in availableDurations"
                   :key="dur"
                   @click.stop="duration = dur"
                   :class="[
@@ -498,10 +499,14 @@ const handleFiltersUpdated = (event: CustomEvent) => {
 const prompt = ref('')
 const duration = ref(5)
 const durations = [5, 10]
+const sora2Durations = [4, 8, 12] // Sora 2 只支持 4秒、8秒、12秒
 const resolution = ref<'720p' | '1080p'>('720p')
 const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
-const videoVersion = ref<'3.0' | '3.0_pro'>('3.0')
-const videoVersions: ('3.0' | '3.0_pro')[] = ['3.0', '3.0_pro']
+const videoVersion = ref<'3.0' | '3.0_pro' | 'sora2'>('3.0')
+const videoVersions = ['3.0', '3.0_pro', 'Sora 2'] as const
+const availableDurations = computed(() => {
+  return videoVersion.value === 'sora2' ? sora2Durations : durations
+})
 const firstFrame = ref<File | null>(null)
 const lastFrame = ref<File | null>(null)
 const firstFramePreview = ref<string | null>(null)
@@ -591,6 +596,21 @@ const handleBottomEdgeHover = (isHovering: boolean) => {
         isBottomBarCollapsed.value = true
       }
     }, 300)
+  }
+}
+
+// 版本切换处理
+const handleVersionChange = (newVersion: '3.0' | '3.0_pro' | 'sora2') => {
+  const oldVersion = videoVersion.value
+  videoVersion.value = newVersion
+  
+  // 如果切换到 Sora 2，且当前时长不在 [4, 8, 12] 中，自动调整为 4 秒
+  if (newVersion === 'sora2' && !sora2Durations.includes(duration.value)) {
+    duration.value = 4
+  }
+  // 如果从 Sora 2 切换到其他版本，且当前时长不在 [5, 10] 中，自动调整为 5 秒
+  else if (oldVersion === 'sora2' && newVersion !== 'sora2' && !durations.includes(duration.value)) {
+    duration.value = 5
   }
 }
 
