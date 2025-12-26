@@ -379,11 +379,11 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <!-- 模型选择弹窗 -->
+                <!-- 模型选择弹窗（向上展开） -->
                 <div
                   v-if="showModelOptions"
                   @click.stop
-                  class="absolute top-full left-0 mt-1 min-w-[120px] bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
+                  class="absolute bottom-full left-0 mb-1 min-w-[120px] bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-[100]"
                   style="max-height: 300px; overflow-y: auto;"
                 >
                   <button
