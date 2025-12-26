@@ -3,10 +3,6 @@
     <!-- 历史视频区域（全屏滚动） -->
     <div class="pb-96 pt-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- 日期标题 -->
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">今天</h2>
-
-        <!-- 历史视频网格 -->
         <!-- 只在首次加载且没有视频时显示加载状态，避免刷新时闪烁 -->
         <div v-if="historyStore.loading && historyStore.videos.length === 0" class="text-center py-12">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -15,10 +11,19 @@
         <div v-else-if="historyStore.videos.length === 0" class="text-center py-12">
           <p class="text-gray-500">暂无历史视频</p>
         </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <div
-            v-for="video in historyStore.videos"
-            :key="video.id"
+        <template v-else>
+          <!-- 按日期分组显示 -->
+          <template v-for="(group, dateKey) in groupedVideos" :key="dateKey">
+            <!-- 日期标题 -->
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 mt-8" :class="{ 'mt-0': dateKey === Object.keys(groupedVideos)[0] }">
+              {{ getDateLabel(dateKey) }}
+            </h2>
+
+            <!-- 历史视频网格 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+              <div
+                v-for="video in group"
+                :key="video.id"
             class="group relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-all"
             style="overflow: visible;"
             @mouseenter="handleVideoHover(video.id, true)"
@@ -181,7 +186,9 @@
               </div>
             </div>
           </div>
-        </div>
+            </div>
+          </template>
+        </template>
       </div>
     </div>
 
@@ -1282,6 +1289,62 @@ const getEstimatedProgress = (video: any): number => {
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
+// 按日期分组视频
+const groupedVideos = computed(() => {
+  const groups: Record<string, any[]> = {}
+  
+  historyStore.videos.forEach(video => {
+    if (!video.created_at) return
+    
+    const videoDate = new Date(video.created_at)
+    // 获取日期键（YYYY-MM-DD格式）
+    const dateKey = videoDate.toISOString().split('T')[0]
+    
+    if (!groups[dateKey]) {
+      groups[dateKey] = []
+    }
+    groups[dateKey].push(video)
+  })
+  
+  // 按日期倒序排列（最新的在前）
+  return Object.keys(groups)
+    .sort((a, b) => b.localeCompare(a))
+    .reduce((acc, key) => {
+      acc[key] = groups[key]
+      return acc
+    }, {} as Record<string, any[]>)
+})
+
+// 获取日期标签（今天、昨天或具体日期）
+const getDateLabel = (dateKey: string) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  
+  const targetDate = new Date(dateKey)
+  targetDate.setHours(0, 0, 0, 0)
+  
+  if (targetDate.getTime() === today.getTime()) {
+    return '今天'
+  } else if (targetDate.getTime() === yesterday.getTime()) {
+    return '昨天'
+  } else {
+    // 显示具体日期，格式：YYYY年MM月DD日
+    const year = targetDate.getFullYear()
+    const month = targetDate.getMonth() + 1
+    const day = targetDate.getDate()
+    const todayYear = today.getFullYear()
+    
+    if (year === todayYear) {
+      return `${month}月${day}日`
+    } else {
+      return `${year}年${month}月${day}日`
+    }
+  }
 }
 
 // 根据视频宽高获取分辨率文本
