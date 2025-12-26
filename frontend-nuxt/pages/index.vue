@@ -1097,6 +1097,90 @@ const cancelDeleteVideo = () => {
   videoToDelete.value = null
 }
 
+// 通用对话框状态
+const showDialog = ref<{
+  show: boolean
+  type: 'info' | 'success' | 'error' | 'confirm'
+  title: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  onConfirm?: () => void
+  onCancel?: () => void
+}>({
+  show: false,
+  type: 'info',
+  title: '',
+  message: ''
+})
+
+// 显示错误对话框
+const showErrorDialog = (message: string, title: string = '错误') => {
+  showDialog.value = {
+    show: true,
+    type: 'error',
+    title,
+    message,
+    confirmText: '确定'
+  }
+}
+
+// 显示成功对话框
+const showSuccessDialog = (message: string, title: string = '成功') => {
+  showDialog.value = {
+    show: true,
+    type: 'success',
+    title,
+    message,
+    confirmText: '确定'
+  }
+}
+
+// 显示确认对话框
+const showConfirmDialog = (title: string, message: string, confirmText: string = '确定', cancelText: string = '取消'): Promise<boolean> => {
+  return new Promise((resolve) => {
+    showDialog.value = {
+      show: true,
+      type: 'confirm',
+      title,
+      message,
+      confirmText,
+      cancelText,
+      onConfirm: () => {
+        closeDialog()
+        resolve(true)
+      },
+      onCancel: () => {
+        closeDialog()
+        resolve(false)
+      }
+    }
+  })
+}
+
+// 关闭对话框
+const closeDialog = () => {
+  showDialog.value.show = false
+}
+
+// 确认对话框
+const dialogConfirm = () => {
+  if (showDialog.value.onConfirm) {
+    showDialog.value.onConfirm()
+  } else {
+    closeDialog()
+  }
+}
+
+// 取消对话框
+const dialogCancel = () => {
+  if (showDialog.value.onCancel) {
+    showDialog.value.onCancel()
+  } else {
+    closeDialog()
+  }
+}
+
 const handleEnhanceResolution = async (videoId: number, method: 'real_esrgan' | 'waifu2x') => {
   showResolutionOptions.value = null
   
