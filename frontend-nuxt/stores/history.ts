@@ -245,12 +245,21 @@ export const useHistoryStore = defineStore('history', {
           `${backendUrl}/api/v1/video/history/${videoId}`,
           { method: 'DELETE' }
         )
-        // 从列表中移除已删除的视频
+        // 从列表中移除已删除的视频（同时从筛选列表和原始列表移除）
         this.videos = this.videos.filter(v => v.id !== videoId)
+        this.allVideos = this.allVideos.filter(v => v.id !== videoId)
         this.total = Math.max(0, this.total - 1)
         return response
       } catch (error: any) {
         console.error('删除视频失败:', error)
+        // 如果是404错误，说明视频可能已经不存在，仍然从列表中移除
+        if (error.status === 404 || error.statusCode === 404) {
+          this.videos = this.videos.filter(v => v.id !== videoId)
+          this.allVideos = this.allVideos.filter(v => v.id !== videoId)
+          this.total = Math.max(0, this.total - 1)
+          // 返回成功，因为目标已经达成（视频不在列表中）
+          return { success: true, message: '视频已删除' }
+        }
         throw error
       }
     },

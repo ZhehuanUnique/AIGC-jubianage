@@ -475,6 +475,38 @@
         </div>
       </div>
     </div>
+
+    <!-- 通用提示对话框 -->
+    <div
+      v-if="showDialog.show"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50"
+      @click.self="closeDialog"
+    >
+      <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ showDialog.title }}</h3>
+        <p class="text-gray-700 mb-6 whitespace-pre-line">{{ showDialog.message }}</p>
+        <div class="flex justify-end gap-3">
+          <button
+            v-if="showDialog.type === 'confirm'"
+            @click="dialogCancel"
+            class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            {{ showDialog.cancelText || '取消' }}
+          </button>
+          <button
+            @click="dialogConfirm"
+            :class="[
+              'px-4 py-2 text-white rounded-lg transition-colors',
+              showDialog.type === 'error' ? 'bg-red-500 hover:bg-red-600' :
+              showDialog.type === 'success' ? 'bg-green-500 hover:bg-green-600' :
+              'bg-primary-500 hover:bg-primary-600'
+            ]"
+          >
+            {{ showDialog.confirmText || '确定' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
