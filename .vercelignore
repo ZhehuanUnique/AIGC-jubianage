@@ -4,6 +4,10 @@ doubao-rag/
 # 忽略后端代码（后端需要单独部署）
 jubianai/
 
+# 忽略根目录的 Python 相关文件
+requirements.txt
+runtime.txt
+
 # 忽略大文件（视频文件），但保留主页需要的
 *.mp4
 !index.mp4
