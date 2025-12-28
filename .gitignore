@@ -3,6 +3,10 @@
 Thumbs.db
 desktop.ini
 
+# 海报文件夹（已上传到 COS，不再需要本地存储）
+poster/
+frontend-nuxt/public/poster/
+
 # 编辑器文件
 .vscode/
 .idea/
