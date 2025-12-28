@@ -12,8 +12,8 @@ if sys.platform == 'win32':
     except:
         pass
 
-POSTER_BASE = Path(__file__).parent / "poster"
-INDEX_HTML = Path(__file__).parent / "index.html"
+POSTER_BASE = Path("C:/Users/Administrator/Desktop/poster")
+INDEX_HTML = Path(__file__).parent / "frontend-nuxt" / "public" / "index.html"
 
 # COS 配置
 COS_BUCKET = "jubianage-1392491103"
@@ -39,6 +39,7 @@ def generate_poster_cards():
         folder_path = POSTER_BASE / local_folder_name
         
         if not folder_path.exists():
+            print(f"⚠️  文件夹不存在: {folder_path}")
             continue
         
         # 获取该文件夹下的所有图片
@@ -49,8 +50,22 @@ def generate_poster_cards():
             images.extend(folder_path.glob(f"*{ext}"))
             images.extend(folder_path.glob(f"*{ext.upper()}"))
         
+        # 过滤掉带 _1 后缀的文件（这些是重复的）
+        images = [img for img in images if not img.name.endswith('_1.jpg') and not img.name.endswith('_1.png') and not img.name.endswith('_1.jpeg') and not img.name.endswith('_1.JPG') and not img.name.endswith('_1.PNG')]
+        
+        # 去重：使用文件名（不含路径）作为唯一标识
+        seen_names = set()
+        unique_images = []
+        for img in images:
+            if img.name not in seen_names:
+                seen_names.add(img.name)
+                unique_images.append(img)
+        images = unique_images
+        
         # 按文件名排序
         images.sort(key=lambda x: x.name)
+        
+        print(f"📁 {local_folder_name}: 找到 {len(images)} 个唯一图片")
         
         # 生成卡片
         for idx, img_path in enumerate(images, 1):
@@ -112,34 +127,41 @@ def update_index_html():
         print("❌ 未找到 marquee__track 标记")
         return
     
-    # 找到对应的结束标记（查找 </section> 或 </div>）
-    # 先尝试找 </section>
+    # 找到 marquee__track 的结束标签（下一个 </div>）
+    # 需要找到与开始标签匹配的结束标签
+    # 先找到 </section>（rail 的结束）
     section_end = content.find('</section>', start_idx)
     if section_end == -1:
-        # 如果找不到 </section>，尝试找 </div>（在 rail 的结束标签）
-        rail_end = content.find('</div>', start_idx + len(start_marker) + 1000)
-        if rail_end != -1:
-            section_end = rail_end
-        else:
-            print("❌ 未找到结束标记")
-            return
+        print("❌ 未找到 </section> 标记")
+        return
     
-    # 在 section 结束前找到最后一个 </div>（这是 marquee__track 的结束标签）
+    # 在 start_idx 和 section_end 之间查找 marquee__track 的结束标签
+    # 查找最后一个 </div>，它应该是 marquee__track 的结束
     track_section = content[start_idx:section_end]
+    
+    # 找到最后一个 </div>（这是 marquee__track 的结束标签）
+    # 需要找到与 <div class="marquee__track" 匹配的 </div>
+    # 简单方法：从后往前找第一个 </div>
     last_div_idx = track_section.rfind('</div>')
     
     if last_div_idx == -1:
-        print("❌ 未找到结束标记")
+        print("❌ 未找到 marquee__track 结束标记")
         return
     
-    # 计算实际结束位置
-    end_idx = start_idx + len(start_marker) + last_div_idx
+    # 计算实际结束位置（start_idx + last_div_idx + len('</div>')）
+    end_idx = start_idx + last_div_idx + len('</div>')
     
-    # 替换内容：保留开始标记和结束标记，只替换中间的内容
-    before = content[:start_idx + len(start_marker)]
+    # 替换整个 marquee__track 内容（包括开始和结束标签）
+    before = content[:start_idx]
     after = content[end_idx:]
     
-    new_content = before + "\n            <!-- 只需要写一份 items，JS 会自动复制一份用于无缝循环 -->\n" + new_cards + "\n          " + after
+    # 新的 marquee__track 内容
+    new_track_content = f'''          <div class="marquee__track" data-marquee-track>
+            <!-- 只需要写一份 items，JS 会自动复制一份用于无缝循环 -->
+{new_cards}
+          </div>'''
+    
+    new_content = before + new_track_content + after
     
     # 保存更新后的 HTML
     import shutil
