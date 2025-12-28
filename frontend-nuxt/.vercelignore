@@ -40,4 +40,7 @@ test/
 dist/
 build/
 
+# 保留海报文件夹（需要部署）
+!public/poster/
+
 

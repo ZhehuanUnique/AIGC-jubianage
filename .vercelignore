@@ -78,6 +78,9 @@ test-*.txt
 uploads/
 assets/
 
+# 忽略海报文件夹（已移动到 frontend-nuxt/public/poster）
+poster/
+
 # 保留必要的静态文件（通过 ! 来覆盖上面的规则）
 !index.html
 !styles.css
