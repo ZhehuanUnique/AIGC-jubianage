@@ -1,4 +1,4 @@
-// 修复 HTML：删除重复海报
+// 修复 HTML：删除重复海报和 _1 后缀文件
 const fs = require('fs');
 const path = require('path');
 
@@ -12,32 +12,59 @@ const cosUrlPattern = /https:\/\/jubianage-1392491103\.cos\.ap-guangzhou\.myqclo
 const seenUrls = new Set();
 const uniqueCards = [];
 
-let match;
-while ((match = cosUrlPattern.exec(html)) !== null) {
-  const url = match[0];
-  const filename = match[1];
-  
-  // 跳过 _1 后缀的文件（包括 _1.jpg, _1.png, _1.jpeg 等）
+// 重新匹配所有 URL
+html.replace(cosUrlPattern, (match, filename, offset) => {
+  // 跳过 _1 后缀的文件
   if (filename.match(/_1\.(jpg|png|jpeg|JPG|PNG|JPEG)$/)) {
-    continue;
+    return match;
   }
   
   // 只保留唯一的 URL
-  if (!seenUrls.has(url)) {
-    seenUrls.add(url);
+  if (!seenUrls.has(match)) {
+    seenUrls.add(match);
     
-    // 提取完整的卡片 HTML
-    const cardStart = html.lastIndexOf('<a class="card"', match.index);
-    const cardEnd = html.indexOf('</a>', match.index) + 5;
+    // 找到这个 URL 所在的完整卡片
+    // 向前查找最近的 <a class="card"
+    let cardStart = html.lastIndexOf('<a class="card"', offset);
+    if (cardStart === -1) {
+      cardStart = html.lastIndexOf('<a class="card"', offset - 1000);
+    }
     
-    if (cardStart !== -1 && cardEnd > cardStart) {
+    // 向后查找对应的 </a>
+    let cardEnd = html.indexOf('</a>', offset) + 5;
+    
+    if (cardStart !== -1 && cardEnd > cardStart && cardEnd < html.length) {
       const cardHtml = html.substring(cardStart, cardEnd);
-      uniqueCards.push(cardHtml);
+      // 确保这是完整的卡片
+      if (cardHtml.includes('card__img') && cardHtml.includes('card__meta')) {
+        uniqueCards.push({ html: cardHtml, url: match });
+      }
     }
   }
-}
+  
+  return match;
+});
 
 console.log(`找到 ${uniqueCards.length} 个唯一海报`);
+
+// 按比例和文件名排序
+uniqueCards.sort((a, b) => {
+  const getRatio = (url) => {
+    if (url.includes('/2-3/')) return 1;
+    if (url.includes('/3-4/')) return 2;
+    if (url.includes('/7-10/')) return 3;
+    return 0;
+  };
+  
+  const ratioA = getRatio(a.url);
+  const ratioB = getRatio(b.url);
+  
+  if (ratioA !== ratioB) {
+    return ratioA - ratioB;
+  }
+  
+  return a.url.localeCompare(b.url);
+});
 
 // 找到 marquee__track 的开始和结束
 const trackStart = html.indexOf('<div class="marquee__track" data-marquee-track>');
@@ -53,13 +80,13 @@ const trackSection = html.substring(trackStart, sectionEnd);
 const lastDiv = trackSection.lastIndexOf('</div>');
 const trackEnd = trackStart + lastDiv + 6;
 
-// 生成新的卡片 HTML
-const newCards = uniqueCards.map((card, idx) => {
-  // 更新编号
-  return card
-    .replace(/aria-label="视频 \d+"/g, `aria-label="视频 ${idx + 1}"`)
-    .replace(/alt="封面 \d+"/g, `alt="封面 ${idx + 1}"`)
-    .replace(/AIGC 片段 \d+/g, `AIGC 片段 ${idx + 1}`);
+// 生成新的卡片 HTML（更新编号）
+const newCards = uniqueCards.map((item, idx) => {
+  const cardNum = String(idx + 1).padStart(2, '0');
+  return item.html
+    .replace(/aria-label="视频 \d+"/g, `aria-label="视频 ${cardNum}"`)
+    .replace(/alt="封面 \d+"/g, `alt="封面 ${cardNum}"`)
+    .replace(/AIGC 片段 \d+/g, `AIGC 片段 ${cardNum}`);
 }).join('\n');
 
 // 构建新的 marquee__track
@@ -73,9 +100,11 @@ const newHtml = html.substring(0, trackStart) + newTrack + html.substring(trackE
 
 // 备份并保存
 const backupPath = htmlPath + '.bak';
+if (fs.existsSync(backupPath)) {
+  fs.unlinkSync(backupPath);
+}
 fs.copyFileSync(htmlPath, backupPath);
 console.log(`已备份到: ${backupPath}`);
 
 fs.writeFileSync(htmlPath, newHtml, 'utf-8');
-console.log(`✅ HTML 已修复，共 ${uniqueCards.length} 个唯一海报`);
-
+console.log(`✅ HTML 已修复，共 ${uniqueCards.length} 个唯一海报（已排除所有 _1 后缀文件）`);
