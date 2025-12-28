@@ -31,8 +31,8 @@ def generate_poster_cards():
     """生成海报卡片 HTML（使用 COS URL）"""
     cards = []
     
-    # 按比例顺序处理
-    ratio_order = ["2:3", "3:4", "7:10"]
+    # 只处理2:3比例的海报
+    ratio_order = ["2:3"]
     
     for ratio in ratio_order:
         local_folder_name, cos_folder_name = RATIO_FOLDERS[ratio]
@@ -93,14 +93,8 @@ def generate_poster_cards():
             }
             subtitle = descriptions.get(ratio, "海报展示")
             
-            # 根据比例添加 data-ratio 属性
-            ratio_attr = ''
-            if ratio == "3:4":
-                ratio_attr = ' data-ratio="3-4"'
-            elif ratio == "7:10":
-                ratio_attr = ' data-ratio="7-10"'
-            
-            card_html = f'''            <a class="card" href="javascript:void(0)" aria-label="视频 {card_num:02d}"{ratio_attr}>
+            # 统一使用2:3比例，不添加data-ratio属性
+            card_html = f'''            <a class="card" href="javascript:void(0)" aria-label="视频 {card_num:02d}">
               <div class="card__thumb">
                 <img class="card__img" src="{img_src}" alt="封面 {card_num:02d}" loading="lazy" />
               </div>
