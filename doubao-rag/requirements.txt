@@ -1,0 +1,22 @@
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.5.0
+opencv-python>=4.8.0
+pillow>=10.0.0
+numpy>=1.24.0
+# LangGraph 和 LangChain
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+# ⚠️ 重要：tokenizers 需要 Rust 编译器
+# 请先运行: pip install tokenizers --only-binary :all:
+# 或使用安装脚本: install.bat (Windows) 或 install.sh (Linux/Mac)
+tokenizers>=0.20.0
+# sentence-transformers（会自动使用已安装的 tokenizers）
+sentence-transformers>=2.2.0
+# chromadb
+chromadb>=0.4.0
+# ffmpeg-python 可选，如果系统已有 ffmpeg 可以不安装
+ffmpeg-python>=0.2.0
+

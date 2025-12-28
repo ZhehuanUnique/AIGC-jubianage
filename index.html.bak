@@ -1,0 +1,1453 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>剧变时代</title>
+    <!-- Favicon（浏览器标签图标） -->
+    <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo/favicon.png" />
+    <link rel="apple-touch-icon" href="/logo/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* 基础样式，确保即使外部 CSS 加载失败也能显示内容 */
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #070A12;
+        color: #EAF0FF;
+        min-height: 100vh;
+      }
+      .debug-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 9999;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 调试信息 -->
+    <div class="debug-info" id="debugInfo">
+      <div>CSS: <span id="cssStatus">加载中...</span></div>
+      <div>JS: <span id="jsStatus">加载中...</span></div>
+    </div>
+    <!-- 背景视频 -->
+    <video class="bg-video" autoplay muted loop playsinline preload="auto">
+      <source src="/index.mp4" type="video/mp4" />
+    </video>
+    
+    <main class="stage">
+      <!-- Logo + 标题（左上角） -->
+      <header class="header">
+        <img class="header__logo" src="/logo/logo.png" alt="剧变时代 Logo" onerror="this.style.display='none';" />
+        <span class="header__title">剧变时代</span>
+      </header>
+      
+      <section class="hero">
+        <h1 class="hero__title">剧变时代</h1>
+        <noscript>
+          <p style="color: #fff; text-align: center; padding: 20px;">
+            请启用 JavaScript 以查看完整内容
+          </p>
+        </noscript>
+      </section>
+
+      <section class="rail">
+        <div class="marquee" data-marquee aria-label="作品流动展示">
+          <div class="marquee__track" data-marquee-track>
+            <a class="card" href="javascript:void(0)" aria-label="视频 01">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200748.jpg" alt="封面 01" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 01</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 02">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200748.jpg" alt="封面 02" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 02</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 03">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200748_1.jpg" alt="封面 03" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 03</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 04">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200748_1.jpg" alt="封面 04" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 04</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 05">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200832.jpg" alt="封面 05" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 05</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 06">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200832.jpg" alt="封面 06" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 06</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 07">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200832_1.jpg" alt="封面 07" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 07</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 08">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200832_1.jpg" alt="封面 08" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 08</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 09">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200855.png" alt="封面 09" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 09</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 10">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200855.png" alt="封面 10" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 10</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 11">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200855_1.png" alt="封面 11" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 11</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 12">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200855_1.png" alt="封面 12" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 12</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 13">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200924.png" alt="封面 13" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 13</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 14">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200924.png" alt="封面 14" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 14</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 15">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200924_1.png" alt="封面 15" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 15</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 16">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200924_1.png" alt="封面 16" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 16</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 17">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200951.png" alt="封面 17" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 17</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 18">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200951.png" alt="封面 18" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 18</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 19">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200951_1.png" alt="封面 19" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 19</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 20">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 200951_1.png" alt="封面 20" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 20</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 21">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201020.png" alt="封面 21" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 21</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 22">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201020.png" alt="封面 22" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 22</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 23">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201020_1.png" alt="封面 23" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 23</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 24">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201020_1.png" alt="封面 24" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 24</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 25">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201045.png" alt="封面 25" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 25</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 26">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201045.png" alt="封面 26" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 26</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 27">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201045_1.png" alt="封面 27" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 27</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 28">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201045_1.png" alt="封面 28" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 28</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 29">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201109.jpg" alt="封面 29" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 29</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 30">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201109.jpg" alt="封面 30" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 30</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 31">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201109_1.jpg" alt="封面 31" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 31</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 32">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201109_1.jpg" alt="封面 32" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 32</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 33">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201118.jpg" alt="封面 33" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 33</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 34">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201118.jpg" alt="封面 34" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 34</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 35">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201118_1.jpg" alt="封面 35" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 35</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 36">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201118_1.jpg" alt="封面 36" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 36</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 37">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201127.png" alt="封面 37" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 37</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 38">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201127.png" alt="封面 38" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 38</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 39">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201127_1.png" alt="封面 39" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 39</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 40">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201127_1.png" alt="封面 40" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 40</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 41">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201224.jpg" alt="封面 41" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 41</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 42">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201224.jpg" alt="封面 42" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 42</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 43">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201224_1.jpg" alt="封面 43" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 43</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 44">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201224_1.jpg" alt="封面 44" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 44</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 45">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201241.jpg" alt="封面 45" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 45</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 46">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201241.jpg" alt="封面 46" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 46</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 47">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201241_1.jpg" alt="封面 47" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 47</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 48">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201241_1.jpg" alt="封面 48" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 48</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 49">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201249.jpg" alt="封面 49" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 49</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 50">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201249.jpg" alt="封面 50" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 50</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 51">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201249_1.jpg" alt="封面 51" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 51</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 52">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/2025-12-28 201249_1.jpg" alt="封面 52" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 52</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 53">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214246.jpg" alt="封面 53" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 53</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 54">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214246.jpg" alt="封面 54" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 54</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 55">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214252.jpg" alt="封面 55" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 55</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 56">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214252.jpg" alt="封面 56" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 56</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 57">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214301.jpg" alt="封面 57" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 57</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 58">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214301.jpg" alt="封面 58" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 58</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 59">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214305.jpg" alt="封面 59" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 59</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 60">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214305.jpg" alt="封面 60" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 60</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 61">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214313.jpg" alt="封面 61" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 61</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 62">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214313.jpg" alt="封面 62" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 62</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 63">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214319.jpg" alt="封面 63" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 63</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 64">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/2：3/20251218-214319.jpg" alt="封面 64" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 64</div>
+                <div class="card__sub">竖版海报 · 2:3 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 65">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 200517.png" alt="封面 65" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 65</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 66">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 200517.png" alt="封面 66" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 66</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 67">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 200517_1.png" alt="封面 67" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 67</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 68">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 200517_1.png" alt="封面 68" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 68</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 69">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201011.png" alt="封面 69" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 69</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 70">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201011.png" alt="封面 70" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 70</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 71">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201011_1.png" alt="封面 71" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 71</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 72">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201011_1.png" alt="封面 72" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 72</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 73">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201059.png" alt="封面 73" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 73</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 74">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201059.png" alt="封面 74" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 74</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 75">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201059_1.png" alt="封面 75" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 75</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 76">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201059_1.png" alt="封面 76" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 76</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 77">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201138.png" alt="封面 77" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 77</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 78">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201138.png" alt="封面 78" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 78</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 79">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201138_1.png" alt="封面 79" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 79</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 80">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201138_1.png" alt="封面 80" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 80</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 81">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201159.png" alt="封面 81" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 81</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 82">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201159.png" alt="封面 82" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 82</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 83">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201159_1.png" alt="封面 83" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 83</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 84">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201159_1.png" alt="封面 84" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 84</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 85">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201300.png" alt="封面 85" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 85</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 86">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201300.png" alt="封面 86" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 86</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 87">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201300_1.png" alt="封面 87" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 87</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 88">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/3：4/2025-12-28 201300_1.png" alt="封面 88" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 88</div>
+                <div class="card__sub">竖版海报 · 3:4 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 89">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200447.png" alt="封面 89" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 89</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 90">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200447.png" alt="封面 90" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 90</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 91">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200447_1.png" alt="封面 91" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 91</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 92">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200447_1.png" alt="封面 92" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 92</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 93">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200801.jpg" alt="封面 93" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 93</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 94">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200801.jpg" alt="封面 94" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 94</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 95">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200801_1.jpg" alt="封面 95" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 95</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 96">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200801_1.jpg" alt="封面 96" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 96</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 97">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200905.jpg" alt="封面 97" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 97</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 98">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200905.jpg" alt="封面 98" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 98</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 99">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200905_1.jpg" alt="封面 99" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 99</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 100">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200905_1.jpg" alt="封面 100" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 100</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 101">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200914.png" alt="封面 101" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 101</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 102">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200914.png" alt="封面 102" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 102</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 103">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200914_1.png" alt="封面 103" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 103</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 104">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200914_1.png" alt="封面 104" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 104</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 105">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200937.png" alt="封面 105" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 105</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 106">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200937.png" alt="封面 106" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 106</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 107">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200937_1.png" alt="封面 107" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 107</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 108">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 200937_1.png" alt="封面 108" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 108</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 109">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201000.png" alt="封面 109" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 109</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 110">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201000.png" alt="封面 110" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 110</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 111">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201000_1.png" alt="封面 111" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 111</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 112">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201000_1.png" alt="封面 112" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 112</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 113">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201032.jpg" alt="封面 113" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 113</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 114">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201032.jpg" alt="封面 114" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 114</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 115">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201032_1.jpg" alt="封面 115" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 115</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 116">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201032_1.jpg" alt="封面 116" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 116</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 117">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201148.jpg" alt="封面 117" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 117</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 118">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201148.jpg" alt="封面 118" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 118</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 119">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201148_1.jpg" alt="封面 119" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 119</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 120">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201148_1.jpg" alt="封面 120" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 120</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 121">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201206.jpg" alt="封面 121" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 121</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 122">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201206.jpg" alt="封面 122" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 122</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 123">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201206_1.jpg" alt="封面 123" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 123</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 124">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201206_1.jpg" alt="封面 124" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 124</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 125">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201215.jpg" alt="封面 125" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 125</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 126">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201215.jpg" alt="封面 126" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 126</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 127">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201215_1.jpg" alt="封面 127" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 127</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 128">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201215_1.jpg" alt="封面 128" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 128</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 129">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201232.jpg" alt="封面 129" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 129</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 130">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201232.jpg" alt="封面 130" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 130</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 131">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201232_1.jpg" alt="封面 131" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 131</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 132">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/2025-12-28 201232_1.jpg" alt="封面 132" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 132</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 133">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/20251218-200312.jpg" alt="封面 133" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 133</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 134">
+              <div class="card__thumb">
+                <img class="card__img" src="/poster/7：10/20251218-200312.jpg" alt="封面 134" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 134</div>
+                <div class="card__sub">竖版海报 · 7:10 比例</div>
+              </div>
+            </a>
+          </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 01</div>
+                <div class="card__sub">横向流动 · 4K 质感</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 02">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214301.jpg" alt="封面 02" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 02</div>
+                <div class="card__sub">丝滑缓动 · 无缝循环</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 03">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214305.jpg" alt="封面 03" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 03</div>
+                <div class="card__sub">GPU transform · 低功耗</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 04">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214313.jpg" alt="封面 04" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 04</div>
+                <div class="card__sub">hover 减速到停</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 05">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214319.jpg" alt="封面 05" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 05</div>
+                <div class="card__sub">移开恢复初速</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 06">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214252.jpg" alt="封面 06" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 06</div>
+                <div class="card__sub">渐隐遮罩 · 高级感</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 07">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214301.jpg" alt="封面 07" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 07</div>
+                <div class="card__sub">无依赖 · 可直接部署</div>
+              </div>
+            </a>
+            <a class="card" href="javascript:void(0)" aria-label="视频 08">
+              <div class="card__thumb">
+                <img class="card__img" src="/封面/2：3封面/20251218-214305.jpg" alt="封面 08" loading="lazy" />
+              </div>
+              <div class="card__meta">
+                <div class="card__title">AIGC 片段 08</div>
+                <div class="card__sub">丝滑不丢帧</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // 页面加载完成后的初始化
+      (function() {
+        'use strict';
+        
+        // 检查资源加载状态
+        function checkResources() {
+          const debugInfo = document.getElementById('debugInfo');
+          if (!debugInfo) return;
+          
+          const cssStatus = document.getElementById('cssStatus');
+          const jsStatus = document.getElementById('jsStatus');
+          
+          // 检查 CSS 是否加载
+          try {
+            const testEl = document.createElement('div');
+            testEl.className = 'bg-video';
+            testEl.style.visibility = 'hidden';
+            testEl.style.position = 'absolute';
+            document.body.appendChild(testEl);
+            const styles = window.getComputedStyle(testEl);
+            const cssLoaded = styles.position === 'fixed' || styles.position === 'absolute';
+            document.body.removeChild(testEl);
+            
+            if (cssStatus) {
+              if (cssLoaded) {
+                cssStatus.textContent = '✓ 已加载';
+                cssStatus.style.color = '#4CAF50';
+              } else {
+                cssStatus.textContent = '✗ 加载失败';
+                cssStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+          } catch (e) {
+            if (cssStatus) {
+              cssStatus.textContent = '✗ 检查失败';
+              cssStatus.style.color = '#f44336';
+            }
+            debugInfo.style.display = 'block';
+          }
+          
+          // 检查 JS 是否加载（延迟检查，等待 main.js 加载）
+          setTimeout(function() {
+            if (jsStatus) {
+              if (typeof setupMarquee === 'function') {
+                jsStatus.textContent = '✓ 已加载';
+                jsStatus.style.color = '#4CAF50';
+              } else {
+                jsStatus.textContent = '✗ 加载失败';
+                jsStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+            
+            // 3秒后隐藏调试信息（如果一切正常）
+            if (cssStatus && cssStatus.textContent.includes('✓') && 
+                jsStatus && jsStatus.textContent.includes('✓')) {
+              setTimeout(function() {
+                if (debugInfo) debugInfo.style.display = 'none';
+              }, 3000);
+            }
+          }, 500);
+        }
+        
+        // 页面加载完成后检查
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', checkResources);
+        } else {
+          checkResources();
+        }
+        
+        // 捕获资源加载错误
+        window.addEventListener('error', function(e) {
+          // 忽略脚本错误（由 onerror 处理）
+          if (e.target && e.target.tagName === 'SCRIPT') {
+            return;
+          }
+          console.error('资源加载错误:', e);
+          const debugInfo = document.getElementById('debugInfo');
+          if (debugInfo) {
+            debugInfo.style.display = 'block';
+            const errorMsg = e.message || e.filename || '未知错误';
+            debugInfo.innerHTML += '<div style="color: #f44336; margin-top: 5px;">错误: ' + errorMsg + '</div>';
+          }
+        }, true);
+        
+        // 处理 main.js 加载失败
+        window.addEventListener('error', function(e) {
+          if (e.target && e.target.tagName === 'SCRIPT' && e.target.src) {
+            const jsStatus = document.getElementById('jsStatus');
+            const debugInfo = document.getElementById('debugInfo');
+            if (jsStatus) {
+              jsStatus.textContent = '✗ 加载失败';
+              jsStatus.style.color = '#f44336';
+            }
+            if (debugInfo) {
+              debugInfo.style.display = 'block';
+            }
+          }
+        }, true);
+      })();
+    </script>
+    <script src="/main.js" defer></script>
+  </body>
+</html>
+
+

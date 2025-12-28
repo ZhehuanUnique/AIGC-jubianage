@@ -1,0 +1,86 @@
+# 忽略 RAG 相关目录（不需要在 Vercel 上运行）
+doubao-rag/
+
+# 忽略后端代码（后端需要单独部署）
+jubianai/backend/
+jubianai/config.py
+jubianai/requirements.txt
+jubianai/init_db.py
+jubianai/render_server.py
+
+# 忽略大文件（视频文件），但保留主页需要的
+*.mp4
+!index.mp4
+*.webm
+!index.webm
+*.avi
+*.mov
+*.mkv
+
+# 忽略 Python 缓存和虚拟环境
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# 忽略环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 忽略测试和临时文件
+test_export/
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# 忽略开发工具配置
+.vscode/
+.idea/
+*.iml
+
+# 忽略 Git 相关
+.git/
+.gitignore
+
+# 忽略文档（已整合到 README.md）
+*.md
+!README.md
+
+# 忽略备份文件
+*_backup.py
+*_old.py
+*_new.py
+app_backup.py
+app_old.py
+app_new.py
+
+# 忽略测试文件
+test*.html
+test*.py
+test-*.txt
+
+# 忽略数据库文件（如果存在）
+*.db
+*.sqlite
+*.sqlite3
+
+# 忽略上传的文件
+uploads/
+assets/
+
+# 保留必要的静态文件（通过 ! 来覆盖上面的规则）
+!index.html
+!styles.css
+!main.js
+!logo/
+!封面/

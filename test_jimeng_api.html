@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即梦 API 测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background: #f9f9f9;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-label:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .file-upload-label.has-file {
+            border-color: #4caf50;
+            background: #f1f8f4;
+        }
+        
+        .preview-container {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .preview-container.show {
+            display: block;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result-container.show {
+            display: block;
+        }
+        
+        .result-success {
+            background: #f1f8f4;
+            border: 2px solid #4caf50;
+        }
+        
+        .result-error {
+            background: #fff5f5;
+            border: 2px solid #f44336;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .result-content {
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .api-config {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .api-config label {
+            font-size: 12px;
+        }
+        
+        .api-config input {
+            font-size: 12px;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 即梦 API 测试页面</h1>
+        <p class="subtitle">测试视频生成3.0 720P - 图生视频-首尾帧功能</p>
+        
+        <div class="api-config">
+            <div class="form-group">
+                <label>后端 API 地址</label>
+                <input type="text" id="apiBaseUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+            </div>
+        </div>
+        
+        <form id="videoForm">
+            <div class="form-group">
+                <label for="prompt">提示词 *</label>
+                <textarea id="prompt" placeholder="描述你想要生成的视频内容..." required>一只可爱的小猫在花园里玩耍</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>首帧图片（可选）</label>
+                <div class="file-upload">
+                    <input type="file" id="firstFrame" accept="image/jpeg,image/jpg,image/png">
+                    <label for="firstFrame" class="file-upload-label" id="firstFrameLabel">
+                        <span>📷 点击上传首帧图片 (JPG/PNG)</span>
+                    </label>
+                </div>
+                <div class="preview-container" id="firstFramePreview">
+                    <img class="preview-image" id="firstFrameImg" alt="首帧预览">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>尾帧图片（可选）</label>
+                <div class="file-upload">
+                    <input type="file" id="lastFrame" accept="image/jpeg,image/jpg,image/png">
+                    <label for="lastFrame" class="file-upload-label" id="lastFrameLabel">
+                        <span>📷 点击上传尾帧图片 (JPG/PNG)</span>
+                    </label>
+                </div>
+                <div class="preview-container" id="lastFramePreview">
+                    <img class="preview-image" id="lastFrameImg" alt="尾帧预览">
+                </div>
+            </div>
+            
+            <div class="params-grid">
+                <div class="form-group">
+                    <label for="width">宽度</label>
+                    <input type="number" id="width" value="1024" min="256" max="1920">
+                </div>
+                <div class="form-group">
+                    <label for="height">高度</label>
+                    <input type="number" id="height" value="576" min="256" max="1080">
+                </div>
+                <div class="form-group">
+                    <label for="duration">时长（秒）</label>
+                    <input type="number" id="duration" value="5" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label for="fps">帧率</label>
+                    <input type="number" id="fps" value="24" min="12" max="60">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="negativePrompt">负面提示词（可选）</label>
+                <textarea id="negativePrompt" placeholder="描述你不想要的内容..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">🚀 生成视频</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在生成视频，请稍候...</p>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 文件上传预览
+        function setupFilePreview(inputId, labelId, previewId, imgId) {
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            const preview = document.getElementById(previewId);
+            const img = document.getElementById(imgId);
+            
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    label.classList.add('has-file');
+                    label.querySelector('span').textContent = `✓ ${file.name}`;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        img.src = e.target.result;
+                        preview.classList.add('show');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    label.classList.remove('has-file');
+                    label.querySelector('span').textContent = `📷 点击上传${inputId === 'firstFrame' ? '首' : '尾'}帧图片 (JPG/PNG)`;
+                    preview.classList.remove('show');
+                }
+            });
+        }
+        
+        setupFilePreview('firstFrame', 'firstFrameLabel', 'firstFramePreview', 'firstFrameImg');
+        setupFilePreview('lastFrame', 'lastFrameLabel', 'lastFramePreview', 'lastFrameImg');
+        
+        // 将图片转换为 base64
+        function imageToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // 移除 data:image/...;base64, 前缀，只保留 base64 字符串
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // 显示结果
+        function showResult(success, title, content) {
+            const container = document.getElementById('resultContainer');
+            const titleEl = document.getElementById('resultTitle');
+            const contentEl = document.getElementById('resultContent');
+            
+            container.className = `result-container show result-${success ? 'success' : 'error'}`;
+            titleEl.textContent = title;
+            contentEl.textContent = content;
+            
+            // 滚动到结果区域
+            container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // 表单提交
+        document.getElementById('videoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            // 禁用按钮，显示加载
+            submitBtn.disabled = true;
+            loading.classList.add('show');
+            resultContainer.classList.remove('show');
+            
+            try {
+                // 获取表单数据
+                const apiBaseUrl = document.getElementById('apiBaseUrl').value.trim();
+                const prompt = document.getElementById('prompt').value.trim();
+                const width = parseInt(document.getElementById('width').value);
+                const height = parseInt(document.getElementById('height').value);
+                const duration = parseInt(document.getElementById('duration').value);
+                const fps = parseInt(document.getElementById('fps').value);
+                const negativePrompt = document.getElementById('negativePrompt').value.trim();
+                
+                // 构建请求体
+                const requestBody = {
+                    prompt: prompt,
+                    width: width,
+                    height: height,
+                    duration: duration,
+                    fps: fps,
+                };
+                
+                if (negativePrompt) {
+                    requestBody.negative_prompt = negativePrompt;
+                }
+                
+                // 处理首尾帧
+                const firstFrameFile = document.getElementById('firstFrame').files[0];
+                const lastFrameFile = document.getElementById('lastFrame').files[0];
+                
+                if (firstFrameFile) {
+                    requestBody.first_frame = await imageToBase64(firstFrameFile);
+                }
+                
+                if (lastFrameFile) {
+                    requestBody.last_frame = await imageToBase64(lastFrameFile);
+                }
+                
+                // 发送请求
+                const response = await fetch(`${apiBaseUrl}/api/v1/video/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult(
+                        true,
+                        '✅ 视频生成任务已提交',
+                        `任务 ID: ${result.task_id}\n\n${result.message || ''}${result.rag_enhanced ? '\n\n✨ 已使用 RAG 增强提示词' : ''}`
+                    );
+                } else {
+                    showResult(
+                        false,
+                        '❌ 生成失败',
+                        result.error || result.message || '未知错误'
+                    );
+                }
+                
+            } catch (error) {
+                showResult(
+                    false,
+                    '❌ 请求失败',
+                    `错误信息: ${error.message}\n\n请检查：\n1. 后端服务是否运行\n2. API 地址是否正确\n3. 网络连接是否正常`
+                );
+            } finally {
+                submitBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
+
+

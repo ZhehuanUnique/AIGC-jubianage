@@ -1,0 +1,5 @@
+{
+  "db_path": "doubao-rag/vector_db",
+  "frames_dir": "doubao-rag/frames",
+  "collection_name": "video_frames"
+}

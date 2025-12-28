@@ -1,0 +1,16 @@
+services:
+  # 后端 API 服务
+  - type: web
+    name: jubianai-backend
+    env: python
+    buildCommand: pip install --upgrade pip && pip install -r jubianai/requirements.txt
+    startCommand: uvicorn jubianai.backend.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    plan: free
+
+

@@ -1,0 +1,13 @@
+# Streamlit Cloud 部署依赖
+# 注意：Streamlit Cloud 会在根目录查找 requirements.txt
+# 如果应用在子目录，需要在 Streamlit Cloud 设置中指定路径为 jubianai/requirements.txt
+
+streamlit>=1.28.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+pillow>=10.0.0
+volcengine>=1.0.0  # 火山引擎官方 SDK
+numpy>=1.24.0
+
+# 注意：Streamlit 前端只需要这些依赖
+# 后端 API 的依赖在 jubianai/requirements.txt 中
