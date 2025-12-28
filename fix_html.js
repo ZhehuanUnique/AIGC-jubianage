@@ -17,8 +17,8 @@ while ((match = cosUrlPattern.exec(html)) !== null) {
   const url = match[0];
   const filename = match[1];
   
-  // 跳过 _1 后缀的文件
-  if (filename.includes('_1.')) {
+  // 跳过 _1 后缀的文件（包括 _1.jpg, _1.png, _1.jpeg 等）
+  if (filename.match(/_1\.(jpg|png|jpeg|JPG|PNG|JPEG)$/)) {
     continue;
   }
   
