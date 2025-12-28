@@ -53,12 +53,21 @@ def generate_poster_cards():
         # 过滤掉带 _1 后缀的文件（这些是重复的）
         images = [img for img in images if not img.name.endswith('_1.jpg') and not img.name.endswith('_1.png') and not img.name.endswith('_1.jpeg') and not img.name.endswith('_1.JPG') and not img.name.endswith('_1.PNG')]
         
-        # 去重：使用文件名（不含路径）作为唯一标识
+        # 去重：使用文件名（不含路径）作为唯一标识，并排除 _1 后缀
         seen_names = set()
         unique_images = []
         for img in images:
+            # 跳过 _1 后缀的文件
+            base_name = img.name
+            if base_name.endswith('_1.jpg') or base_name.endswith('_1.png') or base_name.endswith('_1.jpeg'):
+                continue
+            # 如果文件名（去掉_1后缀）已经存在，也跳过
+            name_without_suffix = base_name.replace('_1.jpg', '.jpg').replace('_1.png', '.png').replace('_1.jpeg', '.jpeg')
+            if name_without_suffix in seen_names:
+                continue
             if img.name not in seen_names:
                 seen_names.add(img.name)
+                seen_names.add(name_without_suffix)  # 也记录去掉_1后缀的版本
                 unique_images.append(img)
         images = unique_images
         
@@ -84,7 +93,14 @@ def generate_poster_cards():
             }
             subtitle = descriptions.get(ratio, "海报展示")
             
-            card_html = f'''            <a class="card" href="javascript:void(0)" aria-label="视频 {card_num:02d}">
+            # 根据比例添加 data-ratio 属性
+            ratio_attr = ''
+            if ratio == "3:4":
+                ratio_attr = ' data-ratio="3-4"'
+            elif ratio == "7:10":
+                ratio_attr = ' data-ratio="7-10"'
+            
+            card_html = f'''            <a class="card" href="javascript:void(0)" aria-label="视频 {card_num:02d}"{ratio_attr}>
               <div class="card__thumb">
                 <img class="card__img" src="{img_src}" alt="封面 {card_num:02d}" loading="lazy" />
               </div>
