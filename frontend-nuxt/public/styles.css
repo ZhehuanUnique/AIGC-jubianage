@@ -63,6 +63,7 @@ body::before {
   min-height: 100svh;
   display:flex;
   flex-direction:column;
+  justify-content: flex-end;
   position: relative;
   z-index: 1;
 }
@@ -96,12 +97,12 @@ body::before {
 }
 
 .hero{
-  flex: 1 0 50%;
-  min-height: 52svh;
+  flex: 0 0 auto;
+  min-height: 0;
   display:flex;
   align-items:flex-start;
   justify-content:flex-start;
-  padding: 48px 48px 10px;
+  padding: 48px 48px 0;
   position: relative;
 }
 
@@ -111,9 +112,11 @@ body::before {
 
 .rail{
   flex: 0 0 auto;
-  padding: 0 0 34px;
+  padding: 0;
   width: 100%; /* 确保rail占满宽度 */
   overflow: hidden; /* 隐藏超出部分 */
+  position: relative;
+  bottom: 0;
 }
 
 .rail .marquee{
