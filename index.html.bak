@@ -63,6 +63,7 @@
       <section class="rail">
         <div class="marquee" data-marquee aria-label="作品流动展示">
           <div class="marquee__track" data-marquee-track>
+            <!-- 只需要写一份 items，JS 会自动复制一份用于无缝循环 -->
             <a class="card" href="javascript:void(0)" aria-label="视频 01">
               <div class="card__thumb">
                 <img class="card__img" src="/poster/2：3/2025-12-28 200748.jpg" alt="封面 01" loading="lazy" />
@@ -1269,81 +1270,7 @@
                 <div class="card__sub">竖版海报 · 7:10 比例</div>
               </div>
             </a>
-          </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 01</div>
-                <div class="card__sub">横向流动 · 4K 质感</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 02">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214301.jpg" alt="封面 02" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 02</div>
-                <div class="card__sub">丝滑缓动 · 无缝循环</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 03">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214305.jpg" alt="封面 03" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 03</div>
-                <div class="card__sub">GPU transform · 低功耗</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 04">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214313.jpg" alt="封面 04" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 04</div>
-                <div class="card__sub">hover 减速到停</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 05">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214319.jpg" alt="封面 05" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 05</div>
-                <div class="card__sub">移开恢复初速</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 06">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214252.jpg" alt="封面 06" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 06</div>
-                <div class="card__sub">渐隐遮罩 · 高级感</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 07">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214301.jpg" alt="封面 07" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 07</div>
-                <div class="card__sub">无依赖 · 可直接部署</div>
-              </div>
-            </a>
-            <a class="card" href="javascript:void(0)" aria-label="视频 08">
-              <div class="card__thumb">
-                <img class="card__img" src="/封面/2：3封面/20251218-214305.jpg" alt="封面 08" loading="lazy" />
-              </div>
-              <div class="card__meta">
-                <div class="card__title">AIGC 片段 08</div>
-                <div class="card__sub">丝滑不丢帧</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <script>
+          t>
       // 页面加载完成后的初始化
       (function() {
         'use strict';

@@ -78,8 +78,9 @@ test-*.txt
 uploads/
 assets/
 
-# 忽略海报文件夹（已移动到 frontend-nuxt/public/poster）
+# 忽略海报文件夹（已上传到腾讯云 COS，不再需要部署）
 poster/
+frontend-nuxt/public/poster/
 
 # 保留必要的静态文件（通过 ! 来覆盖上面的规则）
 !index.html
