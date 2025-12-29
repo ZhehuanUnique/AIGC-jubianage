@@ -10,11 +10,19 @@ export default defineNuxtConfig({
     port: 3001,
     host: '0.0.0.0'
   },
-  // 确保静态文件正确服务
+  // 配置Nitro确保静态文件正确服务
   nitro: {
     prerender: {
       crawlLinks: false
-    }
+    },
+    // 确保静态文件优先服务
+    publicAssets: [
+      {
+        baseURL: '/',
+        dir: 'public',
+        maxAge: 31536000
+      }
+    ]
   },
   runtimeConfig: {
     public: {
