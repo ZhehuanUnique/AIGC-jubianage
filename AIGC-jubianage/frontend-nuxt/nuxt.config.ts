@@ -1,5 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // 静态站点生成配置
+  target: 'static',
+  ssr: false,
   devtools: { enabled: true },
   modules: [
     '@nuxtjs/tailwindcss',
@@ -23,6 +26,10 @@ export default defineNuxtConfig({
         maxAge: 31536000
       }
     ]
+  },
+  // 路由配置
+  router: {
+    base: '/'
   },
   runtimeConfig: {
     public: {
