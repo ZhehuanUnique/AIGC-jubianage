@@ -1,7 +1,8 @@
 /**
- * 涓濇粦 marquee锛氭棤缂濆惊鐜í鍚戞粴鍔?+ hover 缂撳姩鍑忛€熷埌鍋?+ 绂诲紑缂撳姩鎭㈠銆? * - 浣跨敤 requestAnimationFrame
- * - 浣跨敤鏃堕棿甯告暟鐨勬寚鏁板钩婊戯紙涓庡抚鐜囨棤鍏筹級
- * - transform: translate3d 璧?GPU 鍚堟垚
+ * 丝滑 marquee：无缝循环横向滚动 + hover 缓动减速到停 + 离开缓动恢复
+ * - 使用 requestAnimationFrame
+ * - 使用时间常数的指数平滑（与帧率无关）
+ * - transform: translate3d 启用 GPU 合成
  */
 
 function clamp(v, min, max) {
@@ -9,13 +10,14 @@ function clamp(v, min, max) {
 }
 
 function expSmoothingAlpha(dt, smoothness) {
-  // smoothness: 1/s锛岃秺澶ц秺蹇创杩戠洰鏍囷紙涓庡抚鐜囨棤鍏筹級
+  // smoothness: 1/s，越大越快接近目标（与帧率无关）
   const k = Math.max(0, smoothness);
   return 1 - Math.exp(-k * dt);
 }
 
 function springStep(state, target, dt, freqHz, damping) {
-  // 閫熷害寮圭哀锛?D锛夛細璁╂暟鍊艰创杩?target 鐨勫悓鏃舵洿鈥滆嚜鐒垛€?  // state: { x, v } 杩欓噷鎴戜滑鐢ㄦ潵鎺у埗 speed锛坸=褰撳墠 speed, v=鍔犻€熷害绉垎鍑烘潵鐨勯€熷害鍙樺寲鐜囷級
+  // 速度弹簧（2D）：让数值接近 target 的同时更"自然"
+  // state: { x, v } 这里我们用来控制 speed（x=当前 speed, v=加速度积分出来的速度变化率）
   const f = Math.max(0.001, freqHz);
   const z = clamp(damping, 0.05, 2.0);
   const w = 2 * Math.PI * f;
@@ -24,7 +26,7 @@ function springStep(state, target, dt, freqHz, damping) {
   const v = state.v;
   const dx = x - target;
 
-  // 缁忓吀浜岄樁绯荤粺锛歺'' + 2味蠅 x' + 蠅^2 x = 蠅^2 target
+  // 经典二阶系统：x'' + 2ζω x' + ω^2 x = ω^2 target
   const a = -2 * z * w * v - (w * w) * dx;
   const v2 = v + a * dt;
   const x2 = x + v2 * dt;
@@ -37,61 +39,72 @@ function setupMarquee(root) {
   const track = root.querySelector("[data-marquee-track]");
   if (!track) return;
 
-  // 鍙傛暟锛堜綘鍙互鎸夐渶姹傝皟锛?  const baseSpeedPxPerSec = 150; // 鍒濆閫熷害锛坧x/s锛?  const hoverStopSeconds = 0.55; // 鎮仠鍒板仠鐨勫ぇ鑷存椂闂存劅
-  const resumeSeconds = 0.65; // 绂诲紑鎭㈠鍒板垵閫熺殑澶ц嚧鏃堕棿鎰?
-  // 寮圭哀鍙傛暟锛氶鐜囪秺楂樿秺鈥滆窡鎵嬧€濓紝闃诲凹瓒婂ぇ瓒婁笉鍥炲脊
+  // 参数（你可以按需求调）：
+  const baseSpeedPxPerSec = 150; // 初始速度（px/s）
+  const hoverStopSeconds = 0.55; // 暂停到停的大致时间感
+  const resumeSeconds = 0.65; // 离开恢复到初速的大致时间感
+  // 弹簧参数：频率越高越"跟手"，阻尼越大越不回弹
   const speedSpringHz = 3.0;
-  const speedDamping = 1.05; // 1 闄勮繎鎺ヨ繎涓寸晫闃诲凹
+  const speedDamping = 1.05; // 1 接近接近临界阻尼
 
   const prefersReduced =
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // 鏃犵紳寰幆锛氬鍒朵竴浠藉唴瀹癸紝纭繚浠讳綍鏃跺€欏鍣ㄩ兘琚畬鍏ㄨ鐩?  // 澶嶅埗鍚庡搴?= 鍘熷搴?* 2锛岀‘淇濇弧閾猴紙鍙鍒朵竴娆★紝閬垮厤閲嶅杩囧锛?  // 完全禁用复制，避免重复显示
+  // 无缝循环：复制一份内容，确保任何时候容器都被完全覆盖
+  // 复制后宽度 = 原宽度 * 2，确保满屏（只复制一次，避免重复过多）
+  // 完全禁用复制，避免重复显示
   // const originalHTML = track.innerHTML;
   // track.insertAdjacentHTML("beforeend", originalHTML);
 
   let running = true;
   let targetSpeed = prefersReduced ? 0 : baseSpeedPxPerSec;
   const speedState = { x: targetSpeed, v: 0 }; // x=speed, v=speed derivative
-  let translateX = 0; // 褰撳墠 translateX 鍊硷紙鐩存帴鎺у埗浣嶇疆锛?  let lastT = performance.now();
+  let translateX = 0; // 当前 translateX 值（直接控制位置）
+  let lastT = performance.now();
 
   function measureHalfWidth() {
-    // track.scrollWidth 鏄袱浠藉唴瀹圭殑鎬诲搴︼紝涓€浠藉搴?= 鎬诲搴?/ 2
-    // 涓嶄娇鐢?Math.floor锛屼繚鎸佸師濮嬬簿搴︼紝閬垮厤绮惧害鎹熷け瀵艰嚧鐨勪笉涓€鑷?    // 不再复制，直接使用原始宽度
+    // track.scrollWidth 是两份内容的总宽度，一份宽度 = 总宽度 / 2
+    // 不使用 Math.floor，保持原始精度，避免精度损失导致的不一致
+    // 不再复制，直接使用原始宽度
     const width = track.scrollWidth;
-    // 纭繚瀹藉害鑷冲皯澶т簬 0
+    // 确保宽度至少大于 0
     return width > 0 ? width : 1;
   }
 
   function measureContainerWidth() {
-    // 鑾峰彇瀹瑰櫒锛坢arquee锛夌殑瀹藉害锛岀幇鍦ㄥ鍣ㄥ搴︿负娴忚鍣ㄧ獥鍙ｅ搴?    // 淇濇寔鍘熷绮惧害锛岄伩鍏嶇簿搴︽崯澶?    const width = root.getBoundingClientRect().width;
-    // 纭繚瀹藉害鑷冲皯澶т簬 0
+    // 获取容器（marquee）的宽度，现在容器宽度为浏览器窗口宽度
+    // 保持原始精度，避免精度损失
+    const width = root.getBoundingClientRect().width;
+    // 确保宽度至少大于 0
     return width > 0 ? width : window.innerWidth;
   }
 
   let halfWidth = 0;
   let containerWidth = 0;
 
-  // 鍒濆鍖栨祴閲忥紙绛変竴甯э紝纭繚甯冨眬绋冲畾锛?  requestAnimationFrame(() => {
+  // 初始化测量（等一帧，确保布局稳定）
+  requestAnimationFrame(() => {
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
-    // 鍒濆浣嶇疆锛氱‘淇濆鍣ㄨ瀹屽叏瑕嗙洊
-    // 鐢变簬鏈変袱浠藉唴瀹癸紝鍒濆鏃惰绗竴浠藉唴瀹瑰湪瀹瑰櫒鍐咃紝纭繚婊￠摵
+    // 初始位置：确保容器被完全覆盖
+    // 由于有两份内容，初始时让第一份内容在容器内，确保满屏
     if (halfWidth > 0 && containerWidth > 0) {
-      // 鍒濆 translateX = -halfWidth锛岃繖鏍风涓€浠藉唴瀹圭殑鏈€鍚庝竴寮犲崱鐗囧湪瀹瑰櫒宸︿晶杈圭紭
-      // 绗簩浠藉唴瀹逛細瑕嗙洊鏁翠釜瀹瑰櫒锛岀‘淇濇弧閾?      translateX = -halfWidth;
+      // 初始 translateX = -halfWidth，这样第一份内容的最后一张卡片在容器左侧边缘
+      // 第二份内容会覆盖整个容器，确保满屏
+      translateX = -halfWidth;
       track.style.transform = `translate3d(${translateX}px, 0, 0)`;
     }
   });
 
-  // 鐩戝惉绐楀彛澶у皬鍙樺寲锛屾洿鏂板鍣ㄥ搴?  const handleResize = () => {
+  // 监听窗口大小变化，更新容器宽度
+  const handleResize = () => {
     const oldHalfWidth = halfWidth;
     halfWidth = measureHalfWidth();
     containerWidth = measureContainerWidth();
-    // 閲嶆柊瀵归綈锛氫繚鎸佺浉瀵逛綅缃紝纭繚婊￠摵
+    // 重新对齐：保持相对位置，确保满屏
     if (oldHalfWidth > 0 && halfWidth > 0) {
-      // 璁＄畻褰撳墠鐨勭浉瀵逛綅缃紙鍦?[-halfWidth, 0] 鑼冨洿鍐咃級
+      // 计算当前的相对位置（在 [-halfWidth, 0] 范围内）
       let relativeX = translateX;
       while (relativeX < -oldHalfWidth) {
         relativeX += oldHalfWidth;
@@ -99,42 +112,49 @@ function setupMarquee(root) {
       while (relativeX > 0) {
         relativeX -= oldHalfWidth;
       }
-      // 璋冩暣 translateX 淇濇寔鐩稿浣嶇疆姣斾緥
+      // 调整 translateX 保持相对位置比例
       translateX = (relativeX / oldHalfWidth) * halfWidth;
-      // 搴旂敤鍙樻崲
+      // 应用变换
       track.style.transform = `translate3d(${translateX}px, 0, 0)`;
     }
   };
   window.addEventListener("resize", handleResize, { passive: true });
 
-  // 鎷栨嫿/瑙︽懜锛氭墜鍔ㄦ帶鍒?x锛屽苟娉ㄥ叆涓€涓煭鏆傜殑鈥滄墜鍔块€熷害鈥濓紝闅忓悗鍥炲綊鑷姩閫熷害
+  // 拖拽/触摸：手动控制 x，并注入一个短暂的"手势速度"，随后回归自动速度
   let isDragging = false;
   let pointerId = null;
   let lastPointerX = 0;
   let lastPointerT = 0;
-  let gestureSpeed = 0; // px/s锛屾鏁拌〃绀哄悜鍙虫嫋锛堝唴瀹瑰悜鍙崇Щ鍔級
+  let gestureSpeed = 0; // px/s，正数表示向右拖（内容向右移）
 
   function updatePosition(deltaX) {
-    // 鏃犵紳寰幆閫昏緫锛堢‘淇濅换浣曟椂鍊欓兘婊￠摵锛屼笖瀹屽叏鏃犵紳鏃犺烦杞級锛?    // 鍐呭鏈変笁浠斤紝姣忎唤瀹藉害 halfWidth
-    // 鍏抽敭锛歵ranslateX 鎸佺画鍙樺寲锛堝彲浠ユ槸浠绘剰鍊硷級锛屼娇鐢ㄦā杩愮畻璁＄畻瀹為檯浣嶇疆
-    // 杩欐牱灏变笉浼氭湁璺宠浆锛岀湅璧锋潵灏卞儚鍐呭鐪熺殑鏃犵┓鏃犲敖涓€鏍?    
+    // 无缝循环逻辑（确保任何时候都满屏，且完全无缝无跳转）
+    // 内容有三份，每份宽度 halfWidth
+    // 关键：translateX 持续变化（可以是任意值），使用模运算计算实际位置
+    // 这样就不会有跳转，看起来就像内容真的无穷无尽一样
+    
     if (halfWidth <= 0 || containerWidth <= 0) return;
     
-    // translateX 鎸佺画鍑忓皬锛堝唴瀹瑰悜宸︾Щ鍔級锛屽彲浠ユ槸浠绘剰鍊硷紙鍖呮嫭寰堝ぇ鐨勮礋鏁帮級
+    // translateX 持续减小（内容向左移），可以是任意值（包括很大的负数）
     translateX -= deltaX;
     
-    // 浣跨敤妯¤繍绠楄绠楃浉瀵逛綅缃紝纭繚鏃犵紳寰幆锛屾棤璺宠浆
-    // relativeX 搴旇鍦?[-halfWidth, 0) 鑼冨洿鍐呭惊鐜?    let relativeX = translateX;
+    // 使用模运算计算相对位置，确保无缝循环，无跳转
+    // relativeX 应该在 [-halfWidth, 0) 范围内循环
+    let relativeX = translateX;
     
-    // 灏?translateX 鏄犲皠鍒?[-halfWidth, 0) 鑼冨洿鍐?    // 浣跨敤妯¤繍绠楃‘淇濇棤缂濆惊鐜?    relativeX = relativeX % halfWidth;
-    // 纭繚缁撴灉鍦?[-halfWidth, 0) 鑼冨洿鍐?    if (relativeX >= 0) {
+    // 将 translateX 映射到 [-halfWidth, 0) 范围内
+    // 使用模运算确保无缝循环
+    relativeX = relativeX % halfWidth;
+    // 确保结果在 [-halfWidth, 0) 范围内
+    if (relativeX >= 0) {
       relativeX -= halfWidth;
     }
     
-    // 搴旂敤鍙樻崲锛堜娇鐢?relativeX 鑰屼笉鏄?translateX锛岀‘淇濇棤缂濓級
+    // 应用变换（使用 relativeX 而不是 translateX，确保无缝）
     track.style.transform = `translate3d(${relativeX}px, 0, 0)`;
     
-    // 瀹氭湡閲嶇疆 translateX 闃叉鏁板€艰繃澶э紙浣嗕笉褰卞搷瑙嗚鏁堟灉锛屽洜涓轰娇鐢ㄧ殑鏄?relativeX锛?    if (Math.abs(translateX) > halfWidth * 1000) {
+    // 定期重置 translateX 防止数值过大（但不影响视觉效果，因为使用的是 relativeX）
+    if (Math.abs(translateX) > halfWidth * 1000) {
       translateX = relativeX;
     }
   }
@@ -144,20 +164,22 @@ function setupMarquee(root) {
     const dt = clamp((now - lastT) / 1000, 0, 0.05);
     lastT = now;
 
-    // 瀹炴椂鏇存柊瀹瑰櫒瀹藉害锛堝簲瀵圭獥鍙ｅぇ灏忓彉鍖栵級
+    // 实时更新容器宽度（应对窗口大小变化）
     containerWidth = measureContainerWidth();
 
-    // 鎵嬪娍閫熷害浼氭寚鏁拌“鍑忓洖 0锛堣鎷栨嫿鏀惧紑鍚庤嚜鐒跺洖褰掕嚜鍔ㄦ粴鍔級
+    // 手势速度会指数衰减回 0（让拖拽放开后自然回归自动滚动）
     const gestureAlpha = expSmoothingAlpha(dt, 10.5);
     gestureSpeed += (0 - gestureSpeed) * gestureAlpha;
 
-    // 鐢ㄤ簩闃跺脊绨ц閫熷害璐磋繎鐩爣锛氭瘮鍗曠函 lerp 鏇磋嚜鐒?    springStep(speedState, targetSpeed, dt, speedSpringHz, speedDamping);
+    // 用二阶弹簧让速度接近目标：比单纯 lerp 更自然
+    springStep(speedState, targetSpeed, dt, speedSpringHz, speedDamping);
     const autoSpeed = speedState.x;
 
     if (!prefersReduced) {
       if (!isDragging) {
-        // 浠庡彸鍒板乏绉诲姩锛氬唴瀹逛粠鍙充晶杩涘叆锛屽悜宸︿晶绉诲姩
-        // 璁＄畻姣忓抚鐨勭Щ鍔ㄨ窛绂?        const deltaX = (autoSpeed - gestureSpeed) * dt;
+        // 从右到左移动：内容从右侧进入，向左侧移动
+        // 计算每帧的移动距离
+        const deltaX = (autoSpeed - gestureSpeed) * dt;
         updatePosition(deltaX);
       }
     }
@@ -167,10 +189,10 @@ function setupMarquee(root) {
 
   requestAnimationFrame(tick);
 
-  // hover锛氬噺閫熷埌鍋滐紝绂诲紑鎭㈠
+  // hover：减速到停，离开恢复
   const onEnter = () => {
     targetSpeed = 0;
-    // 閫氳繃鈥滈缃€熷害瀵兼暟鈥濊鍋滀笅鏇村儚娓愯繘鍒硅溅
+    // 通过"预设速度导数"让停下更像渐进刹车
     speedState.v *= 0.25;
   };
   const onLeave = () => {
@@ -181,7 +203,7 @@ function setupMarquee(root) {
   root.addEventListener("mouseenter", onEnter, { passive: true });
   root.addEventListener("mouseleave", onLeave, { passive: true });
 
-  // 浜や簰锛氭嫋鎷?瑙︽懜鎷栧姩锛堜笉鎶㈡粴鍔ㄦ潯锛屾按骞虫嫋鍔ㄤ负涓伙級
+  // 交互：拖拽/触摸拖动（不抢滚动条，水平拖动为主）
   root.addEventListener("pointerdown", (e) => {
     if (prefersReduced) return;
     if (e.button !== undefined && e.button !== 0) return;
@@ -192,7 +214,7 @@ function setupMarquee(root) {
     lastPointerX = e.clientX;
     lastPointerT = performance.now();
     gestureSpeed = 0;
-    // 鎷栧姩鏃舵妸鑷姩鐩爣閫熷害闄嶄竴鐐癸紝閬垮厤鈥滄姠鍥炲幓鈥濈殑鎰熻
+    // 拖动时把自动目标速度降一点，避免"抢回去"的感觉
     targetSpeed = 0;
   });
 
@@ -204,12 +226,14 @@ function setupMarquee(root) {
     lastPointerX = e.clientX;
     lastPointerT = now;
 
-    // 鎷栨嫿锛氭墜鍚戝彸鎷栧簲璁╁唴瀹瑰悜鍙筹紙translateX 澧炲姞锛夛紝鎵嬪悜宸︽嫋搴旇鍐呭鍚戝乏锛坱ranslateX 鍑忓皬锛?    translateX += dx;
+    // 拖拽：手向右拖应让内容向右（translateX 增加），手向左拖应让内容向左（translateX 减小）
+    translateX += dx;
     
-    // 浣跨敤涓?updatePosition 鐩稿悓鐨勬ā杩愮畻閫昏緫锛岀‘淇濇棤缂濇棤璺宠浆
+    // 使用与 updatePosition 相同的模运算逻辑，确保无缝无跳转
     if (halfWidth > 0 && containerWidth > 0) {
       let relativeX = translateX % halfWidth;
-      // 纭繚缁撴灉鍦?[-halfWidth, 0) 鑼冨洿鍐?      if (relativeX >= 0) {
+      // 确保结果在 [-halfWidth, 0) 范围内
+      if (relativeX >= 0) {
         relativeX -= halfWidth;
       }
       track.style.transform = `translate3d(${relativeX}px, 0, 0)`;
@@ -217,8 +241,9 @@ function setupMarquee(root) {
       track.style.transform = `translate3d(${translateX}px, 0, 0)`;
     }
 
-    // 浼拌鎵嬪娍閫熷害锛坧x/s锛夛紝鐢ㄤ簬鏀惧紑鍚庣殑鎯€?    const inst = dx / dt; // px/s锛屽彸涓烘
-    // 浣庨€氫竴涓嬶紝鍑忓皯鎵嬫姈
+    // 估计手势速度（px/s），用于放开后的惯性
+    const inst = dx / dt; // px/s，右为正
+    // 低通一下，减少手抖
     gestureSpeed = gestureSpeed * 0.6 + inst * 0.4;
   });
 
@@ -230,7 +255,7 @@ function setupMarquee(root) {
       if (pointerId != null) root.releasePointerCapture(pointerId);
     } catch {}
     pointerId = null;
-    // 鏀惧紑鍚庢仮澶嶈嚜鍔ㄧ洰鏍囬€熷害锛屽苟鎶娾€滄墜鍔块€熷害鈥濆甫鍏ワ紙浼氬湪 tick 閲岃“鍑忥級
+    // 放开后恢复自动目标速度，并把"手势速度"带进去（会在 tick 里衰减）
     targetSpeed = prefersReduced ? 0 : baseSpeedPxPerSec;
     speedState.v *= 0.35;
   }
@@ -239,7 +264,8 @@ function setupMarquee(root) {
   root.addEventListener("pointercancel", endDrag);
   root.addEventListener("lostpointercapture", endDrag);
 
-  // 椤甸潰涓嶅彲瑙佹椂鏆傚仠锛堢渷鐢?鏇寸ǔ锛?  const onVis = () => {
+  // 页面不可见时暂停（省电更稳）
+  const onVis = () => {
     if (document.hidden) {
       running = false;
     } else {
@@ -250,7 +276,7 @@ function setupMarquee(root) {
   };
   document.addEventListener("visibilitychange", onVis, { passive: true });
 
-  // 澶辩劍鏃朵篃鍋滀竴涓嬶紝鍥炲埌椤甸潰鍐嶆仮澶嶏紙浣撻獙鏇村儚鈥滀笣婊戞挱鏀惧櫒鈥濓級
+  // 失焦时也停一下，回到页面再恢复（体验更像"丝滑播放器"）
   const onBlur = () => {
     targetSpeed = 0;
   };
@@ -271,35 +297,37 @@ function setupMarquee(root) {
   };
 }
 
-// 鑳屾櫙瑙嗛澶勭悊锛氱‘淇濊棰戞纭姞杞藉拰寰幆鎾斁
+// 背景视频处理：确保视频正确加载和循环播放
 function setupBackgroundVideo() {
   const video = document.querySelector(".bg-video");
   if (!video) return;
 
-  // 纭繚瑙嗛寰幆鎾斁
+  // 确保视频循环播放
   video.addEventListener("loadeddata", () => {
     video.play().catch((err) => {
-      console.warn("瑙嗛鑷姩鎾斁澶辫触:", err);
+      console.warn("视频自动播放失败:", err);
     });
   });
 
-  // 瑙嗛缁撴潫鏃堕噸鏂版挱鏀撅紙纭繚鏃犵紳寰幆锛?  video.addEventListener("ended", () => {
+  // 视频结束时重新播放（确保无缝循环）
+  video.addEventListener("ended", () => {
     video.currentTime = 0;
     video.play().catch((err) => {
-      console.warn("瑙嗛寰幆鎾斁澶辫触:", err);
+      console.warn("视频循环播放失败:", err);
     });
   });
 
-  // 澶勭悊瑙嗛鍔犺浇閿欒
+  // 处理视频加载错误
   video.addEventListener("error", () => {
-    console.warn("鑳屾櫙瑙嗛鍔犺浇澶辫触锛屽皢浣跨敤澶囩敤鑳屾櫙");
-    // 鍙互鍦ㄨ繖閲屾坊鍔犲鐢ㄨ儗鏅浘鐗?  });
+    console.warn("背景视频加载失败，将使用备用背景");
+    // 可以在这里添加备用背景图
+  });
 
-  // 纭繚瑙嗛鍦ㄩ〉闈㈠彲瑙佹椂鎾斁
+  // 确保视频在页面可见时播放
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       video.play().catch((err) => {
-        console.warn("瑙嗛鎭㈠鎾斁澶辫触:", err);
+        console.warn("视频恢复播放失败:", err);
       });
     }
   });
@@ -308,12 +336,10 @@ function setupBackgroundVideo() {
 document.addEventListener(
   "DOMContentLoaded",
   () => {
-    // 璁剧疆鑳屾櫙瑙嗛
+    // 设置背景视频
     setupBackgroundVideo();
-    // 璁剧疆娴佸姩鎾斁
+    // 设置流动播放
     document.querySelectorAll("[data-marquee]").forEach((el) => setupMarquee(el));
   },
   { passive: true }
 );
-
-
