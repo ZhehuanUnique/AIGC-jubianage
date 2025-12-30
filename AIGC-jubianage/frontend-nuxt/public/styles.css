@@ -83,7 +83,11 @@ body::before {
   justify-content: flex-end;
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  margin: 0;
+  padding: 0;
 }
 
 /* Logo + 鏍囬锛堝乏涓婅锛?*/
@@ -132,9 +136,14 @@ body::before {
   flex: 0 0 auto;
   padding: 0;
   width: 100%; /* 纭繚rail鍗犳弧瀹藉害 */
-  overflow: hidden; /* 闅愯棌瓒呭嚭閮ㄥ垎 */
+  overflow: hidden !important; /* 隐藏超出部分 */
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
   position: relative;
   bottom: 0;
+  margin: 0;
+  margin-bottom: 0;
+  align-self: flex-end;
 }
 
 .rail .marquee{
@@ -147,8 +156,11 @@ body::before {
   /* 閫忔槑瀹瑰櫒锛屽搴︿负娴忚鍣ㄧ獥鍙ｅ搴?*/
   width: 100vw;
   max-width: 100vw;
-  overflow: hidden; /* 闅愯棌瓒呭嚭瀹瑰櫒鐨勫唴瀹癸紝瀹炵幇浠庤竟缂樿繘鍏ュ拰绂诲紑 */
+  overflow: hidden !important; /* 隐藏超出容器的内容，实现从边缘进入和离开 */
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
   padding: 0;
+  margin: 0;
   user-select: none;
   -webkit-user-select: none;
   touch-action: pan-y;
@@ -164,6 +176,7 @@ body::before {
   gap: 16px;
   align-items:stretch;
   padding: 0; /* 移除 padding，确保无缝循环 */
+  margin: 0;
   will-change: transform;
   transform: translate3d(0,0,0);
 }
