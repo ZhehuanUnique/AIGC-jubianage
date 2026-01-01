@@ -979,6 +979,68 @@ export async function getProjectFragments(projectId: number): Promise<Array<{ id
 }
 
 /**
+ * 获取用户的所有生成资产（用于跨设备同步）
+ */
+export async function getGeneratedAssets(params?: {
+  projectId?: number
+  assetType?: 'image' | 'video'
+  assetCategory?: 'character' | 'scene' | 'item' | 'shot'
+}): Promise<Array<{
+  id: number
+  projectId: number
+  assetType: string
+  assetName: string
+  assetCategory: string
+  cosUrl: string
+  cosKey: string
+  thumbnailUrl?: string
+  fileSize?: number
+  mimeType?: string
+  model?: string
+  prompt?: string
+  metadata?: any
+  status: string
+  createdAt: string
+  updatedAt: string
+}>> {
+  try {
+    const token = AuthService.getToken()
+    if (!token) {
+      throw new Error('未登录，请先登录')
+    }
+
+    const queryParams = new URLSearchParams()
+    if (params?.projectId) queryParams.append('projectId', params.projectId.toString())
+    if (params?.assetType) queryParams.append('assetType', params.assetType)
+    if (params?.assetCategory) queryParams.append('assetCategory', params.assetCategory)
+
+    const url = `${API_BASE_URL}/api/generated-assets${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || '获取生成资产列表失败')
+    }
+
+    const result = await response.json()
+    if (result.success) {
+      return result.data || []
+    } else {
+      throw new Error(result.error || '获取生成资产列表失败')
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('网络错误，请检查服务器连接')
+  }
+}
+
+/**
  * 删除角色
  */
 export async function deleteCharacter(characterId: number): Promise<void> {

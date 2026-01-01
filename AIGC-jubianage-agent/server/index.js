@@ -827,6 +827,30 @@ app.get('/api/video-task/:taskId', authenticateToken, async (req, res) => {
             ]
           )
           
+          // 同时保存到 generated_assets 表（用于跨设备同步）
+          try {
+            await db.query(
+              `INSERT INTO generated_assets (user_id, project_id, asset_type, asset_name, asset_category, cos_url, cos_key, mime_type, metadata, status)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT DO NOTHING`,
+              [
+                userId,
+                dbProjectId,
+                'video',
+                fileName,
+                'shot',
+                result.videoUrl,
+                cosKey,
+                'video/mp4',
+                JSON.stringify({ shot_id: shotId.toString(), model, task_id: taskId }),
+                'completed'
+              ]
+            )
+            console.log(`✅ 视频已保存到 generated_assets 表`)
+          } catch (genAssetError) {
+            console.error(`⚠️ 保存视频到 generated_assets 表失败（不影响主流程）:`, genAssetError)
+          }
+          
           console.log(`✅ 视频已保存到数据库: ${result.videoUrl}, shotId: ${shotId}`)
         }
       } catch (dbError) {
@@ -4081,6 +4105,31 @@ app.post('/api/upload-asset-base64-image', authenticateToken, async (req, res) =
       console.log(`✅ ${assetType} 数据库记录已创建: ID=${assetId}, URL=${uploadResult.url}`)
     }
 
+    // 同时保存到 generated_assets 表（用于跨设备同步）
+    try {
+      const assetCategory = assetType === 'character' ? 'character' : assetType === 'scene' ? 'scene' : 'item'
+      await db.query(
+        `INSERT INTO generated_assets (user_id, project_id, asset_type, asset_name, asset_category, cos_url, cos_key, mime_type, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT DO NOTHING`,
+        [
+          userId,
+          dbProjectId,
+          'image',
+          assetNameToUse,
+          assetCategory,
+          uploadResult.url,
+          uploadResult.key,
+          mimeType,
+          'completed'
+        ]
+      )
+      console.log(`✅ ${assetType} 已保存到 generated_assets 表`)
+    } catch (genAssetError) {
+      console.error(`⚠️ 保存到 generated_assets 表失败（不影响主流程）:`, genAssetError)
+      // 不阻止主流程，只记录错误
+    }
+
     res.json({
       success: true,
       data: {
@@ -4099,6 +4148,74 @@ app.post('/api/upload-asset-base64-image', authenticateToken, async (req, res) =
     res.status(500).json({
       success: false,
       error: error.message || '图片上传失败'
+    })
+  }
+})
+
+// 获取用户的所有生成资产（用于跨设备同步）
+app.get('/api/generated-assets', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: '未登录，请先登录',
+      })
+    }
+
+    const { projectId, assetType, assetCategory } = req.query
+    
+    const pool = await import('./db/connection.js')
+    const db = pool.default
+
+    let query = 'SELECT * FROM generated_assets WHERE user_id = $1'
+    const params = [userId]
+
+    if (projectId) {
+      query += ' AND project_id = $' + (params.length + 1)
+      params.push(parseInt(projectId))
+    }
+
+    if (assetType) {
+      query += ' AND asset_type = $' + (params.length + 1)
+      params.push(assetType)
+    }
+
+    if (assetCategory) {
+      query += ' AND asset_category = $' + (params.length + 1)
+      params.push(assetCategory)
+    }
+
+    query += ' ORDER BY created_at DESC'
+
+    const result = await db.query(query, params)
+
+    res.json({
+      success: true,
+      data: result.rows.map(row => ({
+        id: row.id,
+        projectId: row.project_id,
+        assetType: row.asset_type,
+        assetName: row.asset_name,
+        assetCategory: row.asset_category,
+        cosUrl: row.cos_url,
+        cosKey: row.cos_key,
+        thumbnailUrl: row.thumbnail_url,
+        fileSize: row.file_size,
+        mimeType: row.mime_type,
+        model: row.model,
+        prompt: row.prompt,
+        metadata: row.metadata,
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }))
+    })
+  } catch (error) {
+    console.error('获取生成资产列表失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取生成资产列表失败'
     })
   }
 })

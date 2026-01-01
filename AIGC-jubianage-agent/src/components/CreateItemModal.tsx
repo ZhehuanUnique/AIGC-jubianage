@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Upload, Loader2, Trash2 } from 'lucide-react'
 import { alert } from '../utils/alert'
-import { generateImage, getImageTaskStatus, GenerateImageRequest, ImageTaskStatus, uploadAssetImage, getProjectItems, getProjects } from '../services/api'
+import { generateImage, getImageTaskStatus, GenerateImageRequest, ImageTaskStatus, uploadAssetImage, getProjectItems, getProjects, getGeneratedAssets } from '../services/api'
 
 interface CreateItemModalProps {
   onClose: () => void
@@ -124,58 +124,131 @@ function CreateItemModal({ onClose, onItemSelect, projectName }: CreateItemModal
   }, [selectedModel])
 
   // 从数据库加载已生成的物品
-  useEffect(() => {
-    const loadCompletedItems = async () => {
-      if (!currentProjectName) return
-      
-      try {
-        // 先获取项目列表，找到对应的项目ID
-        const token = localStorage.getItem('token')
-        if (!token) return
-        
-        const projectsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'}/api/projects`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
-        
-        if (projectsResponse.ok) {
-          const projectsResult = await projectsResponse.json()
-          if (projectsResult.success && projectsResult.data) {
-            // 查找匹配的项目（通过name或script_title）
-            const project = projectsResult.data.find((p: any) => 
-              p.name === currentProjectName || p.script_title === currentProjectName
-            )
-            
-            if (project && project.id) {
-              // 加载该项目的物品列表
-              const items = await getProjectItems(project.id)
-              if (items && items.length > 0) {
-                // 转换为ItemTask格式并添加到completedItems
-                const completedTasks: ItemTask[] = items.map((item) => ({
-                  id: `item_${item.id}`,
-                  name: item.name,
-                  taskId: `completed_${item.id}`,
-                  status: 'completed' as const,
-                  progress: 100,
-                  imageUrl: item.image || undefined,
-                  model: 'completed',
-                  resolution: 'N/A',
-                  prompt: '',
-                  createdAt: Date.now(),
-                }))
-                setCompletedItems(completedTasks)
-                console.log(`✅ 从数据库加载了 ${completedTasks.length} 个已生成的物品`)
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('加载已生成物品失败:', error)
-      }
+  const loadCompletedItems = async () => {
+    if (!currentProjectName) {
+      console.log('⚠️ 无法加载物品：缺少项目名称')
+      return
     }
     
+    try {
+      console.log(`🔍 开始加载物品，项目名称: "${currentProjectName}"`)
+      
+      // 先获取项目列表，找到对应的项目ID
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.warn('⚠️ 无法加载物品：缺少token')
+        return
+      }
+      
+      const projectsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'}/api/projects`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      
+      if (projectsResponse.ok) {
+        const projectsResult = await projectsResponse.json()
+        console.log('📋 获取到的项目列表:', projectsResult)
+        
+        if (projectsResult.success && projectsResult.data) {
+          // 查找匹配的项目（通过name或script_title）
+          const project = projectsResult.data.find((p: any) => 
+            p.name === currentProjectName || p.script_title === currentProjectName
+          )
+          
+          console.log(`🔍 查找项目匹配结果:`, {
+            currentProjectName,
+            foundProject: project ? { id: project?.id, name: project?.name, script_title: project?.script_title } : null,
+            allProjects: projectsResult.data.map((p: any) => ({ id: p.id, name: p.name, script_title: p.script_title }))
+          })
+          
+          if (project && project.id) {
+            // 优先从 generated_assets 表加载（包含所有生成和上传的资产）
+            try {
+              const generatedAssets = await getGeneratedAssets({
+                projectId: project.id,
+                assetCategory: 'item'
+              })
+              
+              if (generatedAssets && generatedAssets.length > 0) {
+                const completedTasks: ItemTask[] = generatedAssets.map((asset) => ({
+                  id: `item_${asset.id}`,
+                  name: asset.assetName,
+                  taskId: `completed_${asset.id}`,
+                  status: 'completed' as const,
+                  progress: 100,
+                  imageUrl: asset.cosUrl || undefined,
+                  model: asset.model || 'completed',
+                  resolution: 'N/A',
+                  prompt: asset.prompt || '',
+                  createdAt: new Date(asset.createdAt).getTime(),
+                }))
+                setCompletedItems(completedTasks)
+                console.log(`✅ 从 generated_assets 表加载了 ${completedTasks.length} 个已生成的物品:`, completedTasks.map(t => ({ name: t.name, imageUrl: t.imageUrl })))
+                return
+              }
+            } catch (genAssetError) {
+              console.warn('⚠️ 从 generated_assets 表加载失败，尝试从 items 表加载:', genAssetError)
+            }
+            
+            // 如果 generated_assets 表没有数据，从 items 表加载（兼容旧数据）
+            const items = await getProjectItems(project.id)
+            console.log(`📦 从数据库获取到的物品:`, items)
+            
+            // 转换为ItemTask格式并添加到completedItems
+            // 即使items为空数组，也要更新列表（清空已完成的物品）
+            const completedTasks: ItemTask[] = (items || []).map((item) => ({
+              id: `item_${item.id}`,
+              name: item.name,
+              taskId: `completed_${item.id}`,
+              status: 'completed' as const,
+              progress: 100,
+              imageUrl: item.image || item.image_url || undefined,
+              model: 'completed',
+              resolution: 'N/A',
+              prompt: '',
+              createdAt: Date.now(),
+            }))
+            setCompletedItems(completedTasks)
+            console.log(`✅ 从 items 表加载了 ${completedTasks.length} 个已生成的物品:`, completedTasks.map(t => ({ name: t.name, imageUrl: t.imageUrl })))
+          } else {
+            console.warn(`⚠️ 未找到匹配的项目: "${currentProjectName}"`)
+          }
+        }
+      } else {
+        console.error('❌ 获取项目列表失败:', projectsResponse.status, projectsResponse.statusText)
+      }
+    } catch (error) {
+      console.error('❌ 加载已生成物品失败:', error)
+    }
+  }
+
+  // 初始加载和定期刷新
+  useEffect(() => {
+    // 立即加载一次
     loadCompletedItems()
+    
+    // 设置定期刷新（每3秒刷新一次）
+    const refreshInterval = setInterval(() => {
+      loadCompletedItems()
+    }, 3000)
+    
+    // 监听物品上传事件
+    const handleItemUploaded = () => {
+      console.log('📢 收到物品上传事件，延迟500ms后刷新')
+      // 延迟500ms确保数据库已保存
+      setTimeout(() => {
+        loadCompletedItems()
+      }, 500)
+    }
+    
+    window.addEventListener('item-uploaded', handleItemUploaded)
+    
+    // 清理函数
+    return () => {
+      clearInterval(refreshInterval)
+      window.removeEventListener('item-uploaded', handleItemUploaded)
+    }
   }, [currentProjectName])
 
   useEffect(() => {
@@ -227,6 +300,9 @@ function CreateItemModal({ onClose, onItemSelect, projectName }: CreateItemModal
       alert('请填写所有必填项', 'warning')
       return
     }
+
+    // 立即显示成功提示，不等待API调用完成
+    alert('任务已提交，正在生成中...', 'success')
 
     try {
       let taskId: string
@@ -342,8 +418,6 @@ function CreateItemModal({ onClose, onItemSelect, projectName }: CreateItemModal
       if (referenceImageInputRef.current) {
         referenceImageInputRef.current.value = ''
       }
-
-      alert('任务已提交，正在生成中...', 'success')
     } catch (error) {
       console.error('提交任务失败:', error)
       alert(error instanceof Error ? error.message : '提交任务失败，请稍后重试', 'error')
@@ -607,14 +681,19 @@ function CreateItemModal({ onClose, onItemSelect, projectName }: CreateItemModal
       }
 
       // 上传到COS并保存到数据库
-      await uploadAssetImage({
-        imageUrl: imageData,
-        assetType: 'item',
+      const result = await uploadAssetImage({
+        base64Image: imageData,
+        assetType: 'items',
         assetName: task.name,
         projectName: currentProjectName,
       })
 
-      console.log(`✅ 物品 "${task.name}" 已保存到项目 "${currentProjectName}"`)
+      console.log(`✅ 物品 "${task.name}" 已保存到项目 "${currentProjectName}"`, result)
+      
+      // 保存成功后，立即刷新列表
+      setTimeout(() => {
+        loadCompletedItems()
+      }, 500)
     } catch (error) {
       console.error('保存物品失败:', error)
       throw error
